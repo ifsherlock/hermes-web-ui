@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { renameSession } from '@/api/sessions'
-import { useAppStore } from '@/stores/app'
-import { useChatStore } from '@/stores/chat'
+import { useChatStore, type Session } from '@/stores/chat'
 import { NButton, NDropdown, NInput, NModal, NPopconfirm, NTooltip, useMessage } from 'naive-ui'
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import ChatInput from './ChatInput.vue'
 import MessageList from './MessageList.vue'
 
 const chatStore = useChatStore()
-const appStore = useAppStore()
 const message = useMessage()
 
 const showSessions = ref(true)
@@ -16,10 +14,67 @@ const showRenameModal = ref(false)
 const renameValue = ref('')
 const renameSessionId = ref<string | null>(null)
 const renameInputRef = ref<InstanceType<typeof NInput> | null>(null)
+const collapsedGroups = ref<Set<string>>(new Set())
 
-const sortedSessions = computed(() => {
-  return [...chatStore.sessions].sort((a, b) => b.createdAt - a.createdAt)
+// Source sort order: api_server first, cron last, others alphabetical
+function sourceSortKey(source: string): number {
+  if (source === 'api_server') return -1
+  if (source === 'cron') return 999
+  return 0
+}
+
+// Group sessions by source, with sort order
+interface SessionGroup {
+  source: string
+  label: string
+  sessions: Session[]
+}
+
+const groupedSessions = computed<SessionGroup[]>(() => {
+  const all = [...chatStore.sessions].sort((a, b) => b.createdAt - a.createdAt)
+
+  const map = new Map<string, Session[]>()
+  for (const s of all) {
+    const key = s.source || ''
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(s)
+  }
+
+  const keys = [...map.keys()].sort((a, b) => {
+    const ka = sourceSortKey(a)
+    const kb = sourceSortKey(b)
+    if (ka !== kb) return ka - kb
+    return a.localeCompare(b)
+  })
+
+  return keys.map(key => ({
+    source: key,
+    label: key ? getSourceLabel(key) : 'Other',
+    sessions: map.get(key)!,
+  }))
 })
+
+function toggleGroup(source: string) {
+  const isExpanded = !collapsedGroups.value.has(source)
+  if (isExpanded) {
+    collapsedGroups.value = new Set([...collapsedGroups.value, source])
+  } else {
+    collapsedGroups.value = new Set(
+      groupedSessions.value.map(g => g.source).filter(s => s !== source)
+    )
+    // Auto-select the first session in the expanded group
+    const group = groupedSessions.value.find(g => g.source === source)
+    if (group?.sessions.length) {
+      chatStore.switchSession(group.sessions[0].id)
+    }
+  }
+}
+
+// Default: expand only the first group, collapse the rest
+watch(groupedSessions, (groups) => {
+  if (collapsedGroups.value.size > 0) return
+  collapsedGroups.value = new Set(groups.map(g => g.source))
+}, { once: true })
 
 const activeSessionTitle = computed(() =>
   chatStore.activeSession?.title || 'New Chat',
@@ -29,9 +84,6 @@ const activeSessionSource = computed(() =>
   chatStore.activeSession?.source || '',
 )
 
-const sessionModelLabel = computed(() =>
-  chatStore.activeSession?.model || appStore.selectedModel || '',
-)
 
 const sourceLabel: Record<string, string> = {
   telegram: 'Telegram',
@@ -50,6 +102,7 @@ const sourceLabel: Record<string, string> = {
   weixin: 'WeChat',
   bluebubbles: 'iMessage',
   mattermost: 'Mattermost',
+  cron: 'Cron',
 }
 
 function getSourceLabel(source?: string): string {
@@ -151,36 +204,44 @@ async function handleRenameConfirm() {
         </NButton>
       </div>
       <div v-if="showSessions" class="session-items">
-        <div v-if="chatStore.isLoadingSessions && sortedSessions.length === 0" class="session-loading">Loading...</div>
-        <div v-else-if="sortedSessions.length === 0" class="session-empty">No sessions</div>
-        <button
-          v-for="s in sortedSessions"
-          :key="s.id"
-          class="session-item"
-          :class="{ active: s.id === chatStore.activeSessionId }"
-          @click="chatStore.switchSession(s.id)"
-          @contextmenu="handleContextMenu($event, s.id)"
-        >
-          <div class="session-item-content">
-            <span class="session-item-title">{{ s.title }}</span>
-            <span class="session-item-meta">
-              <span v-if="s.model" class="session-item-model">{{ s.model }}</span>
-              <!-- <span v-if="s.source" class="session-item-source">{{ getSourceLabel(s.source) }}</span> -->
-              <span class="session-item-time">{{ formatTime(s.createdAt) }}</span>
-            </span>
+        <div v-if="chatStore.isLoadingSessions && chatStore.sessions.length === 0" class="session-loading">Loading...</div>
+        <div v-else-if="chatStore.sessions.length === 0" class="session-empty">No sessions</div>
+        <template v-for="group in groupedSessions" :key="group.source">
+          <div class="session-group-header" @click="toggleGroup(group.source)">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-chevron" :class="{ collapsed: collapsedGroups.has(group.source) }"><polyline points="9 18 15 12 9 6"/></svg>
+            <span class="session-group-label">{{ group.label }}</span>
+            <span class="session-group-count">{{ group.sessions.length }}</span>
           </div>
-          <NPopconfirm
-            v-if="s.id !== chatStore.activeSessionId || sortedSessions.length > 1"
-            @positive-click="handleDeleteSession(s.id)"
-          >
-            <template #trigger>
-              <button class="session-item-delete" @click.stop>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </template>
-            Delete this session?
-          </NPopconfirm>
-        </button>
+          <template v-if="!collapsedGroups.has(group.source)">
+            <button
+              v-for="s in group.sessions"
+              :key="s.id"
+              class="session-item"
+              :class="{ active: s.id === chatStore.activeSessionId }"
+              @click="chatStore.switchSession(s.id)"
+              @contextmenu="handleContextMenu($event, s.id)"
+            >
+              <div class="session-item-content">
+                <span class="session-item-title">{{ s.title }}</span>
+                <span class="session-item-meta">
+                  <span v-if="s.model" class="session-item-model">{{ s.model }}</span>
+                  <span class="session-item-time">{{ formatTime(s.createdAt) }}</span>
+                </span>
+              </div>
+              <NPopconfirm
+                v-if="s.id !== chatStore.activeSessionId || chatStore.sessions.length > 1"
+                @positive-click="handleDeleteSession(s.id)"
+              >
+                <template #trigger>
+                  <button class="session-item-delete" @click.stop>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </template>
+                Delete this session?
+              </NPopconfirm>
+            </button>
+          </template>
+        </template>
       </div>
     </aside>
 
@@ -224,9 +285,6 @@ async function handleRenameConfirm() {
           </NButton>
           <span class="header-session-title">{{ activeSessionTitle }}</span>
           <span v-if="activeSessionSource" class="source-badge">{{ getSourceLabel(activeSessionSource) }}</span>
-        </div>
-        <div class="header-center">
-          <span v-if="sessionModelLabel" class="model-badge">{{ sessionModelLabel }}</span>
         </div>
         <div class="header-actions">
           <NTooltip trigger="hover">
@@ -293,6 +351,39 @@ async function handleRenameConfirm() {
   color: $text-muted;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.session-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.group-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  transform: rotate(90deg);
+
+  &.collapsed {
+    transform: rotate(0deg);
+  }
+}
+
+.session-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.session-group-count {
+  font-size: 10px;
+  color: $text-muted;
+  font-weight: 400;
 }
 
 .session-items {
@@ -379,17 +470,6 @@ async function handleRenameConfirm() {
   white-space: nowrap;
 }
 
-.session-item-source {
-  font-size: 10px;
-  color: $text-muted;
-  background: rgba($text-muted, 0.1);
-  padding: 0 5px;
-  border-radius: 3px;
-  line-height: 16px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
 .session-item-delete {
   flex-shrink: 0;
   opacity: 0;
@@ -433,12 +513,6 @@ async function handleRenameConfirm() {
   min-width: 0;
 }
 
-.header-center {
-  flex-shrink: 0;
-  max-width: 240px;
-  min-width: 140px;
-}
-
 .header-session-title {
   font-size: 14px;
   font-weight: 500;
@@ -457,16 +531,6 @@ async function handleRenameConfirm() {
   flex-shrink: 0;
   white-space: nowrap;
   line-height: 16px;
-}
-
-.model-badge {
-  font-size: 11px;
-  color: $text-muted;
-  background: rgba($accent-primary, 0.1);
-  padding: 2px 8px;
-  border-radius: 10px;
-  border: 1px solid $border-color;
-  flex-shrink: 0;
 }
 
 .header-actions {

@@ -118,7 +118,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
         timestamp: Math.round(msg.timestamp * 1000),
         toolName,
         toolArgs,
-        toolPreview: preview.slice(0, 100) || undefined,
+        toolPreview: typeof preview === 'string' ? preview.slice(0, 100) || undefined : undefined,
         toolResult: msg.content || undefined,
         toolStatus: 'done',
       })
@@ -166,22 +166,6 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const list = await fetchSessions()
       sessions.value = list.map(mapHermesSession)
-      // Backfill titles from first user message for sessions with null title
-      const nullTitleSessions = sessions.value.filter(s => s.title === 'New Chat')
-      if (nullTitleSessions.length > 0) {
-        await Promise.allSettled(
-          nullTitleSessions.map(async (s) => {
-            const detail = await fetchSession(s.id)
-            if (detail?.messages) {
-              const firstUser = detail.messages.find(m => m.role === 'user')
-              if (firstUser) {
-                const t = firstUser.content.slice(0, 40)
-                s.title = t + (firstUser.content.length > 40 ? '...' : '')
-              }
-            }
-          })
-        )
-      }
       // Auto-select the most recent session
       if (!activeSessionId.value && sessions.value.length > 0) {
         await switchSession(sessions.value[0].id)
@@ -193,10 +177,12 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+
   function createSession(): Session {
     const session: Session = {
       id: uid(),
       title: 'New Chat',
+      source: 'api_server',
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),

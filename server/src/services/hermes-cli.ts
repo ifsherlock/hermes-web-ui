@@ -53,12 +53,20 @@ export async function listSessions(source?: string, limit?: number): Promise<Her
     for (const line of lines) {
       try {
         const raw: HermesSessionFull = JSON.parse(line)
+        let title = raw.title
+        if (!title && raw.messages) {
+          const firstUser = raw.messages.find((m: any) => m.role === 'user')
+          if (firstUser?.content) {
+            const t = String(firstUser.content).slice(0, 40)
+            title = t + (String(firstUser.content).length > 40 ? '...' : '')
+          }
+        }
         sessions.push({
           id: raw.id,
           source: raw.source,
           user_id: raw.user_id,
           model: raw.model,
-          title: raw.title,
+          title,
           started_at: raw.started_at,
           ended_at: raw.ended_at,
           end_reason: raw.end_reason,
