@@ -140,6 +140,21 @@ export async function deleteSession(id: string): Promise<boolean> {
   }
 }
 
+/**
+ * Rename a session title via Hermes CLI
+ */
+export async function renameSession(id: string, title: string): Promise<boolean> {
+  try {
+    await execFileAsync('hermes', ['sessions', 'rename', id, title], {
+      timeout: 10000,
+    })
+    return true
+  } catch (err: any) {
+    console.error('[Hermes CLI] session rename failed:', err.message)
+    return false
+  }
+}
+
 export interface LogFileInfo {
   name: string
   size: string

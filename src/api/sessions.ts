@@ -59,3 +59,15 @@ export async function deleteSession(id: string): Promise<boolean> {
     return false
   }
 }
+
+export async function renameSession(id: string, title: string): Promise<boolean> {
+  try {
+    await request(`/api/sessions/${id}/rename`, {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    })
+    return true
+  } catch {
+    return false
+  }
+}

@@ -1,36 +1,70 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { NButton, NTooltip, NPopconfirm, useMessage } from 'naive-ui'
-import MessageList from './MessageList.vue'
-import ChatInput from './ChatInput.vue'
-import { useChatStore } from '@/stores/chat'
+import { renameSession } from '@/api/sessions'
 import { useAppStore } from '@/stores/app'
+import { useChatStore } from '@/stores/chat'
+import { NButton, NDropdown, NInput, NModal, NPopconfirm, NTooltip, useMessage } from 'naive-ui'
+import { computed, nextTick, ref } from 'vue'
+import ChatInput from './ChatInput.vue'
+import MessageList from './MessageList.vue'
 
 const chatStore = useChatStore()
 const appStore = useAppStore()
 const message = useMessage()
 
 const showSessions = ref(true)
+const showRenameModal = ref(false)
+const renameValue = ref('')
+const renameSessionId = ref<string | null>(null)
+const renameInputRef = ref<InstanceType<typeof NInput> | null>(null)
 
 const sortedSessions = computed(() => {
   return [...chatStore.sessions].sort((a, b) => b.createdAt - a.createdAt)
 })
 
-const activeSessionLabel = computed(() =>
-  chatStore.activeSession?.id || 'New Chat',
+const activeSessionTitle = computed(() =>
+  chatStore.activeSession?.title || 'New Chat',
+)
+
+const activeSessionSource = computed(() =>
+  chatStore.activeSession?.source || '',
 )
 
 const sessionModelLabel = computed(() =>
   chatStore.activeSession?.model || appStore.selectedModel || '',
 )
 
+const sourceLabel: Record<string, string> = {
+  telegram: 'Telegram',
+  api_server: 'API Server',
+  cli: 'CLI',
+  discord: 'Discord',
+  slack: 'Slack',
+  matrix: 'Matrix',
+  whatsapp: 'WhatsApp',
+  signal: 'Signal',
+  email: 'Email',
+  sms: 'SMS',
+  dingtalk: 'DingTalk',
+  feishu: 'Feishu',
+  wecom: 'WeCom',
+  weixin: 'WeChat',
+  bluebubbles: 'iMessage',
+  mattermost: 'Mattermost',
+}
+
+function getSourceLabel(source?: string): string {
+  if (!source) return ''
+  return sourceLabel[source] || source
+}
+
 function handleNewChat() {
   chatStore.newChat()
 }
 
-function copySessionId() {
-  if (chatStore.activeSessionId) {
-    navigator.clipboard.writeText(chatStore.activeSessionId)
+function copySessionId(id?: string) {
+  const sessionId = id || chatStore.activeSessionId
+  if (sessionId) {
+    navigator.clipboard.writeText(sessionId)
     message.success('Copied')
   }
 }
@@ -46,6 +80,61 @@ function formatTime(ts: number) {
   const isToday = d.toDateString() === now.toDateString()
   if (isToday) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+// Context menu
+const contextMenuOptions = [
+  { label: 'Rename', key: 'rename' },
+  { label: 'Copy Session ID', key: 'copy-id' },
+]
+const contextSessionId = ref<string | null>(null)
+
+function handleContextMenu(e: MouseEvent, sessionId: string) {
+  e.preventDefault()
+  contextSessionId.value = sessionId
+  showContextMenu.value = true
+  contextMenuX.value = e.clientX
+  contextMenuY.value = e.clientY
+}
+
+const showContextMenu = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+
+function handleContextMenuSelect(key: string) {
+  showContextMenu.value = false
+  if (!contextSessionId.value) return
+  if (key === 'copy-id') {
+    copySessionId(contextSessionId.value)
+  } else if (key === 'rename') {
+    const session = chatStore.sessions.find(s => s.id === contextSessionId.value)
+    renameSessionId.value = contextSessionId.value
+    renameValue.value = session?.title || ''
+    showRenameModal.value = true
+    nextTick(() => {
+      renameInputRef.value?.focus()
+    })
+  }
+}
+
+function handleClickOutside() {
+  showContextMenu.value = false
+}
+
+async function handleRenameConfirm() {
+  if (!renameSessionId.value || !renameValue.value.trim()) return
+  const ok = await renameSession(renameSessionId.value, renameValue.value.trim())
+  if (ok) {
+    const session = chatStore.sessions.find(s => s.id === renameSessionId.value)
+    if (session) session.title = renameValue.value.trim()
+    if (chatStore.activeSession?.id === renameSessionId.value) {
+      chatStore.activeSession.title = renameValue.value.trim()
+    }
+    message.success('Renamed')
+  } else {
+    message.error('Rename failed')
+  }
+  showRenameModal.value = false
 }
 </script>
 
@@ -70,11 +159,13 @@ function formatTime(ts: number) {
           class="session-item"
           :class="{ active: s.id === chatStore.activeSessionId }"
           @click="chatStore.switchSession(s.id)"
+          @contextmenu="handleContextMenu($event, s.id)"
         >
           <div class="session-item-content">
             <span class="session-item-title">{{ s.title }}</span>
             <span class="session-item-meta">
               <span v-if="s.model" class="session-item-model">{{ s.model }}</span>
+              <!-- <span v-if="s.source" class="session-item-source">{{ getSourceLabel(s.source) }}</span> -->
               <span class="session-item-time">{{ formatTime(s.createdAt) }}</span>
             </span>
           </div>
@@ -93,6 +184,35 @@ function formatTime(ts: number) {
       </div>
     </aside>
 
+    <!-- Context Menu -->
+    <NDropdown
+      placement="bottom-start"
+      trigger="manual"
+      :x="contextMenuX"
+      :y="contextMenuY"
+      :options="contextMenuOptions"
+      :show="showContextMenu"
+      @select="handleContextMenuSelect"
+      @clickoutside="handleClickOutside"
+    />
+
+    <!-- Rename Modal -->
+    <NModal
+      v-model:show="showRenameModal"
+      preset="dialog"
+      title="Rename Session"
+      positive-text="OK"
+      negative-text="Cancel"
+      @positive-click="handleRenameConfirm"
+    >
+      <NInput
+        ref="renameInputRef"
+        v-model:value="renameValue"
+        placeholder="Enter new title"
+        @keydown.enter="handleRenameConfirm"
+      />
+    </NModal>
+
     <!-- Chat Area -->
     <div class="chat-main">
       <header class="chat-header">
@@ -102,7 +222,8 @@ function formatTime(ts: number) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </template>
           </NButton>
-          <span class="header-session-title">{{ activeSessionLabel }}</span>
+          <span class="header-session-title">{{ activeSessionTitle }}</span>
+          <span v-if="activeSessionSource" class="source-badge">{{ getSourceLabel(activeSessionSource) }}</span>
         </div>
         <div class="header-center">
           <span v-if="sessionModelLabel" class="model-badge">{{ sessionModelLabel }}</span>
@@ -110,7 +231,7 @@ function formatTime(ts: number) {
         <div class="header-actions">
           <NTooltip trigger="hover">
             <template #trigger>
-              <NButton quaternary size="small" @click="copySessionId" circle>
+              <NButton quaternary size="small" @click="copySessionId()" circle>
                 <template #icon>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 </template>
@@ -258,6 +379,17 @@ function formatTime(ts: number) {
   white-space: nowrap;
 }
 
+.session-item-source {
+  font-size: 10px;
+  color: $text-muted;
+  background: rgba($text-muted, 0.1);
+  padding: 0 5px;
+  border-radius: 3px;
+  line-height: 16px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .session-item-delete {
   flex-shrink: 0;
   opacity: 0;
@@ -314,6 +446,17 @@ function formatTime(ts: number) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.source-badge {
+  font-size: 10px;
+  color: $text-muted;
+  background: rgba($text-muted, 0.12);
+  padding: 1px 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  line-height: 16px;
 }
 
 .model-badge {

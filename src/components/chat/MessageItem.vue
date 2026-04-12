@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Message } from '@/stores/chat'
-import MarkdownRenderer from './MarkdownRenderer.vue'
+import type { Message } from '@/stores/chat';
+import { computed, ref } from 'vue';
+import MarkdownRenderer from './MarkdownRenderer.vue';
 
 const props = defineProps<{ message: Message }>()
 
 const isSystem = computed(() => props.message.role === 'system')
+const toolExpanded = ref(false)
 
 const timeStr = computed(() => {
   const d = new Date(props.message.timestamp)
@@ -23,15 +24,54 @@ function formatSize(bytes: number): string {
 }
 
 const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) > 0)
+
+const hasToolDetails = computed(() => !!(props.message.toolArgs || props.message.toolResult))
+
+const formattedToolArgs = computed(() => {
+  if (!props.message.toolArgs) return ''
+  try {
+    return JSON.stringify(JSON.parse(props.message.toolArgs), null, 2)
+  } catch {
+    return props.message.toolArgs
+  }
+})
+
+const formattedToolResult = computed(() => {
+  if (!props.message.toolResult) return ''
+  try {
+    const parsed = JSON.parse(props.message.toolResult)
+    const str = JSON.stringify(parsed, null, 2)
+    // Truncate very long output
+    if (str.length > 2000) return str.slice(0, 2000) + '\n... (truncated)'
+    return str
+  } catch {
+    const raw = props.message.toolResult
+    if (raw.length > 2000) return raw.slice(0, 2000) + '\n... (truncated)'
+    return raw
+  }
+})
 </script>
 
 <template>
   <div class="message" :class="[message.role]">
     <template v-if="message.role === 'tool'">
-      <div class="tool-line">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="tool-icon"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <div class="tool-line" :class="{ expandable: hasToolDetails }" @click="hasToolDetails && (toolExpanded = !toolExpanded)">
+        <svg v-if="hasToolDetails" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tool-chevron" :class="{ rotated: toolExpanded }"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="tool-icon"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
         <span class="tool-name">{{ message.toolName }}</span>
-        <span v-if="message.toolPreview" class="tool-preview">{{ message.toolPreview }}</span>
+        <span v-if="message.toolPreview && !toolExpanded" class="tool-preview">{{ message.toolPreview }}</span>
+        <span v-if="message.toolStatus === 'running'" class="tool-spinner"></span>
+        <span v-if="message.toolStatus === 'error'" class="tool-error-badge">error</span>
+      </div>
+      <div v-if="toolExpanded && hasToolDetails" class="tool-details">
+        <div v-if="formattedToolArgs" class="tool-detail-section">
+          <div class="tool-detail-label">Arguments</div>
+          <pre class="tool-detail-code">{{ formattedToolArgs }}</pre>
+        </div>
+        <div v-if="formattedToolResult" class="tool-detail-section">
+          <div class="tool-detail-label">Result</div>
+          <pre class="tool-detail-code">{{ formattedToolResult }}</pre>
+        </div>
       </div>
     </template>
     <template v-else>
@@ -214,10 +254,20 @@ const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) >
   gap: 6px;
   font-size: 11px;
   color: $text-muted;
-  padding: 0 4px;
+  padding: 2px 4px;
+  border-radius: $radius-sm;
+
+  &.expandable {
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+  }
 
   .tool-name {
     font-family: $font-code;
+    flex-shrink: 0;
   }
 
   .tool-preview {
@@ -226,6 +276,74 @@ const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) >
     white-space: nowrap;
     max-width: 400px;
   }
+}
+
+.tool-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+
+  &.rotated {
+    transform: rotate(90deg);
+  }
+}
+
+.tool-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid $text-muted;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.tool-error-badge {
+  font-size: 9px;
+  color: $error;
+  background: rgba($error, 0.08);
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 14px;
+}
+
+.tool-details {
+  margin-left: 16px;
+  margin-top: 2px;
+  border-left: 2px solid $border-light;
+  padding-left: 10px;
+}
+
+.tool-detail-section {
+  margin-bottom: 6px;
+}
+
+.tool-detail-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.tool-detail-code {
+  font-family: $font-code;
+  font-size: 11px;
+  line-height: 1.5;
+  color: $text-secondary;
+  background: $code-bg;
+  border-radius: $radius-sm;
+  padding: 6px 8px;
+  margin: 0;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .streaming-cursor {

@@ -32,3 +32,20 @@ sessionRoutes.delete('/api/sessions/:id', async (ctx) => {
   }
   ctx.body = { ok: true }
 })
+
+// Rename session
+sessionRoutes.post('/api/sessions/:id/rename', async (ctx) => {
+  const { title } = ctx.request.body as { title?: string }
+  if (!title || typeof title !== 'string') {
+    ctx.status = 400
+    ctx.body = { error: 'title is required' }
+    return
+  }
+  const ok = await hermesCli.renameSession(ctx.params.id, title.trim())
+  if (!ok) {
+    ctx.status = 500
+    ctx.body = { error: 'Failed to rename session' }
+    return
+  }
+  ctx.body = { ok: true }
+})

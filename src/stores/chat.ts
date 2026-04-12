@@ -1,7 +1,7 @@
+import { startRun, streamRunEvents, type ChatMessage, type RunEvent } from '@/api/chat'
+import { deleteSession as deleteSessionApi, fetchSession, fetchSessions, type HermesMessage, type SessionSummary } from '@/api/sessions'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { startRun, streamRunEvents, type ChatMessage, type RunEvent } from '@/api/chat'
-import { fetchSessions, fetchSession, deleteSession as deleteSessionApi, type SessionSummary, type HermesMessage } from '@/api/sessions'
 import { useAppStore } from './app'
 
 export interface Attachment {
@@ -20,6 +20,8 @@ export interface Message {
   timestamp: number
   toolName?: string
   toolPreview?: string
+  toolArgs?: string
+  toolResult?: string
   toolStatus?: 'running' | 'done' | 'error'
   isStreaming?: boolean
   attachments?: Attachment[]
@@ -28,6 +30,7 @@ export interface Message {
 export interface Session {
   id: string
   title: string
+  source?: string
   messages: Message[]
   createdAt: number
   updatedAt: number
@@ -53,13 +56,15 @@ async function uploadFiles(attachments: Attachment[]): Promise<{ name: string; p
 }
 
 function mapHermesMessages(msgs: HermesMessage[]): Message[] {
-  // Build a lookup of tool_call_id -> tool name from assistant messages with tool_calls
+  // Build lookups from assistant messages with tool_calls
   const toolNameMap = new Map<string, string>()
+  const toolArgsMap = new Map<string, string>()
   for (const msg of msgs) {
     if (msg.role === 'assistant' && msg.tool_calls) {
       for (const tc of msg.tool_calls) {
-        if (tc.function?.name && tc.id) {
-          toolNameMap.set(tc.id, tc.function.name)
+        if (tc.id) {
+          if (tc.function?.name) toolNameMap.set(tc.id, tc.function.name)
+          if (tc.function?.arguments) toolArgsMap.set(tc.id, tc.function.arguments)
         }
       }
     }
@@ -77,6 +82,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
           content: '',
           timestamp: Math.round(msg.timestamp * 1000),
           toolName: tc.function?.name || 'Tool',
+          toolArgs: tc.function?.arguments || undefined,
           toolStatus: 'done',
         })
       }
@@ -85,7 +91,9 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
 
     // Tool result messages
     if (msg.role === 'tool') {
-      const toolName = msg.tool_name || toolNameMap.get(msg.tool_call_id || '') || 'Tool'
+      const tcId = msg.tool_call_id || ''
+      const toolName = msg.tool_name || toolNameMap.get(tcId) || 'Tool'
+      const toolArgs = toolArgsMap.get(tcId) || undefined
       // Extract a short preview from the content
       let preview = ''
       if (msg.content) {
@@ -96,13 +104,22 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
           preview = msg.content.slice(0, 80)
         }
       }
+      // Find and remove the matching placeholder from tool_calls above
+      const placeholderIdx = result.findIndex(
+        m => m.role === 'tool' && m.toolName === toolName && !m.toolResult && m.id.includes('_' + tcId)
+      )
+      if (placeholderIdx !== -1) {
+        result.splice(placeholderIdx, 1)
+      }
       result.push({
         id: String(msg.id),
         role: 'tool',
         content: '',
         timestamp: Math.round(msg.timestamp * 1000),
         toolName,
+        toolArgs,
         toolPreview: preview.slice(0, 100) || undefined,
+        toolResult: msg.content || undefined,
         toolStatus: 'done',
       })
       continue
@@ -123,6 +140,7 @@ function mapHermesSession(s: SessionSummary): Session {
   return {
     id: s.id,
     title: s.title || 'New Chat',
+    source: s.source || undefined,
     messages: [],
     createdAt: Math.round(s.started_at * 1000),
     updatedAt: Math.round((s.ended_at || s.started_at) * 1000),
@@ -146,7 +164,7 @@ export const useChatStore = defineStore('chat', () => {
   async function loadSessions() {
     isLoadingSessions.value = true
     try {
-      const list = await fetchSessions('api_server')
+      const list = await fetchSessions()
       sessions.value = list.map(mapHermesSession)
       // Backfill titles from first user message for sessions with null title
       const nullTitleSessions = sessions.value.filter(s => s.title === 'New Chat')
