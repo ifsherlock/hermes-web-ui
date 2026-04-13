@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { NSelect, NButton, NSpin, useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import { fetchLogFiles, fetchLogs, type LogEntry } from '@/api/logs'
 
+const { t } = useI18n()
 const message = useMessage()
 const logFiles = ref<{ name: string; size: string; modified: string }[]>([])
 const selectedLog = ref('agent')
@@ -16,13 +18,13 @@ const logOptions = computed(() =>
   logFiles.value.map(f => ({ label: `${f.name} (${f.size})`, value: f.name })),
 )
 
-const levelOptions = [
-  { label: 'All', value: '' },
+const levelOptions = computed(() => [
+  { label: t('logs.all'), value: '' },
   { label: 'ERROR', value: 'ERROR' },
   { label: 'WARNING', value: 'WARNING' },
   { label: 'INFO', value: 'INFO' },
   { label: 'DEBUG', value: 'DEBUG' },
-]
+])
 
 const lineOptions = [
   { label: '50', value: 50 },
@@ -85,7 +87,7 @@ onMounted(async () => {
 <template>
   <div class="logs-view">
     <header class="logs-header">
-      <h2 class="header-title">Logs</h2>
+      <h2 class="header-title">{{ t('logs.title') }}</h2>
       <div class="header-actions">
         <NSelect
           v-model:value="selectedLog"
@@ -111,16 +113,16 @@ onMounted(async () => {
         <input
           v-model="searchQuery"
           class="search-input"
-          placeholder="Search..."
+          :placeholder="t('logs.searchPlaceholder')"
         />
-        <NButton size="small" :loading="loading" @click="loadLogs">Refresh</NButton>
+        <NButton size="small" :loading="loading" @click="loadLogs">{{ t('logs.refresh') }}</NButton>
       </div>
     </header>
 
     <div class="logs-body">
       <NSpin :show="loading">
         <div v-if="filteredEntries.length === 0 && !loading" class="logs-empty">
-          No log entries
+          {{ t('logs.noEntries') }}
         </div>
         <div class="log-list">
           <div

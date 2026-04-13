@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { NButton, useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer.vue'
 import { fetchMemory, saveMemory, type MemoryData } from '@/api/skills'
 
+const { t } = useI18n()
 const message = useMessage()
 const loading = ref(false)
 const data = ref<MemoryData | null>(null)
@@ -19,7 +21,7 @@ async function loadMemory() {
     data.value = await fetchMemory()
   } catch (err: any) {
     console.error('Failed to load memory:', err)
-    message.error('Failed to load memory')
+    message.error(t('memory.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -43,9 +45,9 @@ async function handleSave() {
     await loadMemory()
     editingSection.value = null
     editContent.value = ''
-    message.success('Saved')
+    message.success(t('common.saved'))
   } catch (err: any) {
-    message.error(`Save failed: ${err.message}`)
+    message.error(`${t('common.saveFailed')}: ${err.message}`)
   } finally {
     saving.value = false
   }
@@ -71,7 +73,7 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
 <template>
   <div class="memory-view">
     <header class="memory-header">
-      <h2 class="header-title">Memory</h2>
+      <h2 class="header-title">{{ t('memory.title') }}</h2>
       <NButton size="small" quaternary @click="loadMemory">
         <template #icon>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -79,12 +81,12 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
         </template>
-        Refresh
+        {{ t('memory.refresh') }}
       </NButton>
     </header>
 
     <div class="memory-content">
-      <div v-if="loading && !data" class="memory-loading">Loading...</div>
+      <div v-if="loading && !data" class="memory-loading">{{ t('common.loading') }}</div>
       <div v-else class="memory-sections">
           <!-- My Notes -->
           <div class="memory-section">
@@ -98,7 +100,7 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
                     <line x1="16" y1="17" x2="8" y2="17" />
                   </svg>
                 </span>
-                <span class="section-title">My Notes</span>
+                <span class="section-title">{{ t('memory.myNotes') }}</span>
                 <span v-if="data?.memory_mtime" class="section-mtime">{{ formatTime(data.memory_mtime) }}</span>
               </div>
               <NButton v-if="editingSection !== 'memory'" size="tiny" quaternary @click="startEdit('memory')">
@@ -108,14 +110,14 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
                 </template>
-                Edit
+                {{ t('common.edit') }}
               </NButton>
             </div>
 
             <!-- View mode -->
             <div v-if="editingSection !== 'memory'" class="section-body">
               <MarkdownRenderer v-if="!memoryEmpty" :content="displayMemory" />
-              <p v-else class="empty-text">No notes yet.</p>
+              <p v-else class="empty-text">{{ t('memory.noNotes') }}</p>
             </div>
 
             <!-- Edit mode -->
@@ -123,12 +125,12 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
               <textarea
                 v-model="editContent"
                 class="edit-textarea"
-                placeholder="Write your notes..."
+                :placeholder="t('memory.notesPlaceholder')"
                 spellcheck="false"
               ></textarea>
               <div class="edit-actions">
-                <NButton size="small" @click="cancelEdit">Cancel</NButton>
-                <NButton size="small" type="primary" :loading="saving" @click="handleSave">Save</NButton>
+                <NButton size="small" @click="cancelEdit">{{ t('common.cancel') }}</NButton>
+                <NButton size="small" type="primary" :loading="saving" @click="handleSave">{{ t('common.save') }}</NButton>
               </div>
             </div>
           </div>
@@ -143,7 +145,7 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </span>
-                <span class="section-title">User Profile</span>
+                <span class="section-title">{{ t('memory.userProfile') }}</span>
                 <span v-if="data?.user_mtime" class="section-mtime">{{ formatTime(data.user_mtime) }}</span>
               </div>
               <NButton v-if="editingSection !== 'user'" size="tiny" quaternary @click="startEdit('user')">
@@ -153,14 +155,14 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
                 </template>
-                Edit
+                {{ t('common.edit') }}
               </NButton>
             </div>
 
             <!-- View mode -->
             <div v-if="editingSection !== 'user'" class="section-body">
               <MarkdownRenderer v-if="!userEmpty" :content="displayUser" />
-              <p v-else class="empty-text">No profile yet.</p>
+              <p v-else class="empty-text">{{ t('memory.noProfile') }}</p>
             </div>
 
             <!-- Edit mode -->
@@ -168,12 +170,12 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
               <textarea
                 v-model="editContent"
                 class="edit-textarea"
-                placeholder="Write your profile..."
+                :placeholder="t('memory.profilePlaceholder')"
                 spellcheck="false"
               ></textarea>
               <div class="edit-actions">
-                <NButton size="small" @click="cancelEdit">Cancel</NButton>
-                <NButton size="small" type="primary" :loading="saving" @click="handleSave">Save</NButton>
+                <NButton size="small" @click="cancelEdit">{{ t('common.cancel') }}</NButton>
+                <NButton size="small" type="primary" :loading="saving" @click="handleSave">{{ t('common.save') }}</NButton>
               </div>
             </div>
           </div>
