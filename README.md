@@ -2,6 +2,8 @@
 
 Web dashboard for [Hermes Agent](https://github.com/EKKOLearnAI/hermes-agent) — chat interaction, session management, scheduled jobs, and log viewing.
 
+![Hermes Web UI Demo](https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/src/assets/output.gif)
+
 ## Tech Stack
 
 - **Vue 3** — Composition API + `<script setup>`
