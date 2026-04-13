@@ -3,6 +3,9 @@ import { ref, watch } from 'vue'
 import { NModal, NForm, NFormItem, NInput, NButton, NSelect, useMessage } from 'naive-ui'
 import { useModelsStore } from '@/stores/models'
 import { PROVIDER_PRESETS } from '@/shared/providers'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   close: []
@@ -27,7 +30,7 @@ const formData = ref({
 
 const modelOptions = ref<Array<{ label: string; value: string }>>([])
 
-const PRESET_PROVIDERS = PROVIDER_PRESETS
+const PRESET_PROVIDERS = PROVIDER_PRESETS as any[]
 
 function autoGenerateName(url: string): string {
   const clean = url.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, '')
@@ -45,7 +48,7 @@ watch(selectedPreset, (val) => {
     if (preset) {
       formData.value.name = preset.label
       formData.value.base_url = preset.base_url
-      modelOptions.value = preset.models.map(m => ({ label: m, value: m }))
+      modelOptions.value = preset.models.map((m: string) => ({ label: m, value: m }))
       if (preset.models.length > 0) {
         formData.value.model = preset.models[0]
       }
@@ -68,7 +71,7 @@ watch(providerType, () => {
 async function fetchModels() {
   const { base_url } = formData.value
   if (!base_url.trim()) {
-    message.warning('Please enter Base URL first')
+    message.warning(t('models.enterBaseUrl'))
     return
   }
 
@@ -82,15 +85,15 @@ async function fetchModels() {
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json() as { data?: Array<{ id: string }> }
-    if (!Array.isArray(data.data)) throw new Error('Unexpected response format')
+    if (!Array.isArray(data.data)) throw new Error(t('models.unexpectedFormat'))
 
     modelOptions.value = data.data.map(m => ({ label: m.id, value: m.id }))
     if (modelOptions.value.length > 0 && !formData.value.model) {
       formData.value.model = modelOptions.value[0].value
     }
-    message.success(`Found ${modelOptions.value.length} models`)
+    message.success(t('models.foundModels', { count: modelOptions.value.length }))
   } catch (e: any) {
-    message.error('Failed to fetch models: ' + e.message)
+    message.error(t('models.fetchFailed') + ': ' + e.message)
   } finally {
     fetchingModels.value = false
   }
@@ -98,19 +101,19 @@ async function fetchModels() {
 
 async function handleSave() {
   if (providerType.value === 'preset' && !selectedPreset.value) {
-    message.warning('Please select a provider')
+    message.warning(t('models.selectProviderRequired'))
     return
   }
   if (!formData.value.base_url.trim()) {
-    message.warning('Base URL is required')
+    message.warning(t('models.baseUrlRequired'))
     return
   }
   if (!formData.value.api_key.trim()) {
-    message.warning('API Key is required')
+    message.warning(t('models.apiKeyRequired'))
     return
   }
   if (!formData.value.model) {
-    message.warning('Default Model is required')
+    message.warning(t('models.modelRequired'))
     return
   }
 
@@ -127,7 +130,7 @@ async function handleSave() {
       model: formData.value.model,
       providerKey,
     })
-    message.success('Provider added')
+    message.success(t('models.providerAdded'))
     emit('saved')
   } catch (e: any) {
     message.error(e.message)
@@ -146,72 +149,72 @@ function handleClose() {
   <NModal
     v-model:show="showModal"
     preset="card"
-    title="Add Provider"
+    :title="t('models.addProvider')"
     :style="{ width: '520px' }"
     :mask-closable="!loading"
     @after-leave="emit('close')"
   >
     <NForm label-placement="top">
-      <NFormItem label="Provider Type">
+      <NFormItem :label="t('models.providerType')">
         <div style="display: flex; gap: 12px">
           <NButton
             :type="providerType === 'preset' ? 'primary' : 'default'"
             size="small"
             @click="providerType = 'preset'"
           >
-            Preset
+            {{ t('models.preset') }}
           </NButton>
           <NButton
             :type="providerType === 'custom' ? 'primary' : 'default'"
             size="small"
             @click="providerType = 'custom'"
           >
-            Custom
+            {{ t('models.custom') }}
           </NButton>
         </div>
       </NFormItem>
 
-      <NFormItem v-if="providerType === 'preset'" label="Select Provider" required>
+      <NFormItem v-if="providerType === 'preset'" :label="t('models.selectProvider')" required>
         <NSelect
           v-model:value="selectedPreset"
           :options="PRESET_PROVIDERS"
-          placeholder="Choose a provider..."
+          :placeholder="t('models.chooseProvider')"
           filterable
         />
       </NFormItem>
 
-      <NFormItem v-if="providerType === 'custom'" label="Name">
+      <NFormItem v-if="providerType === 'custom'" :label="t('models.name')">
         <NInput
           v-model:value="formData.name"
-          placeholder="Auto-generated from Base URL"
+          :placeholder="t('models.autoGeneratedName')"
           disabled
         />
       </NFormItem>
 
-      <NFormItem label="Base URL" required>
+      <NFormItem :label="t('models.baseUrl')" required>
         <NInput
           v-model:value="formData.base_url"
-          placeholder="e.g. https://api.example.com/v1"
+          :placeholder="t('models.baseUrlPlaceholder')"
           :disabled="providerType === 'preset'"
         />
       </NFormItem>
 
-      <NFormItem label="API Key" required>
+      <NFormItem :label="t('models.apiKey')" required>
         <NInput
           v-model:value="formData.api_key"
           type="password"
           show-password-on="click"
-          placeholder="sk-..."
+          :placeholder="t('models.apiKeyPlaceholder')"
         />
       </NFormItem>
 
-      <NFormItem label="Default Model" required>
+      <NFormItem :label="t('models.defaultModel')" required>
         <div style="display: flex; gap: 8px; width: 100%">
           <NSelect
             v-model:value="formData.model"
             :options="modelOptions"
             filterable
-            placeholder="Select a model..."
+            :placeholder="t('models.selectModel')"
             style="flex: 1"
           />
           <NButton
@@ -219,7 +222,7 @@ function handleClose() {
             :loading="fetchingModels"
             @click="fetchModels"
           >
-            Fetch
+            {{ t('common.fetch') }}
           </NButton>
         </div>
       </NFormItem>
@@ -227,9 +230,9 @@ function handleClose() {
 
     <template #footer>
       <div class="modal-footer">
-        <NButton @click="handleClose">Cancel</NButton>
+        <NButton @click="handleClose">{{ t('common.cancel') }}</NButton>
         <NButton type="primary" :loading="loading" @click="handleSave">
-          Add
+          {{ t('common.add') }}
         </NButton>
       </div>
     </template>

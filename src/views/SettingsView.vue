@@ -1,128 +1,99 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import {
-  NButton, NSwitch, NSlider, NDataTable, useMessage,
-} from 'naive-ui'
-import { useAppStore } from '@/stores/app'
+import { onMounted } from 'vue'
+import { NTabs, NTabPane, NSpin, NSwitch, NInput, NInputNumber, useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
+import { useSettingsStore } from '@/stores/settings'
+import DisplaySettings from '@/components/settings/DisplaySettings.vue'
+import AgentSettings from '@/components/settings/AgentSettings.vue'
+import MemorySettings from '@/components/settings/MemorySettings.vue'
+import SessionSettings from '@/components/settings/SessionSettings.vue'
+import PrivacySettings from '@/components/settings/PrivacySettings.vue'
+import SettingRow from '@/components/settings/SettingRow.vue'
 
-const appStore = useAppStore()
+const settingsStore = useSettingsStore()
 const message = useMessage()
+const { t } = useI18n()
 
-const testingConnection = ref(false)
+onMounted(() => {
+  settingsStore.fetchSettings()
+})
 
-async function handleTestConnection() {
-  testingConnection.value = true
+async function saveApiServer(values: Record<string, any>) {
   try {
-    await appStore.checkConnection()
-    if (appStore.connected) {
-      message.success('Connected successfully')
-    } else {
-      message.error('Connection failed')
-    }
-  } catch (e: any) {
-    message.error(e.message)
-  } finally {
-    testingConnection.value = false
+    await settingsStore.saveSection('platforms', { api_server: values })
+    message.success(t('settings.saved'))
+  } catch (err: any) {
+    message.error(t('settings.saveFailed'))
   }
 }
-
-const providerColumns = [
-  { title: 'Provider', key: 'provider' },
-  { title: 'Models', key: 'models' },
-  { title: 'Base URL', key: 'base_url' },
-]
-
-const endpoints = [
-  { method: 'GET', endpoint: '/health', description: 'Health Check' },
-  { method: 'POST', endpoint: '/v1/runs', description: 'Start Async Run' },
-  { method: 'GET', endpoint: '/v1/runs/{id}/events', description: 'SSE Event Stream' },
-  { method: 'GET', endpoint: '/api/jobs', description: 'List Jobs' },
-  { method: 'POST', endpoint: '/api/jobs', description: 'Create Job' },
-  { method: 'POST', endpoint: '/api/jobs/{id}/run', description: 'Trigger Job Now' },
-]
 </script>
 
 <template>
   <div class="settings-view">
     <header class="settings-header">
-      <h2 class="header-title">Settings</h2>
+      <h2 class="header-title">{{ t('settings.title') }}</h2>
     </header>
 
     <div class="settings-content">
-      <!-- API Configuration -->
-      <section class="settings-section">
-        <h3 class="section-title">API Configuration</h3>
-        <div class="form-group">
-          <div class="connection-status">
-            <span class="status-dot" :class="{ on: appStore.connected, off: !appStore.connected }"></span>
-            <span>{{ appStore.connected ? 'Connected' : 'Disconnected' }}</span>
-            <span v-if="appStore.serverVersion" class="version">v{{ appStore.serverVersion }}</span>
-          </div>
-          <NButton type="primary" size="small" :loading="testingConnection" @click="handleTestConnection">
-            Test Connection
-          </NButton>
-        </div>
-      </section>
-
-      <!-- Model Management -->
-      <section class="settings-section">
-        <h3 class="section-title">Model Management</h3>
-        <div class="form-group">
-          <label class="form-label">Current Model</label>
-          <div class="current-model">{{ appStore.selectedModel || 'Not set' }}</div>
-        </div>
-
-        <div v-if="appStore.modelGroups.length > 0" class="form-group">
-          <label class="form-label">Available Models</label>
-          <p class="form-hint">Models are discovered from ~/.hermes/auth.json credential pool. Use the sidebar selector to switch.</p>
-          <NDataTable
-            :columns="providerColumns"
-            :data="appStore.modelGroups.map(g => ({
-              provider: g.label,
-              models: g.models.join(', '),
-              base_url: g.base_url,
-            }))"
-            :bordered="false"
-            size="small"
-            :row-props="() => ({ style: 'cursor: default;' })"
-          />
-        </div>
-      </section>
-
-      <!-- Chat Settings -->
-      <section class="settings-section">
-        <h3 class="section-title">Chat Settings</h3>
-        <div class="form-group">
-          <label class="form-label">Stream Responses</label>
-          <NSwitch v-model:value="appStore.streamEnabled" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Session Persistence</label>
-          <NSwitch v-model:value="appStore.sessionPersistence" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Max Tokens: {{ appStore.maxTokens }}</label>
-          <NSlider v-model:value="appStore.maxTokens" :min="256" :max="32768" :step="256" />
-        </div>
-      </section>
-
-      <!-- About -->
-      <section class="settings-section">
-        <h3 class="section-title">About</h3>
-        <p class="about-text">
-          Hermes Agent Web UI
-          <br />Version 0.1.3
-        </p>
-        <div class="endpoint-table">
-          <NDataTable
-            :columns="[{ title: 'Method', key: 'method', width: 80 }, { title: 'Endpoint', key: 'endpoint' }, { title: 'Description', key: 'description' }]"
-            :data="endpoints"
-            :bordered="false"
-            size="small"
-            :row-props="() => ({ style: 'cursor: default;' })"
-          />
-        </div>
-      </section>
+      <NSpin :show="settingsStore.loading">
+        <NTabs type="line" animated>
+          <NTabPane name="display" :tab="t('settings.tabs.display')">
+            <DisplaySettings />
+          </NTabPane>
+          <NTabPane name="agent" :tab="t('settings.tabs.agent')">
+            <AgentSettings />
+          </NTabPane>
+          <NTabPane name="memory" :tab="t('settings.tabs.memory')">
+            <MemorySettings />
+          </NTabPane>
+          <NTabPane name="session" :tab="t('settings.tabs.session')">
+            <SessionSettings />
+          </NTabPane>
+          <NTabPane name="privacy" :tab="t('settings.tabs.privacy')">
+            <PrivacySettings />
+          </NTabPane>
+          <NTabPane name="api_server" :tab="t('settings.tabs.apiServer')">
+            <section class="settings-section">
+              <SettingRow :label="t('settings.apiServer.enable')" :hint="t('settings.apiServer.enableHint')">
+                <NSwitch
+                  :value="settingsStore.platforms?.api_server?.enabled"
+                  @update:value="v => saveApiServer({ enabled: v })"
+                />
+              </SettingRow>
+              <SettingRow :label="t('settings.apiServer.host')" :hint="t('settings.apiServer.hostHint')">
+                <NInput
+                  :value="settingsStore.platforms?.api_server?.host || ''"
+                  size="small" style="width: 200px"
+                  @update:value="v => saveApiServer({ host: v })"
+                />
+              </SettingRow>
+              <SettingRow :label="t('settings.apiServer.port')" :hint="t('settings.apiServer.portHint')">
+                <NInputNumber
+                  :value="settingsStore.platforms?.api_server?.port"
+                  :min="1024" :max="65535"
+                  size="small" style="width: 120px"
+                  @update:value="v => v != null && saveApiServer({ port: v })"
+                />
+              </SettingRow>
+              <SettingRow :label="t('settings.apiServer.key')" :hint="t('settings.apiServer.keyHint')">
+                <NInput
+                  :value="settingsStore.platforms?.api_server?.key || ''"
+                  type="password" show-password-on="click"
+                  size="small" style="width: 200px"
+                  @update:value="v => saveApiServer({ key: v })"
+                />
+              </SettingRow>
+              <SettingRow :label="t('settings.apiServer.cors')" :hint="t('settings.apiServer.corsHint')">
+                <NInput
+                  :value="settingsStore.platforms?.api_server?.cors_origins || ''"
+                  size="small" style="width: 200px"
+                  @update:value="v => saveApiServer({ cors_origins: v })"
+                />
+              </SettingRow>
+            </section>
+          </NTabPane>
+        </NTabs>
+      </NSpin>
     </div>
   </div>
 </template>
@@ -154,97 +125,5 @@ const endpoints = [
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  max-width: 640px;
-}
-
-.settings-section {
-  margin-bottom: 28px;
-
-  .section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: $text-secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid $border-light;
-  }
-}
-
-.form-group {
-  margin-bottom: 14px;
-
-  .form-label {
-    display: block;
-    font-size: 13px;
-    color: $text-secondary;
-    margin-bottom: 6px;
-  }
-}
-
-.form-hint {
-  font-size: 12px;
-  color: $text-muted;
-  margin-bottom: 10px;
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: $text-secondary;
-  margin-bottom: 10px;
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-
-    &.on {
-      background-color: $success;
-      box-shadow: 0 0 6px rgba($success, 0.5);
-    }
-
-    &.off {
-      background-color: $error;
-    }
-  }
-
-  .version {
-    color: $text-muted;
-    font-size: 12px;
-  }
-}
-
-.current-model {
-  font-size: 14px;
-  font-weight: 500;
-  color: $text-primary;
-  padding: 6px 10px;
-  background: $bg-secondary;
-  border-radius: $radius-sm;
-  display: inline-block;
-}
-
-.empty-text {
-  font-size: 13px;
-  color: $text-muted;
-  font-style: italic;
-}
-
-.about-text {
-  font-size: 13px;
-  color: $text-secondary;
-  line-height: 1.6;
-  margin-bottom: 14px;
-}
-
-.endpoint-table {
-  :deep(.n-data-table) {
-    --n-td-color: transparent;
-    --n-th-color: rgba($accent-primary, 0.04);
-  }
 }
 </style>

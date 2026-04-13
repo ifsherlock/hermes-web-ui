@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { NInput } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import SkillList from '@/components/skills/SkillList.vue'
 import SkillDetail from '@/components/skills/SkillDetail.vue'
 import { fetchSkills, type SkillCategory } from '@/api/skills'
 
+const { t } = useI18n()
 const categories = ref<SkillCategory[]>([])
 const loading = ref(false)
 const selectedCategory = ref('')
@@ -33,10 +35,10 @@ function handleSelect(category: string, skill: string) {
 <template>
   <div class="skills-view">
     <header class="skills-header">
-      <h2 class="header-title">Skills</h2>
+      <h2 class="header-title">{{ t('skills.title') }}</h2>
       <NInput
         v-model:value="searchQuery"
-        placeholder="Search skills..."
+        :placeholder="t('skills.searchPlaceholder')"
         size="small"
         clearable
         class="search-input"

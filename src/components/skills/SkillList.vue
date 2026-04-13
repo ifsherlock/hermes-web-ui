@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { SkillCategory } from '@/api/skills'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   categories: SkillCategory[]
@@ -43,7 +46,7 @@ function handleSelect(category: string, skill: string) {
 <template>
   <div class="skill-list">
     <div v-if="filteredCategories.length === 0" class="skill-empty">
-      {{ searchQuery ? 'No skills match your search' : 'No skills found' }}
+      {{ searchQuery ? t('skills.noMatch') : t('skills.noSkills') }}
     </div>
     <div
       v-for="cat in filteredCategories"

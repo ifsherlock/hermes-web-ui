@@ -3,9 +3,11 @@ import { computed } from 'vue'
 import { NButton, useMessage, useDialog } from 'naive-ui'
 import type { AvailableModelGroup } from '@/api/system'
 import { useModelsStore } from '@/stores/models'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ provider: AvailableModelGroup }>()
 
+const { t } = useI18n()
 const modelsStore = useModelsStore()
 const message = useMessage()
 const dialog = useDialog()
@@ -15,14 +17,14 @@ const displayName = computed(() => props.provider.label)
 
 async function handleDelete() {
   dialog.warning({
-    title: 'Delete Provider',
-    content: `Are you sure you want to delete "${displayName.value}"?`,
-    positiveText: 'Delete',
-    negativeText: 'Cancel',
+    title: t('models.deleteProvider'),
+    content: t('models.deleteConfirm', { name: displayName.value }),
+    positiveText: t('common.delete'),
+    negativeText: t('common.cancel'),
     onPositiveClick: async () => {
       try {
         await modelsStore.removeProvider(props.provider.provider)
-        message.success('Provider deleted')
+        message.success(t('models.providerDeleted'))
       } catch (e: any) {
         message.error(e.message)
       }
@@ -36,23 +38,23 @@ async function handleDelete() {
     <div class="card-header">
       <h3 class="provider-name">{{ displayName }}</h3>
       <span class="type-badge" :class="isCustom ? 'custom' : 'builtin'">
-        {{ isCustom ? 'Custom' : 'Built-in' }}
+        {{ isCustom ? t('models.customType') : t('models.builtIn') }}
       </span>
     </div>
 
     <div class="card-body">
       <div class="info-row">
-        <span class="info-label">Provider</span>
+        <span class="info-label">{{ t('models.provider') }}</span>
         <code class="info-value mono">{{ provider.provider }}</code>
       </div>
       <div class="info-row">
-        <span class="info-label">Base URL</span>
+        <span class="info-label">{{ t('models.baseUrl') }}</span>
         <code class="info-value mono">{{ provider.base_url }}</code>
       </div>
     </div>
 
     <div class="card-actions">
-      <NButton size="tiny" quaternary type="error" @click="handleDelete">Delete</NButton>
+      <NButton size="tiny" quaternary type="error" @click="handleDelete">{{ t('common.delete') }}</NButton>
     </div>
   </div>
 </template>

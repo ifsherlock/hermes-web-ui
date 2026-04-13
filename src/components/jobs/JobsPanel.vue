@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import JobCard from './JobCard.vue'
 import { useJobsStore } from '@/stores/jobs'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   edit: [jobId: string]
@@ -17,7 +20,7 @@ const jobsStore = useJobsStore()
       <line x1="8" y1="2" x2="8" y2="6"/>
       <line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
-    <p>No scheduled jobs yet. Create one to get started.</p>
+    <p>{{ t('jobs.noJobs') }}</p>
   </div>
   <div v-else class="jobs-grid">
     <JobCard

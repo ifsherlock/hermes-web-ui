@@ -3,18 +3,20 @@ import { renameSession } from '@/api/sessions'
 import { useChatStore, type Session } from '@/stores/chat'
 import { NButton, NDropdown, NInput, NModal, NPopconfirm, NTooltip, useMessage } from 'naive-ui'
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ChatInput from './ChatInput.vue'
 import MessageList from './MessageList.vue'
 
 const chatStore = useChatStore()
 const message = useMessage()
+const { t } = useI18n()
 
 const showSessions = ref(true)
 const showRenameModal = ref(false)
 const renameValue = ref('')
 const renameSessionId = ref<string | null>(null)
 const renameInputRef = ref<InstanceType<typeof NInput> | null>(null)
-const collapsedGroups = ref<Set<string>>(new Set())
+const collapsedGroups = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('hermes_collapsed_groups') || '[]')))
 
 const sourceLabel: Record<string, string> = {
   telegram: 'Telegram',
@@ -74,7 +76,7 @@ const groupedSessions = computed<SessionGroup[]>(() => {
 
   return keys.map(key => ({
     source: key,
-    label: key ? getSourceLabel(key) : 'Other',
+    label: key ? getSourceLabel(key) : t('chat.other'),
     sessions: map.get(key)!,
   }))
 })
@@ -93,16 +95,18 @@ function toggleGroup(source: string) {
       chatStore.switchSession(group.sessions[0].id)
     }
   }
+  localStorage.setItem('hermes_collapsed_groups', JSON.stringify([...collapsedGroups.value]))
 }
 
-// Default: expand only the first group, collapse the rest
+// Default: expand only the first group if no saved state
 watch(groupedSessions, (groups) => {
-  if (collapsedGroups.value.size > 0) return
-  collapsedGroups.value = new Set(groups.map(g => g.source))
+  if (localStorage.getItem('hermes_collapsed_groups') !== null) return
+  collapsedGroups.value = new Set(groups.slice(1).map(g => g.source))
+  localStorage.setItem('hermes_collapsed_groups', JSON.stringify([...collapsedGroups.value]))
 }, { once: true })
 
 const activeSessionTitle = computed(() =>
-  chatStore.activeSession?.title || 'New Chat',
+  chatStore.activeSession?.title || t('chat.newChat'),
 )
 
 const activeSessionSource = computed(() =>
@@ -117,13 +121,13 @@ function copySessionId(id?: string) {
   const sessionId = id || chatStore.activeSessionId
   if (sessionId) {
     navigator.clipboard.writeText(sessionId)
-    message.success('Copied')
+    message.success(t('common.copied'))
   }
 }
 
 function handleDeleteSession(id: string) {
   chatStore.deleteSession(id)
-  message.success('Session deleted')
+  message.success(t('chat.sessionDeleted'))
 }
 
 function formatTime(ts: number) {
@@ -135,10 +139,10 @@ function formatTime(ts: number) {
 }
 
 // Context menu
-const contextMenuOptions = [
-  { label: 'Rename', key: 'rename' },
-  { label: 'Copy Session ID', key: 'copy-id' },
-]
+const contextMenuOptions = computed(() => [
+  { label: t('chat.rename'), key: 'rename' },
+  { label: t('chat.copySessionId'), key: 'copy-id' },
+])
 const contextSessionId = ref<string | null>(null)
 
 function handleContextMenu(e: MouseEvent, sessionId: string) {
@@ -182,9 +186,9 @@ async function handleRenameConfirm() {
     if (chatStore.activeSession?.id === renameSessionId.value) {
       chatStore.activeSession.title = renameValue.value.trim()
     }
-    message.success('Renamed')
+    message.success(t('chat.renamed'))
   } else {
-    message.error('Rename failed')
+    message.error(t('chat.renameFailed'))
   }
   showRenameModal.value = false
 }
@@ -195,7 +199,7 @@ async function handleRenameConfirm() {
     <!-- Session List -->
     <aside class="session-list" :class="{ collapsed: !showSessions }">
       <div class="session-list-header">
-        <span v-if="showSessions" class="session-list-title">Sessions</span>
+        <span v-if="showSessions" class="session-list-title">{{ t('chat.sessions') }}</span>
         <NButton quaternary size="tiny" @click="handleNewChat" circle>
           <template #icon>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -203,8 +207,8 @@ async function handleRenameConfirm() {
         </NButton>
       </div>
       <div v-if="showSessions" class="session-items">
-        <div v-if="chatStore.isLoadingSessions && chatStore.sessions.length === 0" class="session-loading">Loading...</div>
-        <div v-else-if="chatStore.sessions.length === 0" class="session-empty">No sessions</div>
+        <div v-if="chatStore.isLoadingSessions && chatStore.sessions.length === 0" class="session-loading">{{ t('common.loading') }}</div>
+        <div v-else-if="chatStore.sessions.length === 0" class="session-empty">{{ t('chat.noSessions') }}</div>
         <template v-for="group in groupedSessions" :key="group.source">
           <div class="session-group-header" @click="toggleGroup(group.source)">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-chevron" :class="{ collapsed: collapsedGroups.has(group.source) }"><polyline points="9 18 15 12 9 6"/></svg>
@@ -236,7 +240,7 @@ async function handleRenameConfirm() {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </template>
-                Delete this session?
+                {{ t('chat.deleteSession') }}
               </NPopconfirm>
             </button>
           </template>
@@ -260,15 +264,15 @@ async function handleRenameConfirm() {
     <NModal
       v-model:show="showRenameModal"
       preset="dialog"
-      title="Rename Session"
-      positive-text="OK"
-      negative-text="Cancel"
+      :title="t('chat.renameSession')"
+      :positive-text="t('common.ok')"
+      :negative-text="t('common.cancel')"
       @positive-click="handleRenameConfirm"
     >
       <NInput
         ref="renameInputRef"
         v-model:value="renameValue"
-        placeholder="Enter new title"
+        :placeholder="t('chat.enterNewTitle')"
         @keydown.enter="handleRenameConfirm"
       />
     </NModal>
@@ -294,13 +298,13 @@ async function handleRenameConfirm() {
                 </template>
               </NButton>
             </template>
-            Copy Session ID
+            {{ t('chat.copySessionId') }}
           </NTooltip>
           <NButton size="small" @click="handleNewChat">
             <template #icon>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </template>
-            New Chat
+            {{ t('chat.newChat') }}
           </NButton>
         </div>
       </header>

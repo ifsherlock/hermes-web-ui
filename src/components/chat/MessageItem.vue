@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { Message } from '@/stores/chat';
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from './MarkdownRenderer.vue';
 
 const props = defineProps<{ message: Message }>()
+const { t } = useI18n()
 
 const isSystem = computed(() => props.message.role === 'system')
 const toolExpanded = ref(false)
@@ -42,11 +44,11 @@ const formattedToolResult = computed(() => {
     const parsed = JSON.parse(props.message.toolResult)
     const str = JSON.stringify(parsed, null, 2)
     // Truncate very long output
-    if (str.length > 2000) return str.slice(0, 2000) + '\n... (truncated)'
+    if (str.length > 2000) return str.slice(0, 2000) + '\n' + t('chat.truncated')
     return str
   } catch {
     const raw = props.message.toolResult
-    if (raw.length > 2000) return raw.slice(0, 2000) + '\n... (truncated)'
+    if (raw.length > 2000) return raw.slice(0, 2000) + '\n' + t('chat.truncated')
     return raw
   }
 })
@@ -61,15 +63,15 @@ const formattedToolResult = computed(() => {
         <span class="tool-name">{{ message.toolName }}</span>
         <span v-if="message.toolPreview && !toolExpanded" class="tool-preview">{{ message.toolPreview }}</span>
         <span v-if="message.toolStatus === 'running'" class="tool-spinner"></span>
-        <span v-if="message.toolStatus === 'error'" class="tool-error-badge">error</span>
+        <span v-if="message.toolStatus === 'error'" class="tool-error-badge">{{ t('chat.error') }}</span>
       </div>
       <div v-if="toolExpanded && hasToolDetails" class="tool-details">
         <div v-if="formattedToolArgs" class="tool-detail-section">
-          <div class="tool-detail-label">Arguments</div>
+          <div class="tool-detail-label">{{ t('chat.arguments') }}</div>
           <pre class="tool-detail-code">{{ formattedToolArgs }}</pre>
         </div>
         <div v-if="formattedToolResult" class="tool-detail-section">
-          <div class="tool-detail-label">Result</div>
+          <div class="tool-detail-label">{{ t('chat.result') }}</div>
           <pre class="tool-detail-code">{{ formattedToolResult }}</pre>
         </div>
       </div>

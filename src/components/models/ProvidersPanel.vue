@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import ProviderCard from './ProviderCard.vue'
 import { useModelsStore } from '@/stores/models'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const modelsStore = useModelsStore()
 </script>
 
@@ -12,7 +14,7 @@ const modelsStore = useModelsStore()
       <path d="M2 17l10 5 10-5" />
       <path d="M2 12l10 5 10-5" />
     </svg>
-    <p>No providers found. Add a custom provider to get started.</p>
+    <p>{{ t('models.noProviders') }}</p>
   </div>
   <div v-else class="providers-grid">
     <ProviderCard

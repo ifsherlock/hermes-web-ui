@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { NButton, NTooltip } from 'naive-ui'
 import { useChatStore } from '@/stores/chat'
 import type { Attachment } from '@/stores/chat'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const inputText = ref('')
 const textareaRef = ref<HTMLTextAreaElement>()
 const fileInputRef = ref<HTMLInputElement>()
@@ -201,7 +203,7 @@ function isImage(type: string): boolean {
         ref="textareaRef"
         v-model="inputText"
         class="input-textarea"
-        placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+        :placeholder="t('chat.inputPlaceholder')"
         rows="1"
         @keydown="handleKeydown"
         @input="handleInput"
@@ -216,7 +218,7 @@ function isImage(type: string): boolean {
               </template>
             </NButton>
           </template>
-          Attach files
+          {{ t('chat.attachFiles') }}
         </NTooltip>
         <NButton
           v-if="chatStore.isStreaming"
@@ -224,7 +226,7 @@ function isImage(type: string): boolean {
           type="error"
           @click="chatStore.stopStreaming()"
         >
-          Stop
+          {{ t('chat.stop') }}
         </NButton>
         <NButton
           size="small"
@@ -235,7 +237,7 @@ function isImage(type: string): boolean {
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </template>
-          Send
+          {{ t('chat.send') }}
         </NButton>
       </div>
     </div>

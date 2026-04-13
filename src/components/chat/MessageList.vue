@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import MessageItem from './MessageItem.vue'
 import { useChatStore } from '@/stores/chat'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const listRef = ref<HTMLElement>()
 
 function scrollToBottom() {
@@ -23,7 +25,7 @@ watch(() => chatStore.isStreaming, (v) => { if (v) scrollToBottom() })
   <div ref="listRef" class="message-list">
     <div v-if="chatStore.messages.length === 0" class="empty-state">
       <img src="/assets/logo.png" alt="Hermes" class="empty-logo" />
-      <p>Start a conversation with Hermes Agent</p>
+      <p>{{ t('chat.emptyState') }}</p>
     </div>
     <MessageItem
       v-for="msg in chatStore.messages"

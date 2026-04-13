@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { NButton, NSpin } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import ProvidersPanel from '@/components/models/ProvidersPanel.vue'
 import ProviderFormModal from '@/components/models/ProviderFormModal.vue'
 import { useModelsStore } from '@/stores/models'
 
+const { t } = useI18n()
 const modelsStore = useModelsStore()
 const showModal = ref(false)
 
@@ -29,12 +31,12 @@ async function handleSaved() {
 <template>
   <div class="models-view">
     <header class="models-header">
-      <h2 class="header-title">Models</h2>
+      <h2 class="header-title">{{ t('models.title') }}</h2>
       <NButton type="primary" @click="openCreateModal">
         <template #icon>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </template>
-        Add Provider
+        {{ t('models.addProvider') }}
       </NButton>
     </header>
 
