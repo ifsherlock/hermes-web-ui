@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { NButton, NTooltip } from 'naive-ui'
-import { useChatStore } from '@/stores/chat'
 import type { Attachment } from '@/stores/chat'
+import { useChatStore } from '@/stores/chat'
+import { NButton, NTooltip } from 'naive-ui'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const chatStore = useChatStore()
 const { t } = useI18n()
@@ -13,6 +13,7 @@ const fileInputRef = ref<HTMLInputElement>()
 const attachments = ref<Attachment[]>([])
 const isDragging = ref(false)
 const dragCounter = ref(0)
+const isComposing = ref(false)
 
 const canSend = computed(() => inputText.value.trim() || attachments.value.length > 0)
 
@@ -126,11 +127,26 @@ function handleSend() {
   }
 }
 
+function handleCompositionStart() {
+  isComposing.value = true
+}
+
+function handleCompositionEnd() {
+  requestAnimationFrame(() => {
+    isComposing.value = false
+  })
+}
+
+function isImeEnter(e: KeyboardEvent): boolean {
+  return isComposing.value || e.isComposing || e.keyCode === 229
+}
+
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    handleSend()
-  }
+  if (e.key !== 'Enter' || e.shiftKey) return
+  if (isImeEnter(e)) return
+
+  e.preventDefault()
+  handleSend()
 }
 
 function handleInput(e: Event) {
@@ -206,6 +222,8 @@ function isImage(type: string): boolean {
         :placeholder="t('chat.inputPlaceholder')"
         rows="1"
         @keydown="handleKeydown"
+        @compositionstart="handleCompositionStart"
+        @compositionend="handleCompositionEnd"
         @input="handleInput"
         @paste="handlePaste"
       ></textarea>
