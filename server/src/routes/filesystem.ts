@@ -51,6 +51,10 @@ async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<str
   }
 }
 
+// --- Hardcoded model catalogs (single source: src/shared/providers.ts) ---
+import { buildProviderModelMap } from '../shared/providers'
+const PROVIDER_MODEL_CATALOG = buildProviderModelMap()
+
 export const fsRoutes = new Router()
 
 const hermesDir = resolve(homedir(), '.hermes')
@@ -69,6 +73,10 @@ interface SkillCategory {
 }
 
 // --- Helpers ---
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 function extractDescription(content: string): string {
   // SKILL.md format: YAML frontmatter between --- delimiters, then markdown body
@@ -373,21 +381,35 @@ fsRoutes.get('/api/available-models', async (ctx) => {
       })
     }
 
-    // Fetch all provider models in parallel
-    const results = await Promise.allSettled(
-      endpoints.map(async ep => {
-        const models = await fetchProviderModels(ep.base_url, ep.token)
-        return { ...ep, models }
-      }),
-    )
-
+    // Resolve models: hardcoded catalog first, live probe as fallback
     const groups: Array<{ provider: string; label: string; base_url: string; models: string[] }> = []
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.models.length > 0) {
-        const { key, label, base_url, models } = result.value
-        groups.push({ provider: key, label, base_url, models })
-      } else if (result.status === 'rejected') {
-        console.error(`[available-models] Failed: ${result.reason?.message || result.reason}`)
+    const liveEndpoints: typeof endpoints = []
+
+    for (const ep of endpoints) {
+      const catalogModels = PROVIDER_MODEL_CATALOG[ep.key]
+      if (catalogModels && catalogModels.length > 0) {
+        groups.push({ provider: ep.key, label: ep.label, base_url: ep.base_url, models: catalogModels })
+      } else {
+        liveEndpoints.push(ep)
+      }
+    }
+
+    // Only probe endpoints not in the catalog
+    if (liveEndpoints.length > 0) {
+      const results = await Promise.allSettled(
+        liveEndpoints.map(async ep => {
+          const models = await fetchProviderModels(ep.base_url, ep.token)
+          return { ...ep, models }
+        }),
+      )
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.models.length > 0) {
+          const { key, label, base_url, models } = result.value
+          groups.push({ provider: key, label, base_url, models })
+        } else if (result.status === 'rejected') {
+          console.error(`[available-models] Failed: ${result.reason?.message || result.reason}`)
+        }
       }
     }
 
@@ -457,11 +479,12 @@ fsRoutes.put('/api/config/model', async (ctx) => {
 
 // POST /api/config/providers
 fsRoutes.post('/api/config/providers', async (ctx) => {
-  const { name, base_url, api_key, model } = ctx.request.body as {
+  const { name, base_url, api_key, model, providerKey } = ctx.request.body as {
     name: string
     base_url: string
     api_key: string
     model: string
+    providerKey?: string | null
   }
 
   if (!name || !base_url || !model) {
@@ -470,11 +493,18 @@ fsRoutes.post('/api/config/providers', async (ctx) => {
     return
   }
 
+  if (!api_key) {
+    ctx.status = 400
+    ctx.body = { error: 'Missing API key' }
+    return
+  }
+
   try {
+    // 1. Write to config.yaml custom_providers
     await copyFile(configPath, configPath + '.bak')
     let yaml = await safeReadFile(configPath) || ''
 
-    const newEntry = `- name: ${name}\n  base_url: ${base_url}\n  api_key: ${api_key || ''}\n  model: ${model}\n`
+    const newEntry = `- name: ${name}\n  base_url: ${base_url}\n  api_key: ${api_key}\n  model: ${model}\n`
 
     if (/^custom_providers:/m.test(yaml)) {
       yaml = yaml.replace(/^(custom_providers:)/m, `$1\n${newEntry}`)
@@ -483,6 +513,37 @@ fsRoutes.post('/api/config/providers', async (ctx) => {
     }
 
     await writeFile(configPath, yaml, 'utf-8')
+
+    // 2. Write to auth.json credential_pool so GET /api/available-models sees it immediately
+    const poolKey = providerKey
+      || `custom:${name.trim().toLowerCase().replace(/ /g, '-')}`
+    const auth = await loadAuthJson() || { credential_pool: {} }
+    if (!auth.credential_pool) auth.credential_pool = {}
+
+    // Don't overwrite existing entries for built-in providers
+    if (!auth.credential_pool[poolKey]) {
+      auth.credential_pool[poolKey] = []
+    }
+
+    auth.credential_pool[poolKey].push({
+      id: `${poolKey}-${Date.now()}`,
+      label: name,
+      base_url,
+      access_token: api_key,
+      last_status: null,
+    })
+
+    await writeFile(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
+
+    // 3. Auto-switch model to the newly added provider
+    let yaml2 = await safeReadFile(configPath) || ''
+    const modelBlockMatch = yaml2.match(/^(model:\s*\n(?:  .+\n)*)/m)
+    if (modelBlockMatch) {
+      const lines = [`model:`, `  default: ${model}`, `  provider: ${poolKey}`]
+      yaml2 = yaml2.replace(modelBlockMatch[1], lines.join('\n') + '\n')
+      await writeFile(configPath, yaml2, 'utf-8')
+    }
+
     ctx.body = { success: true }
   } catch (err: any) {
     ctx.status = 500
@@ -490,19 +551,78 @@ fsRoutes.post('/api/config/providers', async (ctx) => {
   }
 })
 
-// DELETE /api/config/providers/:name
-fsRoutes.delete('/api/config/providers/:name', async (ctx) => {
-  const name = ctx.params.name
+// DELETE /api/config/providers/:poolKey
+fsRoutes.delete('/api/config/providers/:poolKey', async (ctx) => {
+  const poolKey = decodeURIComponent(ctx.params.poolKey)
 
   try {
-    await copyFile(configPath, configPath + '.bak')
-    let yaml = await safeReadFile(configPath) || ''
+    const auth = await loadAuthJson()
+    if (!auth?.credential_pool) {
+      ctx.status = 404
+      ctx.body = { error: 'No credential pool found' }
+      return
+    }
 
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const blockRegex = new RegExp(`  - name:\\s*${escaped}\\s*\\n(?:    .+\\n)*`, 'g')
-    yaml = yaml.replace(blockRegex, '')
+    const keys = Object.keys(auth.credential_pool)
 
-    await writeFile(configPath, yaml, 'utf-8')
+    // Guard: cannot delete the last provider
+    if (keys.length <= 1) {
+      ctx.status = 400
+      ctx.body = { error: 'Cannot delete the last provider' }
+      return
+    }
+
+    if (!(poolKey in auth.credential_pool)) {
+      ctx.status = 404
+      ctx.body = { error: `Provider "${poolKey}" not found` }
+      return
+    }
+
+    // Check if this is the current active provider
+    const yaml = await safeReadFile(configPath) || ''
+    const providerMatch = yaml.match(/^  provider:\s*(.+)$/m)
+    const isCurrent = providerMatch && providerMatch[1].trim() === poolKey
+
+    // Save base_url before deleting (needed for config.yaml cleanup)
+    const deletedBaseUrl = auth.credential_pool[poolKey]?.[0]?.base_url
+
+    // 1. Delete from auth.json
+    delete auth.credential_pool[poolKey]
+    await writeFile(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
+
+    // 2. Remove matching entry from config.yaml custom_providers
+    //    Use base_url to match — more reliable than name (preset key ≠ display name)
+    if (deletedBaseUrl) {
+      await copyFile(configPath, configPath + '.bak')
+      let newYaml = await safeReadFile(configPath) || ''
+      const entryRegex = new RegExp(
+        `^- name:.*\\n(?:[ \\t]+.*\\n)*?  base_url:\\s*${escapeRegExp(deletedBaseUrl)}\\s*\\n(?:[ \\t]+.*\\n)*`,
+        'gm',
+      )
+      newYaml = newYaml.replace(entryRegex, '').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
+      await writeFile(configPath, newYaml, 'utf-8')
+    }
+
+    // 3. If was the current provider, switch to first remaining
+    if (isCurrent) {
+      const remainingKeys = Object.keys(auth.credential_pool)
+      if (remainingKeys.length > 0) {
+        const fallback = remainingKeys[0]
+        const fallbackEntry = auth.credential_pool[fallback]?.[0]
+        const catalogModels = PROVIDER_MODEL_CATALOG[fallback] || []
+        const fallbackModel = catalogModels[0] || fallbackEntry?.label || fallback
+
+        await copyFile(configPath, configPath + '.bak')
+        let newYaml = await safeReadFile(configPath) || ''
+        const modelBlockMatch = newYaml.match(/^(model:\s*\n(?:  .+\n)*)/m)
+        if (modelBlockMatch) {
+          const lines = [`model:`, `  default: ${fallbackModel}`, `  provider: ${fallback}`]
+          newYaml = newYaml.replace(modelBlockMatch[1], lines.join('\n') + '\n')
+          await writeFile(configPath, newYaml, 'utf-8')
+        }
+      }
+    }
+
     ctx.body = { success: true }
   } catch (err: any) {
     ctx.status = 500

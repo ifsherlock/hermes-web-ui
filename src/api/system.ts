@@ -49,6 +49,7 @@ export interface CustomProvider {
   base_url: string
   api_key: string
   model: string
+  providerKey?: string | null
 }
 
 export async function checkHealth(): Promise<HealthResponse> {
