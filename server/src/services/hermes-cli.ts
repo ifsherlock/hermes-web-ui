@@ -182,7 +182,17 @@ export async function getVersion(): Promise<string> {
 }
 
 /**
- * Update Hermes Agent
+ * Start Hermes gateway
+ */
+export async function startGateway(): Promise<string> {
+  const { stdout, stderr } = await execFileAsync('hermes', ['gateway', 'start'], {
+    timeout: 30000,
+  })
+  return stdout || stderr
+}
+
+/**
+ * Restart Hermes gateway
  */
 export async function restartGateway(): Promise<string> {
   const { stdout, stderr } = await execFileAsync('hermes', ['gateway', 'restart'], {

@@ -17,7 +17,7 @@ export const useAppStore = defineStore('app', () => {
   async function checkConnection() {
     try {
       const res = await checkHealth()
-      connected.value = true
+      connected.value = res.status === 'ok'
       if (res.version) serverVersion.value = res.version
     } catch {
       connected.value = false

@@ -97,7 +97,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     label: 'MiniMax (China)',
     value: 'minimax-cn',
-    base_url: 'https://api.minimaxi.com/anthropic',
+    base_url: 'https://api.minimaxi.com/v1',
     models: ['MiniMax-M2.7', 'MiniMax-M2.5', 'MiniMax-M2.1', 'MiniMax-M2'],
   },
   {

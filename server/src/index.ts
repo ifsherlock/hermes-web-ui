@@ -15,12 +15,13 @@ import { fsRoutes } from './routes/filesystem'
 import { configRoutes } from './routes/config'
 import { weixinRoutes } from './routes/weixin'
 import * as hermesCli from './services/hermes-cli'
-const { restartGateway } = hermesCli
+const { restartGateway, startGateway, getVersion } = hermesCli
 
 export async function bootstrap() {
   await mkdir(config.uploadDir, { recursive: true })
   await mkdir(config.dataDir, { recursive: true })
   await ensureApiServerConfig()
+  await ensureGatewayRunning()
 
   const app = new Koa()
 
@@ -35,12 +36,26 @@ export async function bootstrap() {
   app.use(configRoutes.routes())
   app.use(weixinRoutes.routes())
 
-  // Health endpoint with version
+  // Health endpoint: check CLI version + gateway connectivity
   app.use(async (ctx, next) => {
     if (ctx.path === '/health') {
-      const raw = await hermesCli.getVersion()
+      const raw = await getVersion()
       const version = raw.split('\n')[0].replace('Hermes Agent ', '') || ''
-      ctx.body = { status: 'ok', platform: 'hermes-agent', version }
+
+      let gatewayOk = false
+      try {
+        const res = await fetch(`${config.upstream.replace(/\/$/, '')}/health`, {
+          signal: AbortSignal.timeout(5000),
+        })
+        gatewayOk = res.ok
+      } catch { /* not reachable */ }
+
+      ctx.body = {
+        status: gatewayOk ? 'ok' : 'error',
+        platform: 'hermes-agent',
+        version,
+        gateway: gatewayOk ? 'running' : 'stopped',
+      }
       return
     }
     await next()
@@ -133,6 +148,33 @@ async function ensureApiServerConfig() {
     await restartGateway()
   } catch (err: any) {
     console.error('  ✗ Failed to update config:', err.message)
+  }
+}
+
+async function ensureGatewayRunning() {
+  const upstream = config.upstream.replace(/\/$/, '')
+  try {
+    const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
+    if (res.ok) {
+      console.log('  ✓ Gateway is running')
+      return
+    }
+  } catch {
+    // Gateway not reachable
+  }
+
+  console.log('  ⚠ Gateway not reachable, starting...')
+  try {
+    await startGateway()
+    await new Promise(r => setTimeout(r, 3000))
+    const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
+    if (res.ok) {
+      console.log('  ✓ Gateway started successfully')
+      return
+    }
+    console.log('  ✗ Gateway start attempted but still not reachable')
+  } catch (err: any) {
+    console.error('  ✗ Failed to start gateway:', err.message)
   }
 }
 
