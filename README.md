@@ -28,14 +28,14 @@ Open http://localhost:8648
 
 ### CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `hermes-web-ui start` | Start in background (daemon mode) |
-| `hermes-web-ui start --port 9000` | Start on custom port |
-| `hermes-web-ui stop` | Stop background process |
-| `hermes-web-ui restart` | Restart background process |
-| `hermes-web-ui status` | Check if running |
-| `hermes-web-ui` | Run in foreground (for debugging) |
+| Command                           | Description                       |
+| --------------------------------- | --------------------------------- |
+| `hermes-web-ui start`             | Start in background (daemon mode) |
+| `hermes-web-ui start --port 9000` | Start on custom port              |
+| `hermes-web-ui stop`              | Stop background process           |
+| `hermes-web-ui restart`           | Restart background process        |
+| `hermes-web-ui status`            | Check if running                  |
+| `hermes-web-ui`                   | Run in foreground (for debugging) |
 
 ### Auto Configuration
 
@@ -51,6 +51,7 @@ npm run dev
 ```
 
 This starts:
+
 - Frontend: http://localhost:5173
 - BFF Server: http://localhost:8648 (proxies to Hermes on 8642)
 
@@ -121,6 +122,7 @@ hermes-web-ui/
 ## Features
 
 ### Chat
+
 - Async Run + SSE event streaming via BFF proxy
 - Session management via Hermes CLI
 - Multi-session switching with message history
@@ -134,6 +136,7 @@ hermes-web-ui/
 - Per-session model display (badge in chat header and session list)
 
 ### Platform Channels
+
 - Unified channel configuration page (Telegram, Discord, Slack, WhatsApp, Matrix, Feishu, WeChat, WeCom)
 - Credential management — writes to `~/.hermes/.env` (matching `hermes gateway setup` behavior)
 - Channel behavior settings — writes to `~/.hermes/config.yaml`
@@ -142,6 +145,7 @@ hermes-web-ui/
 - Per-platform configured/unconfigured status detection
 
 ### Model Management
+
 - Automatically reads credential pool from `~/.hermes/auth.json`
 - Fetches available models from each provider endpoint (`/v1/models`)
 - Groups models by provider (e.g. zai, subrouter.ai)
@@ -150,6 +154,7 @@ hermes-web-ui/
 - Error handling: parallel fetching, per-provider timeout, fallback to config.yaml parsing
 
 ### Settings
+
 - Display settings (streaming, compact mode, reasoning, cost, etc.)
 - Agent settings (max turns, timeout, tool enforcement)
 - Memory settings (enable/disable, char limits)
@@ -158,22 +163,26 @@ hermes-web-ui/
 - API server settings
 
 ### Scheduled Jobs
+
 - Job list view (including paused/disabled jobs)
 - Create, edit, pause, resume, and delete jobs
 - Trigger immediate job execution
 - Cron expression quick presets
 
 ### Skills & Memory
+
 - Browse and search installed skills
 - View skill details and attached files
 - User notes and profile management
 
 ### Logs
+
 - View Hermes agent/gateway/error logs
 - Filter by log level, log file, and search keyword
 - Structured log parsing with HTTP access log highlighting
 
 ### Other
+
 - Internationalization — auto-detect browser language, manual toggle between Chinese and English
 - Real-time connection status monitoring
 - Hermes version display in sidebar
@@ -194,6 +203,7 @@ Browser → BFF (Koa, :8648) → Hermes API (:8642)
 ```
 
 The BFF layer handles:
+
 - API proxy to Hermes (with header forwarding)
 - SSE streaming passthrough
 - File upload to temp directory
