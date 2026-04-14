@@ -2,6 +2,7 @@ import Router from '@koa/router'
 import { readdir, readFile, stat, writeFile, mkdir, copyFile } from 'fs/promises'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
+import YAML from 'js-yaml'
 
 // --- Auth / Credential Pool ---
 
@@ -26,6 +27,10 @@ async function loadAuthJson(): Promise<AuthJson | null> {
   } catch {
     return null
   }
+}
+
+async function saveAuthJson(auth: AuthJson): Promise<void> {
+  await writeFile(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
 }
 
 async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<string[]> {
@@ -74,13 +79,7 @@ interface SkillCategory {
 
 // --- Helpers ---
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function extractDescription(content: string): string {
-  // SKILL.md format: YAML frontmatter between --- delimiters, then markdown body
-  // Extract first non-empty, non-frontmatter, non-heading line as description
   const lines = content.split('\n')
   let inFrontmatter = false
   let bodyStarted = false
@@ -99,7 +98,6 @@ function extractDescription(content: string): string {
     if (inFrontmatter) continue
     if (line.trim() === '') continue
     if (line.startsWith('#')) continue
-    // Return first meaningful line, truncated
     return line.trim().slice(0, 80)
   }
   return ''
@@ -120,6 +118,26 @@ async function safeStat(filePath: string): Promise<{ mtime: number } | null> {
   } catch {
     return null
   }
+}
+
+// --- Config YAML helpers ---
+
+const configPath = resolve(homedir(), '.hermes/config.yaml')
+
+async function readConfigYaml(): Promise<Record<string, any>> {
+  const raw = await safeReadFile(configPath)
+  if (!raw) return {}
+  return (YAML.load(raw) as Record<string, any>) || {}
+}
+
+async function writeConfigYaml(config: Record<string, any>): Promise<void> {
+  await copyFile(configPath, configPath + '.bak')
+  const yamlStr = YAML.dump(config, {
+    lineWidth: -1,
+    noRefs: true,
+    quotingType: '"',
+  })
+  await writeFile(configPath, yamlStr, 'utf-8')
 }
 
 // --- Skills Routes ---
@@ -158,7 +176,6 @@ fsRoutes.get('/api/skills', async (ctx) => {
       }
     }
 
-    // Sort categories alphabetically
     categories.sort((a, b) => a.name.localeCompare(b.name))
     for (const cat of categories) {
       cat.skills.sort((a, b) => a.name.localeCompare(b.name))
@@ -171,8 +188,7 @@ fsRoutes.get('/api/skills', async (ctx) => {
   }
 })
 
-// List files in a skill directory (for references/templates/scripts)
-// Must be registered before the wildcard route
+// List files in a skill directory
 async function listFilesRecursive(dir: string, prefix: string): Promise<{ path: string; name: string }[]> {
   const result: { path: string; name: string }[] = []
   let entries
@@ -211,7 +227,6 @@ fsRoutes.get('/api/skills/:path(.+)', async (ctx) => {
   const filePath = ctx.params.path
   const fullPath = resolve(join(hermesDir, 'skills', filePath))
 
-  // Security: ensure path stays within skills directory
   if (!fullPath.startsWith(join(hermesDir, 'skills'))) {
     ctx.status = 403
     ctx.body = { error: 'Access denied' }
@@ -230,7 +245,6 @@ fsRoutes.get('/api/skills/:path(.+)', async (ctx) => {
 
 // --- Memory Routes ---
 
-// Read MEMORY.md and USER.md
 fsRoutes.get('/api/memory', async (ctx) => {
   const memoryPath = join(hermesDir, 'memories', 'MEMORY.md')
   const userPath = join(hermesDir, 'memories', 'USER.md')
@@ -250,7 +264,6 @@ fsRoutes.get('/api/memory', async (ctx) => {
   }
 })
 
-// Write MEMORY.md or USER.md
 fsRoutes.post('/api/memory', async (ctx) => {
   const { section, content } = ctx.request.body as { section: string; content: string }
 
@@ -280,8 +293,6 @@ fsRoutes.post('/api/memory', async (ctx) => {
 
 // --- Config Model Routes ---
 
-const configPath = resolve(homedir(), '.hermes/config.yaml')
-
 interface ModelInfo {
   id: string
   label: string
@@ -292,58 +303,42 @@ interface ModelGroup {
   models: ModelInfo[]
 }
 
-// Build model list from user's actual config.yaml configuration
-// Only shows models the user has explicitly configured, not entire provider catalogs
-function buildModelGroups(yaml: string): { default: string; groups: ModelGroup[] } {
+// Build model list from user's actual config.yaml using js-yaml
+function buildModelGroups(config: Record<string, any>): { default: string; groups: ModelGroup[] } {
   let defaultModel = ''
   let defaultProvider = ''
   const groups: ModelGroup[] = []
   const allModelIds = new Set<string>()
 
-  // 1. Extract current model from `model:` section
-  const defaultMatch = yaml.match(/^model:\s*\n\s+default:\s*(.+)/m)
-  if (defaultMatch) defaultModel = defaultMatch[1].trim()
-  const providerMatch = yaml.match(/^model:\s*\n(?:.*\n)*?\s+provider:\s*(.+)/m)
-  if (providerMatch) defaultProvider = providerMatch[1].trim()
-
-  // 2. Extract providers: section (user-defined endpoints)
-  const providersSection = yaml.match(/^providers:\s*\n((?:  .+\n(?:    .+\n)*)*)/m)
-  if (providersSection) {
-    const entries = providersSection[1].match(/^  (\S+):\s*\n((?:    .+\n)*)/gm)
-    if (entries) {
-      for (const entry of entries) {
-        const nameMatch = entry.match(/^  (\S+):/)
-        const baseUrlMatch = entry.match(/base_url:\s*(.+)/)
-        const name = nameMatch?.[1]?.trim()
-        if (name) {
-          // Provider entry itself — mark as available but don't add model yet
-          // (it's an endpoint the user can switch to, models are fetched at runtime)
-        }
-      }
-    }
+  // 1. Extract current model
+  const modelSection = config.model
+  if (typeof modelSection === 'object' && modelSection !== null) {
+    defaultModel = String(modelSection.default || '').trim()
+    defaultProvider = String(modelSection.provider || '').trim()
+  } else if (typeof modelSection === 'string') {
+    defaultModel = modelSection.trim()
   }
 
-  // 3. Extract custom_providers: section
-  const customSection = yaml.match(/^custom_providers:\s*\n((?:\s*- .+\n(?:  .+\n)*)*)/m)
-  if (customSection) {
-    const entryBlocks = customSection[1].match(/\s*- name:\s*(.+)\n((?:  .+\n)*)/g)
-    if (entryBlocks) {
-      const customModels: ModelInfo[] = []
-      for (const block of entryBlocks) {
-        const cName = block.match(/name:\s*(.+)/)?.[1]?.trim()
-        const cModel = block.match(/model:\s*(.+)/)?.[1]?.trim()
+  // 2. Extract custom_providers section
+  const customProviders = config.custom_providers
+  if (Array.isArray(customProviders)) {
+    const customModels: ModelInfo[] = []
+    for (const entry of customProviders) {
+      if (entry && typeof entry === 'object') {
+        const cName = String(entry.name || '').trim()
+        const cModel = String(entry.model || '').trim()
         if (cName && cModel) {
           customModels.push({ id: cModel, label: `${cName}: ${cModel}` })
           allModelIds.add(cModel)
         }
       }
-      if (customModels.length > 0) {
-        groups.push({ provider: 'Custom', models: customModels })
-      }
+    }
+    if (customModels.length > 0) {
+      groups.push({ provider: 'Custom', models: customModels })
     }
   }
 
-  // 4. Add current default model (if not already in custom_providers)
+  // 3. Add current default model (if not already in custom_providers)
   if (defaultModel && !allModelIds.has(defaultModel)) {
     groups.unshift({ provider: 'Current', models: [{ id: defaultModel, label: defaultModel }] })
   }
@@ -357,10 +352,14 @@ fsRoutes.get('/api/available-models', async (ctx) => {
     const auth = await loadAuthJson()
     const pool = auth?.credential_pool || {}
 
-    // Read current default model from config.yaml
-    const yaml = await safeReadFile(configPath) || ''
-    const defaultMatch = yaml.match(/^model:\s*\n\s+default:\s*(.+)/m)
-    const currentDefault = defaultMatch?.[1]?.trim() || ''
+    const config = await readConfigYaml()
+    const modelSection = config.model
+    let currentDefault = ''
+    if (typeof modelSection === 'object' && modelSection !== null) {
+      currentDefault = String(modelSection.default || '').trim()
+    } else if (typeof modelSection === 'string') {
+      currentDefault = modelSection.trim()
+    }
 
     // Collect unique endpoints from credential pool
     const endpoints: Array<{ key: string; label: string; base_url: string; token: string }> = []
@@ -394,7 +393,6 @@ fsRoutes.get('/api/available-models', async (ctx) => {
       }
     }
 
-    // Only probe endpoints not in the catalog
     if (liveEndpoints.length > 0) {
       const results = await Promise.allSettled(
         liveEndpoints.map(async ep => {
@@ -415,7 +413,7 @@ fsRoutes.get('/api/available-models', async (ctx) => {
 
     // Fallback: if no providers returned models, fall back to config.yaml parsing
     if (groups.length === 0) {
-      const fallback = buildModelGroups(yaml)
+      const fallback = buildModelGroups(config)
       ctx.body = fallback
       return
     }
@@ -430,8 +428,8 @@ fsRoutes.get('/api/available-models', async (ctx) => {
 // GET /api/config/models
 fsRoutes.get('/api/config/models', async (ctx) => {
   try {
-    const yaml = await safeReadFile(configPath)
-    ctx.body = yaml ? buildModelGroups(yaml) : { default: '', groups: [] }
+    const config = await readConfigYaml()
+    ctx.body = buildModelGroups(config)
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
@@ -452,24 +450,18 @@ fsRoutes.put('/api/config/model', async (ctx) => {
   }
 
   try {
-    await copyFile(configPath, configPath + '.bak')
-    let yaml = await safeReadFile(configPath) || ''
+    const config = await readConfigYaml()
 
-    // Rebuild the model: block
-    const modelBlockMatch = yaml.match(/^(model:\s*\n(?:  .+\n)*)/m)
-    if (modelBlockMatch) {
-      const lines = [`model:`, `  default: ${defaultModel}`]
-
-      if (reqProvider) {
-        // Provider from credential pool key (e.g. "zai" or "custom:subrouter.ai")
-        // Hermes resolves base_url/api_key from auth.json automatically
-        lines.push(`  provider: ${reqProvider}`)
-      }
-
-      yaml = yaml.replace(modelBlockMatch[1], lines.join('\n') + '\n')
+    if (typeof config.model !== 'object' || config.model === null) {
+      config.model = {}
     }
 
-    await writeFile(configPath, yaml, 'utf-8')
+    config.model.default = defaultModel
+    if (reqProvider) {
+      config.model.provider = reqProvider
+    }
+
+    await writeConfigYaml(config)
     ctx.body = { success: true }
   } catch (err: any) {
     ctx.status = 500
@@ -501,26 +493,21 @@ fsRoutes.post('/api/config/providers', async (ctx) => {
 
   try {
     // 1. Write to config.yaml custom_providers
-    await copyFile(configPath, configPath + '.bak')
-    let yaml = await safeReadFile(configPath) || ''
+    const config = await readConfigYaml()
 
-    const newEntry = `- name: ${name}\n  base_url: ${base_url}\n  api_key: ${api_key}\n  model: ${model}\n`
-
-    if (/^custom_providers:/m.test(yaml)) {
-      yaml = yaml.replace(/^(custom_providers:)/m, `$1\n${newEntry}`)
-    } else {
-      yaml = yaml.trimEnd() + `\n\ncustom_providers:\n${newEntry}\n`
+    if (!Array.isArray(config.custom_providers)) {
+      config.custom_providers = []
     }
 
-    await writeFile(configPath, yaml, 'utf-8')
+    config.custom_providers.push({ name, base_url, api_key, model })
+    await writeConfigYaml(config)
 
-    // 2. Write to auth.json credential_pool so GET /api/available-models sees it immediately
+    // 2. Write to auth.json credential_pool
     const poolKey = providerKey
       || `custom:${name.trim().toLowerCase().replace(/ /g, '-')}`
     const auth = await loadAuthJson() || { credential_pool: {} }
     if (!auth.credential_pool) auth.credential_pool = {}
 
-    // Don't overwrite existing entries for built-in providers
     if (!auth.credential_pool[poolKey]) {
       auth.credential_pool[poolKey] = []
     }
@@ -533,16 +520,16 @@ fsRoutes.post('/api/config/providers', async (ctx) => {
       last_status: null,
     })
 
-    await writeFile(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
+    await saveAuthJson(auth)
 
     // 3. Auto-switch model to the newly added provider
-    let yaml2 = await safeReadFile(configPath) || ''
-    const modelBlockMatch = yaml2.match(/^(model:\s*\n(?:  .+\n)*)/m)
-    if (modelBlockMatch) {
-      const lines = [`model:`, `  default: ${model}`, `  provider: ${poolKey}`]
-      yaml2 = yaml2.replace(modelBlockMatch[1], lines.join('\n') + '\n')
-      await writeFile(configPath, yaml2, 'utf-8')
+    const config2 = await readConfigYaml()
+    if (typeof config2.model !== 'object' || config2.model === null) {
+      config2.model = {}
     }
+    config2.model.default = model
+    config2.model.provider = poolKey
+    await writeConfigYaml(config2)
 
     ctx.body = { success: true }
   } catch (err: any) {
@@ -565,7 +552,6 @@ fsRoutes.delete('/api/config/providers/:poolKey', async (ctx) => {
 
     const keys = Object.keys(auth.credential_pool)
 
-    // Guard: cannot delete the last provider
     if (keys.length <= 1) {
       ctx.status = 400
       ctx.body = { error: 'Cannot delete the last provider' }
@@ -579,28 +565,23 @@ fsRoutes.delete('/api/config/providers/:poolKey', async (ctx) => {
     }
 
     // Check if this is the current active provider
-    const yaml = await safeReadFile(configPath) || ''
-    const providerMatch = yaml.match(/^  provider:\s*(.+)$/m)
-    const isCurrent = providerMatch && providerMatch[1].trim() === poolKey
+    const config = await readConfigYaml()
+    const currentProvider = config.model?.provider
+    const isCurrent = currentProvider === poolKey
 
-    // Save base_url before deleting (needed for config.yaml cleanup)
+    // Save base_url before deleting
     const deletedBaseUrl = auth.credential_pool[poolKey]?.[0]?.base_url
 
     // 1. Delete from auth.json
     delete auth.credential_pool[poolKey]
-    await writeFile(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
+    await saveAuthJson(auth)
 
     // 2. Remove matching entry from config.yaml custom_providers
-    //    Use base_url to match — more reliable than name (preset key ≠ display name)
-    if (deletedBaseUrl) {
-      await copyFile(configPath, configPath + '.bak')
-      let newYaml = await safeReadFile(configPath) || ''
-      const entryRegex = new RegExp(
-        `^- name:.*\\n(?:[ \\t]+.*\\n)*?  base_url:\\s*${escapeRegExp(deletedBaseUrl)}\\s*\\n(?:[ \\t]+.*\\n)*`,
-        'gm',
+    if (deletedBaseUrl && Array.isArray(config.custom_providers)) {
+      config.custom_providers = (config.custom_providers as any[]).filter(
+        (entry: any) => entry.base_url !== deletedBaseUrl,
       )
-      newYaml = newYaml.replace(entryRegex, '').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
-      await writeFile(configPath, newYaml, 'utf-8')
+      await writeConfigYaml(config)
     }
 
     // 3. If was the current provider, switch to first remaining
@@ -612,14 +593,13 @@ fsRoutes.delete('/api/config/providers/:poolKey', async (ctx) => {
         const catalogModels = PROVIDER_MODEL_CATALOG[fallback] || []
         const fallbackModel = catalogModels[0] || fallbackEntry?.label || fallback
 
-        await copyFile(configPath, configPath + '.bak')
-        let newYaml = await safeReadFile(configPath) || ''
-        const modelBlockMatch = newYaml.match(/^(model:\s*\n(?:  .+\n)*)/m)
-        if (modelBlockMatch) {
-          const lines = [`model:`, `  default: ${fallbackModel}`, `  provider: ${fallback}`]
-          newYaml = newYaml.replace(modelBlockMatch[1], lines.join('\n') + '\n')
-          await writeFile(configPath, newYaml, 'utf-8')
+        const config2 = await readConfigYaml()
+        if (typeof config2.model !== 'object' || config2.model === null) {
+          config2.model = {}
         }
+        config2.model.default = fallbackModel
+        config2.model.provider = fallback
+        await writeConfigYaml(config2)
       }
     }
 

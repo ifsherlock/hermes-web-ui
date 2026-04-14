@@ -182,13 +182,27 @@ export async function getVersion(): Promise<string> {
 }
 
 /**
- * Start Hermes gateway
+ * Start Hermes gateway (uses launchd/systemd)
  */
 export async function startGateway(): Promise<string> {
   const { stdout, stderr } = await execFileAsync('hermes', ['gateway', 'start'], {
     timeout: 30000,
   })
   return stdout || stderr
+}
+
+/**
+ * Start Hermes gateway in background (for WSL where launchd/systemd is unavailable)
+ * Uses "hermes gateway run" as a detached background process
+ */
+export async function startGatewayBackground(): Promise<number | null> {
+  const { spawn } = require('child_process') as typeof import('child_process')
+  const child = spawn('hermes', ['gateway', 'run'], {
+    detached: true,
+    stdio: 'ignore',
+  })
+  child.unref()
+  return child.pid ?? null
 }
 
 /**

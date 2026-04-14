@@ -3,10 +3,11 @@ import { spawn } from 'child_process'
 import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync } from 'fs'
+import { homedir } from 'os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const serverEntry = resolve(__dirname, '..', 'dist', 'server', 'index.js')
-const PID_DIR = resolve(__dirname, '..', '.hermes-web-ui')
+const PID_DIR = resolve(homedir(), '.hermes-web-ui')
 const PID_FILE = join(PID_DIR, 'server.pid')
 const LOG_FILE = join(PID_DIR, 'server.log')
 const DEFAULT_PORT = 8648
@@ -49,7 +50,7 @@ function startDaemon(port) {
     console.log(`    Use "hermes-web-ui stop" to stop it first`)
     process.exit(1)
   }
-  removePid() // stale pid file
+  removePid()
   mkdirSync(PID_DIR, { recursive: true })
 
   const logStream = openSync(LOG_FILE, 'a')
@@ -59,10 +60,15 @@ function startDaemon(port) {
     env: { ...process.env, PORT: String(port) },
   })
 
+  child.on('error', (err) => {
+    console.error(`  ✗ Failed to start: ${err.message}`)
+    removePid()
+    process.exit(1)
+  })
+
   child.unref()
   writePid(child.pid)
 
-  // Wait a moment and check if the process is still alive
   setTimeout(() => {
     if (isRunning(child.pid)) {
       console.log(`  ✓ hermes-web-ui started (PID: ${child.pid}, port: ${port})`)
@@ -70,7 +76,6 @@ function startDaemon(port) {
       console.log(`    Log: ${LOG_FILE}`)
     } else {
       console.log('  ✗ Failed to start hermes-web-ui')
-      console.log(`    Check log: ${LOG_FILE}`)
       removePid()
       process.exit(1)
     }
@@ -85,13 +90,24 @@ function stopDaemon() {
   }
 
   if (!isRunning(pid)) {
-    console.log(`  ✗ Process ${pid} is not alive (stale PID file)`)
     removePid()
-    process.exit(1)
+    console.log(`  ✓ hermes-web-ui was not running (cleaned stale PID)`)
+    return
   }
 
   try {
-    process.kill(pid, 'SIGTERM')
+    try {
+      process.kill(pid, 'SIGTERM')
+      // Wait briefly for graceful shutdown
+      for (let i = 0; i < 10; i++) {
+        if (!isRunning(pid)) break
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500)
+      }
+    } catch {}
+    // Force kill if still alive
+    if (isRunning(pid)) {
+      process.kill(pid, 'SIGKILL')
+    }
     removePid()
     console.log(`  ✓ hermes-web-ui stopped (PID: ${pid})`)
   } catch (err) {
@@ -104,8 +120,9 @@ function showStatus() {
   const pid = getPid()
   if (pid && isRunning(pid)) {
     console.log(`  ✓ hermes-web-ui is running (PID: ${pid})`)
+    console.log(`    PID file: ${PID_FILE}`)
   } else {
-    if (pid) removePid() // clean stale
+    if (pid) removePid()
     console.log('  ✗ hermes-web-ui is not running')
   }
 }
@@ -127,7 +144,6 @@ switch (command) {
     showStatus()
     break
   default:
-    // Direct run (foreground): hermes-web-ui [port]
     const port = !isNaN(command) ? parseInt(command) : DEFAULT_PORT
     const child = spawn(process.execPath, [serverEntry], {
       stdio: 'inherit',

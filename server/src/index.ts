@@ -15,7 +15,7 @@ import { fsRoutes } from './routes/filesystem'
 import { configRoutes } from './routes/config'
 import { weixinRoutes } from './routes/weixin'
 import * as hermesCli from './services/hermes-cli'
-const { restartGateway, startGateway, getVersion } = hermesCli
+const { restartGateway, startGateway, startGatewayBackground, getVersion } = hermesCli
 
 export async function bootstrap() {
   await mkdir(config.uploadDir, { recursive: true })
@@ -80,71 +80,43 @@ export async function bootstrap() {
 
 async function ensureApiServerConfig() {
   const { homedir } = await import('os')
-  const { readFileSync, writeFileSync, existsSync } = await import('fs')
+  const { readFileSync, writeFileSync, existsSync, copyFileSync } = await import('fs')
+  const yaml = (await import('js-yaml')).default
   const configPath = resolve(homedir(), '.hermes/config.yaml')
+
+  const apiServerConfig = {
+    enabled: true,
+    host: '127.0.0.1',
+    port: 8642,
+    key: '',
+    cors_origins: '*',
+  }
 
   try {
     if (!existsSync(configPath)) {
-      console.log('  ✗ config.yaml not found, skipping')
+      console.log('  ✗ config.yaml not found, run "hermes setup" first')
       return
     }
 
     const content = readFileSync(configPath, 'utf-8')
+    const config = yaml.load(content) as any || {}
 
-    // Case 1: api_server section exists, check if enabled is true
-    if (/api_server:/.test(content)) {
-      // Check specifically under api_server: look for a direct child `enabled: false`
-      // Match api_server block and find enabled at the correct indent level
-      const blockMatch = content.match(/api_server:\n((?:[ \t]+.*\n)*?)(?=\S|$)/)
-      if (blockMatch) {
-        const block = blockMatch[1]
-        if (/^([ \t]*)enabled:\s*true/m.test(block)) {
-          console.log('  ✓ api_server.enabled is true')
-          return
-        }
-        if (/^([ \t]*)enabled:\s*false/m.test(block)) {
-          // Backup before modifying
-          const { copyFileSync } = await import('fs')
-          copyFileSync(configPath, configPath + '.bak')
-          const updated = content.replace(
-            /(api_server:\n(?:[ \t]*.*\n)*?[ \t]*)enabled:\s*false/,
-            '$1enabled: true'
-          )
-          writeFileSync(configPath, updated, 'utf-8')
-          console.log('  ✓ api_server.enabled changed to true (backup saved to config.yaml.bak)')
-          await restartGateway()
-          return
-        }
-      }
-      // api_server exists but no enabled key — don't touch, assume default
-      console.log('  ✓ api_server section exists')
+    // Check if api_server is already correct
+    if (config.platforms?.api_server?.enabled === true) {
+      console.log('  ✓ api_server config is correct')
       return
     }
 
-    // Case 2: api_server section exists and enabled is true (or missing but default true)
-    if (/api_server:/.test(content)) {
-      console.log('  ✓ api_server section exists')
-      return
-    }
-
-    // Case 3: platforms section exists but no api_server — append api_server block
-    if (/platforms:/.test(content)) {
-      const { copyFileSync } = await import('fs')
-      copyFileSync(configPath, configPath + '.bak')
-      const append = `\n  api_server:\n    enabled: true\n    host: "127.0.0.1"\n    port: 8642\n    key: ""\n    cors_origins: "*"\n`
-      const updated = content.replace(/(platforms:)/, '$1' + append)
-      writeFileSync(configPath, updated, 'utf-8')
-      console.log('  ✓ api_server block appended to platforms (backup saved to config.yaml.bak)')
-      await restartGateway()
-      return
-    }
-
-    // Case 4: No platforms section at all — append at end of file
-    const { copyFileSync } = await import('fs')
+    // Backup before modifying
     copyFileSync(configPath, configPath + '.bak')
-    const append = `\nplatforms:\n  api_server:\n    enabled: true\n    host: "127.0.0.1"\n    port: 8642\n    key: ""\n    cors_origins: "*"\n`
-    writeFileSync(configPath, content + append, 'utf-8')
-    console.log('  ✓ platforms.api_server block appended (backup saved to config.yaml.bak)')
+
+    // Ensure platforms.api_server with correct values
+    if (!config.platforms) config.platforms = {}
+    config.platforms.api_server = apiServerConfig
+
+    const updated = yaml.dump(config, { lineWidth: -1, noRefs: true, quotingType: '"' })
+    writeFileSync(configPath, updated, 'utf-8')
+    console.log('  ✓ api_server config ensured (backup saved to config.yaml.bak)')
     await restartGateway()
   } catch (err: any) {
     console.error('  ✗ Failed to update config:', err.message)
@@ -161,6 +133,27 @@ async function ensureGatewayRunning() {
     }
   } catch {
     // Gateway not reachable
+  }
+
+  // Detect WSL — no launchd/systemd, hermes gateway start won't work
+  const { existsSync, readFileSync } = await import('fs')
+  const isWSL = existsSync('/proc/version') && readFileSync('/proc/version', 'utf-8').toLowerCase().includes('microsoft')
+
+  if (isWSL) {
+    console.log('  ⚠ WSL detected — Gateway not reachable, starting in background...')
+    try {
+      const pid = await startGatewayBackground()
+      await new Promise(r => setTimeout(r, 3000))
+      const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
+      if (res.ok) {
+        console.log(`  ✓ Gateway started in background (PID: ${pid})`)
+        return
+      }
+      console.log('  ✗ Gateway start attempted but still not reachable')
+    } catch (err: any) {
+      console.error('  ✗ Failed to start gateway:', err.message)
+    }
+    return
   }
 
   console.log('  ⚠ Gateway not reachable, starting...')
