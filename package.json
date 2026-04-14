@@ -15,7 +15,7 @@
     "start": "vite --host --port 8648",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite --host",
-    "dev:server": "nodemon --watch server/src --ext ts --exec node -r ts-node/register server/src/index.ts --no-warnings",
+    "dev:server": "nodemon --signal SIGTERM --watch server/src -e ts,tsx --exec node -r ts-node/register server/src/index.ts",
     "build": "vue-tsc -b && vite build && tsc -p server/tsconfig.json",
     "preview": "vite preview"
   },
