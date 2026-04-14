@@ -1,4 +1,15 @@
 export default {
+  // 登录
+  login: {
+    title: '登录',
+    description: '输入访问令牌以继续。令牌在服务端启动日志中查看。',
+    placeholder: '访问令牌',
+    submit: '登录',
+    tokenRequired: '请输入访问令牌',
+    invalidToken: '令牌无效',
+    connectionFailed: '无法连接到服务器',
+  },
+
   // 通用
   common: {
     loading: '加载中...',
@@ -133,6 +144,7 @@ export default {
     attachedFiles: '附件文件',
     loadFailed: '加载技能失败',
     fileLoadFailed: '加载文件失败',
+    toggleFailed: '切换技能状态失败',
   },
 
   // 记忆

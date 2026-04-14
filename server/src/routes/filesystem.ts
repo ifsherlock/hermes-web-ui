@@ -69,6 +69,7 @@ const hermesDir = resolve(homedir(), '.hermes')
 interface SkillInfo {
   name: string
   description: string
+  enabled: boolean
 }
 
 interface SkillCategory {
@@ -147,6 +148,10 @@ fsRoutes.get('/api/skills', async (ctx) => {
   const skillsDir = join(hermesDir, 'skills')
 
   try {
+    // Read disabled skills list from config.yaml
+    const config = await readConfigYaml()
+    const disabledList: string[] = config.skills?.disabled || []
+
     const entries = await readdir(skillsDir, { withFileTypes: true })
     const categories: SkillCategory[] = []
 
@@ -167,6 +172,7 @@ fsRoutes.get('/api/skills', async (ctx) => {
           skills.push({
             name: se.name,
             description: extractDescription(skillMd),
+            enabled: !disabledList.includes(se.name),
           })
         }
       }
@@ -185,6 +191,40 @@ fsRoutes.get('/api/skills', async (ctx) => {
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: `Failed to read skills directory: ${err.message}` }
+  }
+})
+
+// Toggle skill enabled/disabled via config.yaml skills.disabled
+fsRoutes.put('/api/skills/toggle', async (ctx) => {
+  const { name, enabled } = ctx.request.body as { name?: string; enabled?: boolean }
+
+  if (!name || typeof enabled !== 'boolean') {
+    ctx.status = 400
+    ctx.body = { error: 'Missing name or enabled flag' }
+    return
+  }
+
+  try {
+    const config = await readConfigYaml()
+    if (!config.skills) config.skills = {}
+    if (!Array.isArray(config.skills.disabled)) config.skills.disabled = []
+
+    const disabled = config.skills.disabled as string[]
+    const idx = disabled.indexOf(name)
+
+    if (enabled) {
+      // Enable: remove from disabled list
+      if (idx !== -1) disabled.splice(idx, 1)
+    } else {
+      // Disable: add to disabled list
+      if (idx === -1) disabled.push(name)
+    }
+
+    await writeConfigYaml(config)
+    ctx.body = { success: true }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
   }
 })
 

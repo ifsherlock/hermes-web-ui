@@ -1,3 +1,5 @@
+import router from '@/router'
+
 const DEFAULT_BASE_URL = ''
 
 function getBaseUrl(): string {
@@ -16,6 +18,14 @@ export function setApiKey(key: string) {
   localStorage.setItem('hermes_api_key', key)
 }
 
+export function clearApiKey() {
+  localStorage.removeItem('hermes_api_key')
+}
+
+export function hasApiKey(): boolean {
+  return !!getApiKey()
+}
+
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const base = getBaseUrl()
   const url = `${base}${path}`
@@ -30,6 +40,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   }
 
   const res = await fetch(url, { ...options, headers })
+
+  // Global 401 handler — redirect to login
+  if (res.status === 401) {
+    router.replace({ name: 'login' })
+    throw new Error('Unauthorized')
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')

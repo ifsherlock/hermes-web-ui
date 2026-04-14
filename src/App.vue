@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider } from 'naive-ui'
 import { themeOverrides } from '@/styles/theme'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
@@ -7,10 +8,22 @@ import { useKeyboard } from '@/composables/useKeyboard'
 import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()
+const route = useRoute()
+const router = useRouter()
+const ready = ref(false)
+
+const isLoginPage = computed(() => route.name === 'login')
+
+// Wait for router to resolve before rendering layout
+router.isReady().then(() => {
+  ready.value = true
+})
 
 onMounted(() => {
-  appStore.loadModels()
-  appStore.startHealthPolling()
+  if (!isLoginPage.value) {
+    appStore.loadModels()
+    appStore.startHealthPolling()
+  }
 })
 
 onUnmounted(() => {
@@ -25,8 +38,8 @@ useKeyboard()
     <NMessageProvider>
       <NDialogProvider>
         <NNotificationProvider>
-          <div class="app-layout">
-            <AppSidebar />
+          <div v-if="ready" class="app-layout" :class="{ 'no-sidebar': isLoginPage }">
+            <AppSidebar v-if="!isLoginPage" />
             <main class="app-main">
               <router-view />
             </main>
@@ -45,11 +58,19 @@ useKeyboard()
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+
+  &.no-sidebar {
+    display: block;
+  }
 }
 
 .app-main {
   flex: 1;
   overflow-y: auto;
   background-color: $bg-primary;
+
+  .no-sidebar & {
+    height: 100vh;
+  }
 }
 </style>

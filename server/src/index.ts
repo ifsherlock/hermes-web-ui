@@ -15,6 +15,7 @@ import { fsRoutes } from './routes/filesystem'
 import { configRoutes } from './routes/config'
 import { weixinRoutes } from './routes/weixin'
 import * as hermesCli from './services/hermes-cli'
+import { getToken, authMiddleware } from './services/auth'
 
 const app = new Koa()
 const { restartGateway, startGateway, startGatewayBackground, getVersion } = hermesCli
@@ -28,6 +29,14 @@ let gatewayPid: number | null = null
 export async function bootstrap() {
   await mkdir(config.uploadDir, { recursive: true })
   await mkdir(config.dataDir, { recursive: true })
+
+  // Auth (after mkdir so data dir exists)
+  const authToken = await getToken()
+  if (authToken) {
+    app.use(await authMiddleware(authToken))
+    console.log(`🔐 Auth enabled — token: ${authToken}`)
+  }
+
   await ensureApiServerConfig()
   await ensureGatewayRunning()
 

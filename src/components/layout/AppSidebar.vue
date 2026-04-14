@@ -67,8 +67,8 @@ function handleNav(key: string) {
 
 <template>
   <aside class="sidebar">
-    <div class="sidebar-logo" @click="router.push('/')">
-      <img src="/assets/logo.png" alt="Hermes" class="logo-img" />
+    <div class="sidebar-logo" @click="router.push('/chat')">
+      <img src="/logo.png" alt="Hermes" class="logo-img" />
       <span class="logo-text">Hermes</span>
       <canvas ref="canvasRef" class="logo-dance" />
     </div>

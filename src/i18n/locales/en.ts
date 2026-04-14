@@ -1,4 +1,15 @@
 export default {
+  // Login
+  login: {
+    title: 'Login',
+    description: 'Enter your access token to continue. Find it in the server startup logs.',
+    placeholder: 'Access token',
+    submit: 'Login',
+    tokenRequired: 'Please enter your access token',
+    invalidToken: 'Invalid token',
+    connectionFailed: 'Cannot connect to server',
+  },
+
   // Common
   common: {
     loading: 'Loading...',
@@ -133,6 +144,7 @@ export default {
     attachedFiles: 'Attached Files',
     loadFailed: 'Failed to load skill',
     fileLoadFailed: 'Failed to load file',
+    toggleFailed: 'Failed to toggle skill',
   },
 
   // Memory

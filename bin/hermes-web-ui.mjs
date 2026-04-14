@@ -12,7 +12,16 @@ const VERSION = pkg.version
 const PID_DIR = resolve(homedir(), '.hermes-web-ui')
 const PID_FILE = join(PID_DIR, 'server.pid')
 const LOG_FILE = join(PID_DIR, 'server.log')
+const TOKEN_FILE = resolve(__dirname, '..', 'dist', 'server', 'data', '.token')
 const DEFAULT_PORT = 8648
+
+function getToken() {
+  try {
+    return readFileSync(TOKEN_FILE, 'utf-8').trim()
+  } catch {
+    return null
+  }
+}
 
 function getPort() {
   if (process.argv[3] && !isNaN(process.argv[3])) return parseInt(process.argv[3])
@@ -103,6 +112,10 @@ function startDaemon(port) {
       console.log(`  ✓ hermes-web-ui started (PID: ${child.pid}, port: ${port})`)
       console.log(`    http://localhost:${port}`)
       console.log(`    Log: ${LOG_FILE}`)
+      const token = getToken()
+      if (token) {
+        console.log(`    Token: ${token}`)
+      }
       // Open browser
       const url = `http://localhost:${port}`
       const isWin = process.platform === 'win32'

@@ -137,6 +137,8 @@ export async function getSession(id: string): Promise<HermesSession | null> {
     const lines = stdout.trim().split('\n').filter(Boolean)
     if (lines.length === 0) return null
 
+    if (!lines[0].startsWith('{')) return null
+
     const raw: HermesSessionFull = JSON.parse(lines[0])
     return {
       id: raw.id,

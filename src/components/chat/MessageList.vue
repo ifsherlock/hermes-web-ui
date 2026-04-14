@@ -42,7 +42,7 @@ watch(currentToolCalls, scrollToBottom)
 <template>
   <div ref="listRef" class="message-list">
     <div v-if="chatStore.messages.length === 0" class="empty-state">
-      <img src="/assets/logo.png" alt="Hermes" class="empty-logo" />
+      <img src="/logo.png" alt="Hermes" class="empty-logo" />
       <p>{{ t('chat.emptyState') }}</p>
     </div>
     <MessageItem

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { NSwitch, useMessage } from 'naive-ui'
 import type { SkillCategory } from '@/api/skills'
+import { toggleSkill } from '@/api/skills'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const message = useMessage()
 
 const props = defineProps<{
   categories: SkillCategory[]
@@ -16,6 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const collapsedCategories = ref<Set<string>>(new Set())
+const togglingSkills = ref<Set<string>>(new Set())
 
 const filteredCategories = computed(() => {
   if (!props.searchQuery) return props.categories
@@ -40,6 +44,23 @@ function toggleCategory(name: string) {
 
 function handleSelect(category: string, skill: string) {
   emit('select', category, skill)
+}
+
+async function handleToggle(category: string, skillName: string, newEnabled: boolean) {
+  if (togglingSkills.value.has(skillName)) return
+  togglingSkills.value.add(skillName)
+
+  try {
+    await toggleSkill(skillName, newEnabled)
+    // Update local state
+    const cat = props.categories.find(c => c.name === category)
+    const skill = cat?.skills.find(s => s.name === skillName)
+    if (skill) skill.enabled = newEnabled
+  } catch (err: any) {
+    message.error(t('skills.toggleFailed') + `: ${err.message}`)
+  } finally {
+    togglingSkills.value.delete(skillName)
+  }
 }
 </script>
 
@@ -75,8 +96,17 @@ function handleSelect(category: string, skill: string) {
           }"
           @click="handleSelect(cat.name, skill.name)"
         >
-          <span class="skill-name">{{ skill.name }}</span>
-          <span v-if="skill.description" class="skill-desc">{{ skill.description }}</span>
+          <div class="skill-info">
+            <span class="skill-name">{{ skill.name }}</span>
+            <span v-if="skill.description" class="skill-desc">{{ skill.description }}</span>
+          </div>
+          <NSwitch
+            size="small"
+            :value="skill.enabled !== false"
+            :loading="togglingSkills.has(skill.name)"
+            @update:value="handleToggle(cat.name, skill.name, $event)"
+            @click.stop
+          />
         </button>
       </div>
     </div>
@@ -155,7 +185,8 @@ function handleSelect(category: string, skill: string) {
 
 .skill-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   width: 100%;
   padding: 6px 10px 6px 28px;
   border: none;
@@ -166,6 +197,7 @@ function handleSelect(category: string, skill: string) {
   cursor: pointer;
   border-radius: $radius-sm;
   transition: all $transition-fast;
+  gap: 8px;
 
   &:hover {
     background: rgba($accent-primary, 0.06);
@@ -177,6 +209,13 @@ function handleSelect(category: string, skill: string) {
     color: $text-primary;
     font-weight: 500;
   }
+}
+
+.skill-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .skill-name {

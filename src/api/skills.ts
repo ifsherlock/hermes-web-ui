@@ -3,6 +3,7 @@ import { request } from './client'
 export interface SkillInfo {
   name: string
   description: string
+  enabled?: boolean
 }
 
 export interface SkillCategory {
@@ -51,5 +52,12 @@ export async function saveMemory(section: 'memory' | 'user', content: string): P
   await request('/api/memory', {
     method: 'POST',
     body: JSON.stringify({ section, content }),
+  })
+}
+
+export async function toggleSkill(name: string, enabled: boolean): Promise<void> {
+  await request('/api/skills/toggle', {
+    method: 'PUT',
+    body: JSON.stringify({ name, enabled }),
   })
 }
