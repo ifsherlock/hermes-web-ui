@@ -16,19 +16,39 @@ export interface HermesSession {
   tool_call_count: number
   input_tokens: number
   output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  reasoning_tokens: number
   billing_provider: string | null
   estimated_cost_usd: number
+  actual_cost_usd: number | null
+  cost_status: string
   messages?: any[]
 }
 
-interface HermesSessionFull extends HermesSession {
-  system_prompt?: string
-  model_config?: string
+interface HermesSessionFull {
+  id: string
+  source: string
+  user_id: string | null
+  model: string
+  title: string | null
+  started_at: number
+  ended_at: number | null
+  end_reason: string | null
+  message_count: number
+  tool_call_count: number
+  input_tokens: number
+  output_tokens: number
   cache_read_tokens?: number
   cache_write_tokens?: number
   reasoning_tokens?: number
+  billing_provider: string | null
+  estimated_cost_usd: number
   actual_cost_usd?: number | null
   cost_status?: string
+  messages?: any[]
+  system_prompt?: string
+  model_config?: string
   cost_source?: string
   pricing_version?: string | null
   [key: string]: any
@@ -74,8 +94,13 @@ export async function listSessions(source?: string, limit?: number): Promise<Her
           tool_call_count: raw.tool_call_count,
           input_tokens: raw.input_tokens,
           output_tokens: raw.output_tokens,
+          cache_read_tokens: raw.cache_read_tokens || 0,
+          cache_write_tokens: raw.cache_write_tokens || 0,
+          reasoning_tokens: raw.reasoning_tokens || 0,
           billing_provider: raw.billing_provider,
           estimated_cost_usd: raw.estimated_cost_usd,
+          actual_cost_usd: raw.actual_cost_usd ?? null,
+          cost_status: raw.cost_status || '',
         })
       } catch { /* skip malformed lines */ }
     }
@@ -122,8 +147,13 @@ export async function getSession(id: string): Promise<HermesSession | null> {
       tool_call_count: raw.tool_call_count,
       input_tokens: raw.input_tokens,
       output_tokens: raw.output_tokens,
+      cache_read_tokens: raw.cache_read_tokens || 0,
+      cache_write_tokens: raw.cache_write_tokens || 0,
+      reasoning_tokens: raw.reasoning_tokens || 0,
       billing_provider: raw.billing_provider,
       estimated_cost_usd: raw.estimated_cost_usd,
+      actual_cost_usd: raw.actual_cost_usd ?? null,
+      cost_status: raw.cost_status || '',
       messages: raw.messages,
     }
   } catch (err: any) {

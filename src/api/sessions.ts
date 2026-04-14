@@ -11,8 +11,13 @@ export interface SessionSummary {
   tool_call_count: number
   input_tokens: number
   output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  reasoning_tokens: number
   billing_provider: string | null
   estimated_cost_usd: number
+  actual_cost_usd: number | null
+  cost_status: string
 }
 
 export interface SessionDetail extends SessionSummary {

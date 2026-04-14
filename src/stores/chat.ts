@@ -37,6 +37,8 @@ export interface Session {
   model?: string
   provider?: string
   messageCount?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 function uid(): string {
@@ -147,6 +149,8 @@ function mapHermesSession(s: SessionSummary): Session {
     model: s.model,
     provider: (s as any).billing_provider || '',
     messageCount: s.message_count,
+    inputTokens: s.input_tokens,
+    outputTokens: s.output_tokens,
   }
 }
 
@@ -203,6 +207,8 @@ export const useChatStore = defineStore('chat', () => {
         if (detail && detail.messages) {
           const mapped = mapHermesMessages(detail.messages)
           activeSession.value.messages = mapped
+          activeSession.value.inputTokens = detail.input_tokens
+          activeSession.value.outputTokens = detail.output_tokens
           // Update title: use Hermes title, or fallback to first user message
           if (detail.title) {
             activeSession.value.title = detail.title

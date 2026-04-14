@@ -1,8 +1,8 @@
 # Hermes Web UI
 
-Web dashboard for [Hermes Agent](https://github.com/NousResearch/hermes-agent) — chat interaction, session management, scheduled jobs, platform channel configuration, and log viewing.
+Web dashboard for [Hermes Agent](https://github.com/NousResearch/hermes-agent) — chat interaction, session management, scheduled jobs, usage statistics, platform channel configuration, and log viewing.
 
-![Hermes Web UI Demo](https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/src/assets/output1.gif)
+![Hermes Web UI Demo](https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/src/assets/output.gif)
 
 ## Tech Stack
 
@@ -19,12 +19,34 @@ Web dashboard for [Hermes Agent](https://github.com/NousResearch/hermes-agent) �
 
 ## Install and Run
 
+### Quick Install
+
 ```bash
 npm install -g hermes-web-ui
 hermes-web-ui start
 ```
 
 Open http://localhost:8648
+
+### WSL (Windows Subsystem for Linux)
+
+```bash
+# 1. Auto-setup: install Node.js + hermes-web-ui
+bash <(curl -fsSL https://cdn.jsdelivr.net/gh/EKKOLearnAI/hermes-web-ui@main/scripts/setup.sh)
+
+# 2. Start
+hermes-web-ui start
+```
+
+> WSL will auto-detect and use `hermes gateway run` for background startup (no launchd/systemd).
+
+### One-line Setup (Auto-detect OS)
+
+```bash
+bash <(curl -fsSL https://cdn.jsdelivr.net/gh/EKKOLearnAI/hermes-web-ui@main/scripts/setup.sh)
+```
+
+Automatically installs Node.js (if missing) and hermes-web-ui on Debian/Ubuntu/macOS.
 
 ### CLI Commands
 
@@ -35,11 +57,20 @@ Open http://localhost:8648
 | `hermes-web-ui stop`              | Stop background process           |
 | `hermes-web-ui restart`           | Restart background process        |
 | `hermes-web-ui status`            | Check if running                  |
+| `hermes-web-ui update`            | Update to latest version & restart|
+| `hermes-web-ui -v`                | Show version number               |
+| `hermes-web-ui -h`                | Show help message                 |
 | `hermes-web-ui`                   | Run in foreground (for debugging) |
 
 ### Auto Configuration
 
-On startup, the BFF server automatically checks `~/.hermes/config.yaml` and ensures `platforms.api_server.enabled` is set to `true`. If modified, it backs up the original to `config.yaml.bak` and restarts the gateway.
+On startup, the BFF server automatically:
+
+- Checks `~/.hermes/config.yaml` and ensures `platforms.api_server` has all required fields (`enabled`, `host`, `port`, `key`, `cors_origins`)
+- If any field is missing, backs up the original to `config.yaml.bak`, fills in defaults, and restarts the gateway
+- Detects if the gateway is running and starts it if needed
+- Kills any process occupying the target port before starting
+- Opens the browser automatically after successful startup
 
 ## Development
 
@@ -68,7 +99,7 @@ Outputs to `dist/` (frontend + compiled BFF server).
 ```
 hermes-web-ui/
 ├── bin/
-│   └── hermes-web-ui.mjs         # CLI entry (start/stop/restart/status)
+│   └── hermes-web-ui.mjs         # CLI entry (start/stop/restart/status/update/version/help)
 ├── server/src/
 │   ├── index.ts                   # BFF entry (Koa app bootstrap)
 │   ├── config.ts                  # Configuration (port, upstream, etc.)
@@ -102,6 +133,7 @@ hermes-web-ui/
 │   │   ├── settings/              # Settings components
 │   │   │   ├── PlatformCard.vue   # Platform card with config status
 │   │   │   └── PlatformSettings.vue  # Platform channel configuration
+│   │   ├── usage/                 # Usage statistics components
 │   │   └── skills/                # Skill components
 │   ├── views/
 │   │   ├── ChatView.vue           # Chat page
@@ -111,6 +143,7 @@ hermes-web-ui/
 │   │   ├── ChannelsView.vue       # Platform channels page
 │   │   ├── SkillsView.vue         # Skills page
 │   │   ├── MemoryView.vue         # Memory page
+│   │   ├── UsageView.vue          # Usage statistics page
 │   │   └── SettingsView.vue       # Settings page
 │   └── router/index.ts            # Router configuration
 └── dist/                          # Build output (published to npm)
@@ -134,6 +167,17 @@ hermes-web-ui/
 - Model selector — automatically discovers available models from `~/.hermes/auth.json` credential pool
 - Global model switching (updates `~/.hermes/config.yaml`)
 - Per-session model display (badge in chat header and session list)
+- Context token usage display (used / total)
+
+### Usage Statistics
+
+- Total token usage breakdown (input / output)
+- Session count with daily average
+- Estimated cost tracking
+- Cache hit rate
+- Model usage distribution (horizontal bar chart)
+- 30-day daily trend (bar chart + data table)
+- Hover tooltips on chart bars
 
 ### Platform Channels
 
@@ -186,8 +230,10 @@ hermes-web-ui/
 - Internationalization — auto-detect browser language, manual toggle between Chinese and English
 - Real-time connection status monitoring
 - Hermes version display in sidebar
-- Auto config check on startup
-- Minimalist dark theme
+- Auto config check on startup with field-level validation
+- Port conflict auto-resolution (kills stale processes)
+- Auto browser open on startup
+- Minimalist "Pure Ink" theme
 - Session group collapse state persisted across navigation
 
 ## Architecture
@@ -207,7 +253,7 @@ The BFF layer handles:
 - API proxy to Hermes (with header forwarding)
 - SSE streaming passthrough
 - File upload to temp directory
-- Session CRUD via Hermes CLI
+- Session CRUD via Hermes CLI (with cache/cost token passthrough)
 - Config & credential management (config.yaml + .env)
 - WeChat QR code login flow (fetch QR, poll status, save credentials)
 - Auto gateway restart on platform config changes

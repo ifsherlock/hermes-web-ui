@@ -1,84 +1,133 @@
 <script setup lang="ts">
-import type { Message } from '@/stores/chat';
-import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import MarkdownRenderer from './MarkdownRenderer.vue';
+import type { Message } from "@/stores/chat";
+import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import MarkdownRenderer from "./MarkdownRenderer.vue";
 
-const props = defineProps<{ message: Message }>()
-const { t } = useI18n()
+const props = defineProps<{ message: Message }>();
+const { t } = useI18n();
 
-const isSystem = computed(() => props.message.role === 'system')
-const toolExpanded = ref(false)
+const isSystem = computed(() => props.message.role === "system");
+const toolExpanded = ref(false);
 
 const timeStr = computed(() => {
-  const d = new Date(props.message.timestamp)
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-})
+  const d = new Date(props.message.timestamp);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+});
 
 function isImage(type: string): boolean {
-  return type.startsWith('image/')
+  return type.startsWith("image/");
 }
 
 function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) > 0)
+const hasAttachments = computed(
+  () => (props.message.attachments?.length ?? 0) > 0,
+);
 
-const hasToolDetails = computed(() => !!(props.message.toolArgs || props.message.toolResult))
+const hasToolDetails = computed(
+  () => !!(props.message.toolArgs || props.message.toolResult),
+);
 
 const formattedToolArgs = computed(() => {
-  if (!props.message.toolArgs) return ''
+  if (!props.message.toolArgs) return "";
   try {
-    return JSON.stringify(JSON.parse(props.message.toolArgs), null, 2)
+    return JSON.stringify(JSON.parse(props.message.toolArgs), null, 2);
   } catch {
-    return props.message.toolArgs
+    return props.message.toolArgs;
   }
-})
+});
 
 const formattedToolResult = computed(() => {
-  if (!props.message.toolResult) return ''
+  if (!props.message.toolResult) return "";
   try {
-    const parsed = JSON.parse(props.message.toolResult)
-    const str = JSON.stringify(parsed, null, 2)
+    const parsed = JSON.parse(props.message.toolResult);
+    const str = JSON.stringify(parsed, null, 2);
     // Truncate very long output
-    if (str.length > 2000) return str.slice(0, 2000) + '\n' + t('chat.truncated')
-    return str
+    if (str.length > 2000)
+      return str.slice(0, 2000) + "\n" + t("chat.truncated");
+    return str;
   } catch {
-    const raw = props.message.toolResult
-    if (raw.length > 2000) return raw.slice(0, 2000) + '\n' + t('chat.truncated')
-    return raw
+    const raw = props.message.toolResult;
+    if (raw.length > 2000)
+      return raw.slice(0, 2000) + "\n" + t("chat.truncated");
+    return raw;
   }
-})
+});
 </script>
 
 <template>
   <div class="message" :class="[message.role]">
     <template v-if="message.role === 'tool'">
-      <div class="tool-line" :class="{ expandable: hasToolDetails }" @click="hasToolDetails && (toolExpanded = !toolExpanded)">
-        <svg v-if="hasToolDetails" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tool-chevron" :class="{ rotated: toolExpanded }"><polyline points="9 18 15 12 9 6"/></svg>
-        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="tool-icon"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <div
+        class="tool-line"
+        :class="{ expandable: hasToolDetails }"
+        @click="hasToolDetails && (toolExpanded = !toolExpanded)"
+      >
+        <svg
+          v-if="hasToolDetails"
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          class="tool-chevron"
+          :class="{ rotated: toolExpanded }"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        <svg
+          v-else
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          class="tool-icon"
+        >
+          <path
+            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+          />
+        </svg>
         <span class="tool-name">{{ message.toolName }}</span>
-        <span v-if="message.toolPreview && !toolExpanded" class="tool-preview">{{ message.toolPreview }}</span>
-        <span v-if="message.toolStatus === 'running'" class="tool-spinner"></span>
-        <span v-if="message.toolStatus === 'error'" class="tool-error-badge">{{ t('chat.error') }}</span>
+        <span
+          v-if="message.toolPreview && !toolExpanded"
+          class="tool-preview"
+          >{{ message.toolPreview }}</span
+        >
+        <span
+          v-if="message.toolStatus === 'running'"
+          class="tool-spinner"
+        ></span>
+        <span v-if="message.toolStatus === 'error'" class="tool-error-badge">{{
+          t("chat.error")
+        }}</span>
       </div>
       <div v-if="toolExpanded && hasToolDetails" class="tool-details">
         <div v-if="formattedToolArgs" class="tool-detail-section">
-          <div class="tool-detail-label">{{ t('chat.arguments') }}</div>
+          <div class="tool-detail-label">{{ t("chat.arguments") }}</div>
           <pre class="tool-detail-code">{{ formattedToolArgs }}</pre>
         </div>
         <div v-if="formattedToolResult" class="tool-detail-section">
-          <div class="tool-detail-label">{{ t('chat.result') }}</div>
+          <div class="tool-detail-label">{{ t("chat.result") }}</div>
           <pre class="tool-detail-code">{{ formattedToolResult }}</pre>
         </div>
       </div>
     </template>
     <template v-else>
       <div class="msg-body">
-        <img v-if="message.role === 'assistant'" src="/assets/logo.png" alt="Hermes" class="msg-avatar" />
+        <img
+          v-if="message.role === 'assistant'"
+          src="/assets/logo.png"
+          alt="Hermes"
+          class="msg-avatar"
+        />
         <div class="msg-content" :class="message.role">
           <div class="message-bubble" :class="{ system: isSystem }">
             <div v-if="hasAttachments" class="msg-attachments">
@@ -89,22 +138,41 @@ const formattedToolResult = computed(() => {
                 :class="{ image: isImage(att.type) }"
               >
                 <template v-if="isImage(att.type) && att.url">
-                  <img :src="att.url" :alt="att.name" class="msg-attachment-thumb" />
+                  <img
+                    :src="att.url"
+                    :alt="att.name"
+                    class="msg-attachment-thumb"
+                  />
                 </template>
                 <template v-else>
                   <div class="msg-attachment-file">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <path
+                        d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                      />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
                     <span class="att-name">{{ att.name }}</span>
                     <span class="att-size">{{ formatSize(att.size) }}</span>
                   </div>
                 </template>
               </div>
             </div>
-            <MarkdownRenderer v-if="message.content" :content="message.content" />
-            <span v-if="message.isStreaming" class="streaming-cursor"></span>
-            <div v-if="message.isStreaming && !message.content" class="streaming-dots">
+            <MarkdownRenderer
+              v-if="message.content"
+              :content="message.content"
+            />
+
+            <span v-if="message.isStreaming && !message.content" class="streaming-dots">
               <span></span><span></span><span></span>
-            </div>
+            </span>
           </div>
           <div class="message-time">{{ timeStr }}</div>
         </div>
@@ -114,7 +182,7 @@ const formattedToolResult = computed(() => {
 </template>
 
 <style scoped lang="scss">
-@use '@/styles/variables' as *;
+@use "@/styles/variables" as *;
 
 .message {
   display: flex;
@@ -147,9 +215,8 @@ const formattedToolResult = computed(() => {
     }
 
     .msg-avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 4px;
+      width: 40px;
+      height: 40px;
       flex-shrink: 0;
       margin-top: 2px;
     }
@@ -345,7 +412,9 @@ const formattedToolResult = computed(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .streaming-cursor {
@@ -376,12 +445,26 @@ const formattedToolResult = computed(() => {
 }
 
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes pulse {
-  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-  40% { opacity: 1; transform: scale(1); }
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>

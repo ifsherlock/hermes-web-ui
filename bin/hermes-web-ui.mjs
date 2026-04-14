@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn } from 'child_process'
+import { spawn, execSync } from 'child_process'
 import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync } from 'fs'
@@ -7,6 +7,8 @@ import { homedir } from 'os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const serverEntry = resolve(__dirname, '..', 'dist', 'server', 'index.js')
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
+const VERSION = pkg.version
 const PID_DIR = resolve(homedir(), '.hermes-web-ui')
 const PID_FILE = join(PID_DIR, 'server.pid')
 const LOG_FILE = join(PID_DIR, 'server.log')
@@ -51,6 +53,32 @@ function startDaemon(port) {
     process.exit(1)
   }
   removePid()
+
+  // Check if port is already in use
+  try {
+    const isWin = process.platform === 'win32'
+    let pids = ''
+    if (isWin) {
+      const out = execSync(`netstat -aon | findstr :${port}`, { encoding: 'utf-8' }).trim()
+      const lines = out.split('\n').filter(l => l.includes('LISTENING'))
+      pids = [...new Set(lines.map(l => l.trim().split(/\s+/).pop()).filter(Boolean))].join(' ')
+    } else {
+      pids = execSync(`lsof -ti:${port}`, { encoding: 'utf-8' }).trim()
+    }
+    if (pids) {
+      console.log(`  ⚠ Port ${port} is in use by PID(s): ${pids}, killing...`)
+      if (isWin) {
+        execSync(`taskkill /F /PID ${pids.split(' ').join(' /PID ')}`, { encoding: 'utf-8' })
+      } else {
+        execSync(`kill -9 ${pids}`, { encoding: 'utf-8' })
+      }
+      // Brief wait for port to be released
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500)
+    }
+  } catch {
+    // Port is free
+  }
+
   mkdirSync(PID_DIR, { recursive: true })
 
   const logStream = openSync(LOG_FILE, 'a')
@@ -74,6 +102,11 @@ function startDaemon(port) {
       console.log(`  ✓ hermes-web-ui started (PID: ${child.pid}, port: ${port})`)
       console.log(`    http://localhost:${port}`)
       console.log(`    Log: ${LOG_FILE}`)
+      // Open browser
+      const url = `http://localhost:${port}`
+      const isWin = process.platform === 'win32'
+      const cmd = isWin ? `start ${url}` : process.platform === 'darwin' ? `open ${url}` : `xdg-open ${url}`
+      try { execSync(cmd, { stdio: 'ignore' }) } catch {}
     } else {
       console.log('  ✗ Failed to start hermes-web-ui')
       removePid()
@@ -129,6 +162,56 @@ function showStatus() {
 
 const command = process.argv[2] || 'start'
 
+if (['-v', '--version', 'version'].includes(command)) {
+  console.log(`hermes-web-ui v${VERSION}`)
+  process.exit(0)
+}
+
+if (['-h', '--help', 'help'].includes(command)) {
+  console.log(`
+hermes-web-ui v${VERSION}
+
+Usage: hermes-web-ui <command> [options]
+
+Commands:
+  start [port]       Start the server (default port: ${DEFAULT_PORT})
+  stop               Stop the server
+  restart [port]     Restart the server
+  status             Show server status
+  update             Update to latest version and restart
+  version            Show version number
+
+Options:
+  -v, --version      Show version number
+  -h, --help         Show this help message
+  --port <port>      Specify port (used with start/restart)
+`)
+  process.exit(0)
+}
+
+function doUpdate() {
+  const isWin = process.platform === 'win32'
+  const cmd = isWin
+    ? 'cmd /c npm install -g hermes-web-ui@latest'
+    : 'npm install -g hermes-web-ui@latest'
+
+  console.log('  ⬆ Updating hermes-web-ui...')
+
+  const child = spawn(isWin ? 'cmd' : 'sh', isWin ? ['/c', ...cmd.split(' ')] : ['-c', cmd], {
+    stdio: 'inherit',
+  })
+
+  child.on('exit', (code) => {
+    if (code === 0) {
+      console.log('  ✓ Update complete, restarting...')
+      stopDaemon()
+      setTimeout(() => startDaemon(getPort()), 500)
+    } else {
+      console.log('  ✗ Update failed')
+    }
+  })
+}
+
 switch (command) {
   case 'start':
     startDaemon(getPort())
@@ -142,6 +225,10 @@ switch (command) {
     break
   case 'status':
     showStatus()
+    break
+  case 'update':
+  case 'upgrade':
+    doUpdate()
     break
   default:
     const port = !isNaN(command) ? parseInt(command) : DEFAULT_PORT

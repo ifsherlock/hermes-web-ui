@@ -84,7 +84,7 @@ async function ensureApiServerConfig() {
   const yaml = (await import('js-yaml')).default
   const configPath = resolve(homedir(), '.hermes/config.yaml')
 
-  const apiServerConfig = {
+  const apiServerDefaults: Record<string, any> = {
     enabled: true,
     host: '127.0.0.1',
     port: 8642,
@@ -101,18 +101,26 @@ async function ensureApiServerConfig() {
     const content = readFileSync(configPath, 'utf-8')
     const config = yaml.load(content) as any || {}
 
-    // Check if api_server is already correct
-    if (config.platforms?.api_server?.enabled === true) {
+    if (!config.platforms) config.platforms = {}
+    if (!config.platforms.api_server) config.platforms.api_server = {}
+
+    const api = config.platforms.api_server
+    let needsUpdate = false
+
+    for (const [key, value] of Object.entries(apiServerDefaults)) {
+      if (api[key] === undefined || api[key] === null) {
+        api[key] = value
+        needsUpdate = true
+      }
+    }
+
+    if (!needsUpdate) {
       console.log('  ✓ api_server config is correct')
       return
     }
 
     // Backup before modifying
     copyFileSync(configPath, configPath + '.bak')
-
-    // Ensure platforms.api_server with correct values
-    if (!config.platforms) config.platforms = {}
-    config.platforms.api_server = apiServerConfig
 
     const updated = yaml.dump(config, { lineWidth: -1, noRefs: true, quotingType: '"' })
     writeFileSync(configPath, updated, 'utf-8')
