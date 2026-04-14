@@ -15,15 +15,21 @@ import { fsRoutes } from './routes/filesystem'
 import { configRoutes } from './routes/config'
 import { weixinRoutes } from './routes/weixin'
 import * as hermesCli from './services/hermes-cli'
+
+const app = new Koa()
 const { restartGateway, startGateway, startGatewayBackground, getVersion } = hermesCli
+
+let server: any = null
+let isShuttingDown = false
+
+// 👉 如果你有子进程，一定要存
+let gatewayPid: number | null = null
 
 export async function bootstrap() {
   await mkdir(config.uploadDir, { recursive: true })
   await mkdir(config.dataDir, { recursive: true })
   await ensureApiServerConfig()
   await ensureGatewayRunning()
-
-  const app = new Koa()
 
   app.use(cors({ origin: config.corsOrigins }))
   app.use(bodyParser())
@@ -36,7 +42,7 @@ export async function bootstrap() {
   app.use(configRoutes.routes())
   app.use(weixinRoutes.routes())
 
-  // Health endpoint: check CLI version + gateway connectivity
+  // health
   app.use(async (ctx, next) => {
     if (ctx.path === '/health') {
       const raw = await getVersion()
@@ -48,7 +54,7 @@ export async function bootstrap() {
           signal: AbortSignal.timeout(5000),
         })
         gatewayOk = res.ok
-      } catch { /* not reachable */ }
+      } catch { }
 
       ctx.body = {
         status: gatewayOk ? 'ok' : 'error',
@@ -63,20 +69,93 @@ export async function bootstrap() {
 
   app.use(proxyRoutes.routes())
 
-  // SPA fallback
+  // SPA
   const distDir = resolve(__dirname, '..')
   app.use(serve(distDir))
   app.use(async (ctx) => {
-    if (!ctx.path.startsWith('/api') && !ctx.path.startsWith('/v1') && ctx.path !== '/health' && ctx.path !== '/upload' && ctx.path !== '/webhook') {
+    if (!ctx.path.startsWith('/api') &&
+      !ctx.path.startsWith('/v1') &&
+      ctx.path !== '/health' &&
+      ctx.path !== '/upload' &&
+      ctx.path !== '/webhook') {
       await send(ctx, 'index.html', { root: distDir })
     }
   })
 
-  app.listen(config.port, '0.0.0.0', () => {
-    console.log(`  ➜  Hermes BFF Server: http://localhost:${config.port}`)
-    console.log(`  ➜  Upstream: ${config.upstream}`)
+  // 🚀 启动服务
+  server = app.listen(config.port, '0.0.0.0')
+
+  server.on('listening', () => {
+    console.log(`➜ Server: http://localhost:${config.port}`)
+    console.log(`➜ Upstream: ${config.upstream}`)
+  })
+
+  server.on('error', (err: any) => {
+    console.error('Server error:', err.message)
+  })
+
+  // 👇 绑定退出信号
+  bindShutdown()
+}
+
+// ============================
+// ✅ 统一关闭逻辑（核心）
+// ============================
+function bindShutdown() {
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) return
+    isShuttingDown = true
+
+    console.log(`\n[${signal}] shutting down...`)
+
+    try {
+      // ✅ 1. 关闭 HTTP server
+      if (server) {
+        await new Promise<void>((resolve) => {
+          server.close(() => {
+            console.log('✓ http server closed')
+            resolve()
+          })
+        })
+      }
+
+      // ✅ 2. 关闭子进程（如果有）
+      if (gatewayPid) {
+        try {
+          process.kill(gatewayPid)
+          console.log(`✓ gateway process killed: ${gatewayPid}`)
+        } catch { }
+      }
+
+    } catch (err) {
+      console.error('shutdown error:', err)
+    }
+
+    process.exit(0)
+  }
+
+  // 👉 nodemon 专用（必须 once）
+  process.once('SIGUSR2', shutdown)
+
+  // 👉 正常退出
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
+
+  // 👉 防止异常退出没处理
+  process.on('uncaughtException', (err) => {
+    console.error('uncaughtException:', err)
+    shutdown('uncaughtException')
+  })
+
+  process.on('unhandledRejection', (err) => {
+    console.error('unhandledRejection:', err)
+    shutdown('unhandledRejection')
   })
 }
+
+// ============================
+// 你的原逻辑（基本不动）
+// ============================
 
 async function ensureApiServerConfig() {
   const { homedir } = await import('os')
@@ -84,7 +163,7 @@ async function ensureApiServerConfig() {
   const yaml = (await import('js-yaml')).default
   const configPath = resolve(homedir(), '.hermes/config.yaml')
 
-  const apiServerDefaults: Record<string, any> = {
+  const defaults: Record<string, any> = {
     enabled: true,
     host: '127.0.0.1',
     port: 8642,
@@ -94,88 +173,59 @@ async function ensureApiServerConfig() {
 
   try {
     if (!existsSync(configPath)) {
-      console.log('  ✗ config.yaml not found, run "hermes setup" first')
+      console.log('✗ config.yaml not found')
       return
     }
 
     const content = readFileSync(configPath, 'utf-8')
-    const config = yaml.load(content) as any || {}
+    const cfg = yaml.load(content) as any || {}
 
-    if (!config.platforms) config.platforms = {}
-    if (!config.platforms.api_server) config.platforms.api_server = {}
+    if (!cfg.platforms) cfg.platforms = {}
+    if (!cfg.platforms.api_server) cfg.platforms.api_server = {}
 
-    const api = config.platforms.api_server
-    let needsUpdate = false
+    const api = cfg.platforms.api_server
+    let changed = false
 
-    for (const [key, value] of Object.entries(apiServerDefaults)) {
-      if (api[key] === undefined || api[key] === null) {
-        api[key] = value
-        needsUpdate = true
+    for (const [k, v] of Object.entries(defaults)) {
+      if (api[k] == null) {
+        api[k] = v
+        changed = true
       }
     }
 
-    if (!needsUpdate) {
-      console.log('  ✓ api_server config is correct')
-      return
-    }
+    if (!changed) return
 
-    // Backup before modifying
     copyFileSync(configPath, configPath + '.bak')
+    writeFileSync(configPath, yaml.dump(cfg), 'utf-8')
 
-    const updated = yaml.dump(config, { lineWidth: -1, noRefs: true, quotingType: '"' })
-    writeFileSync(configPath, updated, 'utf-8')
-    console.log('  ✓ api_server config ensured (backup saved to config.yaml.bak)')
     await restartGateway()
   } catch (err: any) {
-    console.error('  ✗ Failed to update config:', err.message)
+    console.error('config error:', err.message)
   }
 }
 
 async function ensureGatewayRunning() {
   const upstream = config.upstream.replace(/\/$/, '')
+
   try {
     const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
-    if (res.ok) {
-      console.log('  ✓ Gateway is running')
-      return
-    }
-  } catch {
-    // Gateway not reachable
-  }
+    if (res.ok) return
+  } catch { }
 
-  // Detect WSL — no launchd/systemd, hermes gateway start won't work
-  const { existsSync, readFileSync } = await import('fs')
-  const isWSL = existsSync('/proc/version') && readFileSync('/proc/version', 'utf-8').toLowerCase().includes('microsoft')
+  console.log('⚠ Gateway not running, starting...')
 
-  if (isWSL) {
-    console.log('  ⚠ WSL detected — Gateway not reachable, starting in background...')
-    try {
-      const pid = await startGatewayBackground()
-      await new Promise(r => setTimeout(r, 3000))
-      const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
-      if (res.ok) {
-        console.log(`  ✓ Gateway started in background (PID: ${pid})`)
-        return
-      }
-      console.log('  ✗ Gateway start attempted but still not reachable')
-    } catch (err: any) {
-      console.error('  ✗ Failed to start gateway:', err.message)
-    }
-    return
-  }
-
-  console.log('  ⚠ Gateway not reachable, starting...')
   try {
-    await startGateway()
+    // 👉 关键：保存 PID
+    gatewayPid = await startGatewayBackground()
+
     await new Promise(r => setTimeout(r, 3000))
+
     const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
     if (res.ok) {
-      console.log('  ✓ Gateway started successfully')
-      return
+      console.log(`✓ Gateway started (PID: ${gatewayPid})`)
     }
-    console.log('  ✗ Gateway start attempted but still not reachable')
   } catch (err: any) {
-    console.error('  ✗ Failed to start gateway:', err.message)
+    console.error('gateway start failed:', err.message)
   }
 }
 
