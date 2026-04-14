@@ -70,7 +70,7 @@ check_hermes() {
         return 0
     fi
     warn "Hermes Agent CLI not found"
-    echo "    Install it from: https://github.com/EKKOLearnAI/hermes-agent"
+    echo "    Install it from: https://github.com/NousResearch/hermes-agent"
     return 1
 }
 
@@ -101,6 +101,13 @@ check_port
 
 echo ""
 if [ $has_error -eq 0 ]; then
+    # Auto-install hermes-web-ui if not already installed
+    if ! command -v hermes-web-ui &>/dev/null; then
+        warn "hermes-web-ui not installed, installing globally..."
+        npm install -g hermes-web-ui
+        info "hermes-web-ui installed"
+    fi
+    echo ""
     info "All checks passed! Run: hermes-web-ui start"
 else
     warn "Some checks failed. Please fix the issues above."
