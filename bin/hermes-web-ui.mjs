@@ -86,6 +86,7 @@ function startDaemon(port) {
     detached: true,
     stdio: ['ignore', logStream, logStream],
     env: { ...process.env, PORT: String(port) },
+    windowsHide: true,
   })
 
   child.on('error', (err) => {
@@ -199,6 +200,7 @@ function doUpdate() {
 
   const child = spawn(isWin ? 'cmd' : 'sh', isWin ? ['/c', ...cmd.split(' ')] : ['-c', cmd], {
     stdio: 'inherit',
+    windowsHide: true,
   })
 
   child.on('exit', (code) => {
@@ -235,6 +237,7 @@ switch (command) {
     const child = spawn(process.execPath, [serverEntry], {
       stdio: 'inherit',
       env: { ...process.env, PORT: String(port) },
+      windowsHide: true,
     })
     child.on('exit', (code) => process.exit(code ?? 1))
     process.on('SIGTERM', () => child.kill('SIGTERM'))

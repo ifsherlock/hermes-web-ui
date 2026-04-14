@@ -3,6 +3,8 @@ import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
 
+const execOpts = { windowsHide: true }
+
 export interface HermesSession {
   id: string
   source: string
@@ -65,6 +67,7 @@ export async function listSessions(source?: string, limit?: number): Promise<Her
     const { stdout } = await execFileAsync('hermes', args, {
       maxBuffer: 50 * 1024 * 1024, // 50MB
       timeout: 30000,
+      ...execOpts,
     })
 
     const lines = stdout.trim().split('\n').filter(Boolean)
@@ -128,6 +131,7 @@ export async function getSession(id: string): Promise<HermesSession | null> {
     const { stdout } = await execFileAsync('hermes', args, {
       maxBuffer: 50 * 1024 * 1024,
       timeout: 30000,
+      ...execOpts,
     })
 
     const lines = stdout.trim().split('\n').filter(Boolean)
@@ -170,6 +174,7 @@ export async function deleteSession(id: string): Promise<boolean> {
   try {
     await execFileAsync('hermes', ['sessions', 'delete', id, '--yes'], {
       timeout: 10000,
+      ...execOpts,
     })
     return true
   } catch (err: any) {
@@ -185,6 +190,7 @@ export async function renameSession(id: string, title: string): Promise<boolean>
   try {
     await execFileAsync('hermes', ['sessions', 'rename', id, title], {
       timeout: 10000,
+      ...execOpts,
     })
     return true
   } catch (err: any) {
@@ -204,7 +210,7 @@ export interface LogFileInfo {
  */
 export async function getVersion(): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('hermes', ['--version'], { timeout: 5000 })
+    const { stdout } = await execFileAsync('hermes', ['--version'], { timeout: 5000, ...execOpts })
     return stdout.trim()
   } catch {
     return ''
@@ -217,6 +223,7 @@ export async function getVersion(): Promise<string> {
 export async function startGateway(): Promise<string> {
   const { stdout, stderr } = await execFileAsync('hermes', ['gateway', 'start'], {
     timeout: 30000,
+    ...execOpts,
   })
   return stdout || stderr
 }
@@ -230,6 +237,7 @@ export async function startGatewayBackground(): Promise<number | null> {
   const child = spawn('hermes', ['gateway', 'run'], {
     detached: true,
     stdio: 'ignore',
+    windowsHide: true,
   })
   child.unref()
   return child.pid ?? null
@@ -241,6 +249,7 @@ export async function startGatewayBackground(): Promise<number | null> {
 export async function restartGateway(): Promise<string> {
   const { stdout, stderr } = await execFileAsync('hermes', ['gateway', 'restart'], {
     timeout: 30000,
+    ...execOpts,
   })
   return stdout || stderr
 }
@@ -252,6 +261,7 @@ export async function listLogFiles(): Promise<LogFileInfo[]> {
   try {
     const { stdout } = await execFileAsync('hermes', ['logs', 'list'], {
       timeout: 10000,
+      ...execOpts,
     })
     const files: LogFileInfo[] = []
     const lines = stdout.trim().split('\n').filter(l => l.includes('.log'))
@@ -291,6 +301,7 @@ export async function readLogs(
     const { stdout } = await execFileAsync('hermes', args, {
       maxBuffer: 10 * 1024 * 1024,
       timeout: 15000,
+      ...execOpts,
     })
     return stdout
   } catch (err: any) {
