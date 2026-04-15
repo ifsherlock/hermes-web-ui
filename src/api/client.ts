@@ -6,7 +6,7 @@ function getBaseUrl(): string {
   return localStorage.getItem('hermes_server_url') || DEFAULT_BASE_URL
 }
 
-function getApiKey(): string {
+export function getApiKey(): string {
   return localStorage.getItem('hermes_api_key') || ''
 }
 

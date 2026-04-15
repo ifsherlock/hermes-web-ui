@@ -1,4 +1,4 @@
-import { request, getBaseUrlValue } from './client'
+import { request, getBaseUrlValue, getApiKey } from './client'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -44,7 +44,8 @@ export function streamRunEvents(
   onError: (err: Error) => void,
 ) {
   const baseUrl = getBaseUrlValue()
-  const url = `${baseUrl}/v1/runs/${runId}/events`
+  const token = getApiKey()
+  const url = `${baseUrl}/v1/runs/${runId}/events${token ? `?token=${encodeURIComponent(token)}` : ''}`
 
   let closed = false
   const source = new EventSource(url)
