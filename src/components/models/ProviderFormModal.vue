@@ -36,7 +36,7 @@ function autoGenerateName(url: string): string {
   const clean = url.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, '')
   const host = clean.split('/')[0]
   if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    return `Local (${host})`
+    return t('models.local', { host })
   }
   return host.charAt(0).toUpperCase() + host.slice(1)
 }

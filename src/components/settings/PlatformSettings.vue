@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
-import { NSwitch, NInput, NButton, NSpin, useMessage } from 'naive-ui'
+import { NSwitch, NInput, NButton, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settings'
 import { saveCredentials as saveCredsApi, fetchWeixinQrCode, pollWeixinQrStatus, saveWeixinCredentials } from '@/api/config'
@@ -21,14 +21,18 @@ async function saveChannel(platform: string, values: Record<string, any>) {
 }
 
 // Save credentials to .env (matching hermes gateway setup behavior)
+const savingCreds = ref(false)
+
 async function saveCredentials(platform: string, values: Record<string, any>) {
+  savingCreds.value = true
   try {
     await saveCredsApi(platform, values)
-    // Refresh to pick up new .env values
     await settingsStore.fetchSettings()
     message.success(t('settings.saved'))
   } catch (err: any) {
     message.error(t('settings.saveFailed'))
+  } finally {
+    savingCreds.value = false
   }
 }
 
@@ -57,7 +61,7 @@ async function startWeixinQrLogin() {
     pollWeixinStatus()
   } catch (err: any) {
     wxQrStatus.value = 'error'
-    message.error(err.message || 'Failed to get QR code')
+    message.error(err.message || t('platform.qrFetching'))
   }
 }
 

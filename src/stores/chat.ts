@@ -83,7 +83,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
           role: 'tool',
           content: '',
           timestamp: Math.round(msg.timestamp * 1000),
-          toolName: tc.function?.name || 'Tool',
+          toolName: tc.function?.name || 'tool',
           toolArgs: tc.function?.arguments || undefined,
           toolStatus: 'done',
         })
@@ -94,7 +94,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
     // Tool result messages
     if (msg.role === 'tool') {
       const tcId = msg.tool_call_id || ''
-      const toolName = msg.tool_name || toolNameMap.get(tcId) || 'Tool'
+      const toolName = msg.tool_name || toolNameMap.get(tcId) || 'tool'
       const toolArgs = toolArgsMap.get(tcId) || undefined
       // Extract a short preview from the content
       let preview = ''
@@ -141,7 +141,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
 function mapHermesSession(s: SessionSummary): Session {
   return {
     id: s.id,
-    title: s.title || 'New Chat',
+    title: s.title || '',
     source: s.source || undefined,
     messages: [],
     createdAt: Math.round(s.started_at * 1000),
@@ -190,7 +190,7 @@ export const useChatStore = defineStore('chat', () => {
   function createSession(): Session {
     const session: Session = {
       id: uid(),
-      title: 'New Chat',
+      title: '',
       source: 'api_server',
       messages: [],
       createdAt: Date.now(),
@@ -289,7 +289,7 @@ export const useChatStore = defineStore('chat', () => {
   function updateSessionTitle(sessionId: string) {
     const target = sessions.value.find(s => s.id === sessionId)
     if (!target) return
-    if (target.title === 'New Chat') {
+    if (!target.title) {
       const firstUser = target.messages.find(m => m.role === 'user')
       if (firstUser) {
         const title = firstUser.attachments?.length

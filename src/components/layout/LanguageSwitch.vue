@@ -3,11 +3,11 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NSelect } from 'naive-ui'
 
-const { locale, availableLocales } = useI18n()
+const { locale, availableLocales, t } = useI18n()
 
 const options = computed(() =>
   availableLocales.map(loc => ({
-    label: loc === 'zh' ? '中文' : 'English',
+    label: loc === 'zh' ? t('language.zh') : t('language.en'),
     value: loc,
   })),
 )

@@ -2,6 +2,9 @@
 import { computed } from 'vue'
 import { NSelect } from 'naive-ui'
 import { useAppStore } from '@/stores/app'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const appStore = useAppStore()
 
@@ -26,7 +29,7 @@ function handleChange(value: string | number | Array<string | number>) {
 
 <template>
   <div class="model-selector">
-    <div class="model-label">Model</div>
+    <div class="model-label">{{ t('models.title') }}</div>
     <NSelect
       :value="appStore.selectedModel"
       :options="options"

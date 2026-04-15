@@ -35,7 +35,7 @@ async function saveApiServer(values: Record<string, any>) {
     </header>
 
     <div class="settings-content">
-      <NSpin :show="settingsStore.loading">
+      <NSpin :show="settingsStore.loading || settingsStore.saving" size="large" :description="t('common.loading')">
         <NTabs type="line" animated>
           <NTabPane name="display" :tab="t('settings.tabs.display')">
             <DisplaySettings />

@@ -69,7 +69,7 @@ function handleSelect(category: string, skill: string) {
     </header>
 
     <div class="skills-content">
-      <div v-if="loading && categories.length === 0" class="skills-loading">Loading...</div>
+      <div v-if="loading && categories.length === 0" class="skills-loading">{{ t('common.loading') }}</div>
       <div v-else class="skills-layout">
           <div class="mobile-backdrop" :class="{ active: showSidebar }" @click="showSidebar = false" />
           <div v-if="showSidebar" class="skills-sidebar">
@@ -92,7 +92,7 @@ function handleSelect(category: string, skill: string) {
                 <polyline points="2 17 12 22 22 17" />
                 <polyline points="2 12 12 17 22 12" />
               </svg>
-              <span>Select a skill from the list</span>
+              <span>{{ t('skills.noMatch') }}</span>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import type { DisplayConfig, AgentConfig, MemoryConfig, SessionResetConfig, Priv
 
 export const useSettingsStore = defineStore('settings', () => {
   const loading = ref(false)
+  const saving = ref(false)
 
   const display = ref<DisplayConfig>({})
   const agent = ref<AgentConfig>({})
@@ -49,7 +50,9 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function saveSection(section: string, values: Record<string, any>) {
-    await configApi.updateConfigSection(section, values)
+    saving.value = true
+    try {
+      await configApi.updateConfigSection(section, values)
     switch (section) {
       case 'display': display.value = { ...display.value, ...values }; break
       case 'agent': agent.value = { ...agent.value, ...values }; break
@@ -76,10 +79,13 @@ export const useSettingsStore = defineStore('settings', () => {
         break
       }
     }
+    } finally {
+      saving.value = false
+    }
   }
 
   return {
-    loading,
+    loading, saving,
     display, agent, memory, sessionReset, privacy,
     telegram, discord, slack, whatsapp, matrix, wecom, feishu, dingtalk, weixin, platforms,
     fetchSettings, saveSection,

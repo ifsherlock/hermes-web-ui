@@ -41,7 +41,7 @@ function formatCost(n: number): string {
       <div class="stat-label">{{ t('usage.cacheHitRate') }}</div>
       <div class="stat-value">{{ usageStore.cacheHitRate !== null ? usageStore.cacheHitRate.toFixed(1) + '%' : '--' }}</div>
       <div class="stat-sub" v-if="usageStore.cacheHitRate !== null">
-        {{ formatTokens(usageStore.totalCacheTokens) }} tokens
+        {{ formatTokens(usageStore.totalCacheTokens) }} {{ t('usage.tokens') }}
       </div>
     </div>
   </div>

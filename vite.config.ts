@@ -3,16 +3,17 @@ import vue from '@vitejs/plugin-vue'
 import type { ProxyOptions } from 'vite'
 import { resolve } from 'path'
 
+const BACKEND = 'http://127.0.0.1:8648'
+
 function createProxyConfig(): ProxyOptions {
   return {
-    target: 'http://127.0.0.1:8648',
+    target: BACKEND,
     changeOrigin: true,
     configure: (proxy) => {
       proxy.on('proxyReq', (proxyReq) => {
         proxyReq.removeHeader('origin')
         proxyReq.removeHeader('referer')
       })
-      // Disable response buffering for SSE streaming
       proxy.on('proxyRes', (proxyRes) => {
         proxyRes.headers['cache-control'] = 'no-cache'
         proxyRes.headers['x-accel-buffering'] = 'no'

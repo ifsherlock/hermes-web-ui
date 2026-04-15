@@ -1,7 +1,7 @@
 export default {
   // 登录
   login: {
-    title: '登录',
+    title: 'Hermes Web UI',
     description: '输入访问令牌以继续。令牌在服务端启动日志中查看。',
     placeholder: '访问令牌',
     submit: '登录',
@@ -43,6 +43,7 @@ export default {
     logs: '日志',
     usage: '用量',
     channels: '频道',
+    terminal: '终端',
     settings: '设置',
     connected: '已连接',
     disconnected: '未连接',
@@ -69,8 +70,8 @@ export default {
     enterNewTitle: '输入新标题',
     other: '其他',
     runFailed: '运行失败',
-    tool: '工具',
     error: '错误',
+    tool: '工具',
     arguments: '参数',
     result: '结果',
     truncated: '... (已截断)',
@@ -350,6 +351,15 @@ export default {
     label: '语言',
     zh: '中文',
     en: 'English',
+  },
+
+  // 终端
+  terminal: {
+    sessions: '会话',
+    newTab: '新建终端',
+    closeSession: '关闭此会话？',
+    sessionExited: '已退出',
+    processExited: '进程已退出，代码 {code}',
   },
 
   // 用量统计

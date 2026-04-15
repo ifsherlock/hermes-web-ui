@@ -95,7 +95,7 @@ async function handleDelete() {
         <span class="info-value">
           {{ formatTime(job.last_run_at) }}
           <span v-if="job.last_status" class="run-status" :class="{ ok: job.last_status === 'ok', err: job.last_status !== 'ok' }">
-            {{ job.last_status === 'ok' ? 'OK' : job.last_status }}
+            {{ job.last_status === 'ok' ? t('common.ok') : job.last_status }}
           </span>
         </span>
       </div>

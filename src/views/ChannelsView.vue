@@ -20,7 +20,7 @@ onMounted(() => {
     </header>
 
     <div class="channels-content">
-      <NSpin :show="settingsStore.loading">
+      <NSpin :show="settingsStore.loading || settingsStore.saving" size="large" :description="t('common.loading')">
         <PlatformSettings />
       </NSpin>
     </div>
@@ -40,5 +40,6 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  position: relative;
 }
 </style>

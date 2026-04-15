@@ -56,7 +56,7 @@ async function handleLogin() {
       <div class="login-logo">
         <img src="/logo.png" alt="Hermes" width="80" height="80" />
       </div>
-      <h1 class="login-title">Hermes Web UI</h1>
+      <h1 class="login-title">{{ t('login.title') }}</h1>
       <p class="login-desc">{{ t("login.description") }}</p>
 
       <form class="login-form" @submit.prevent="handleLogin">

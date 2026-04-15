@@ -2,19 +2,29 @@
 import { spawn, execSync } from 'child_process'
 import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync, chmodSync } from 'fs'
 import { randomBytes } from 'crypto'
 import { homedir } from 'os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const serverEntry = resolve(__dirname, '..', 'dist', 'server', 'index.js')
-const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
+const pkgDir = resolve(__dirname, '..')
+const pkg = JSON.parse(readFileSync(resolve(pkgDir, 'package.json'), 'utf-8'))
 const VERSION = pkg.version
 const PID_DIR = resolve(homedir(), '.hermes-web-ui')
 const PID_FILE = join(PID_DIR, 'server.pid')
 const LOG_FILE = join(PID_DIR, 'server.log')
 const TOKEN_FILE = resolve(__dirname, '..', 'dist', 'server', 'data', '.token')
 const DEFAULT_PORT = 8648
+
+// ─── Auto-fix node-pty native module ──────────────────────────
+function ensureNativeModules() {
+  const prebuildDir = join(pkgDir, 'node_modules', 'node-pty', 'prebuilds', `${process.platform}-${process.arch}`)
+  const helper = join(prebuildDir, 'spawn-helper')
+  try {
+    chmodSync(helper, 0o755)
+  } catch {}
+}
 
 function getToken() {
   try {
@@ -105,6 +115,7 @@ function startDaemon(port) {
 
   mkdirSync(PID_DIR, { recursive: true })
 
+  ensureNativeModules()
   const token = ensureToken()
 
   const logStream = openSync(LOG_FILE, 'a')
@@ -260,6 +271,7 @@ switch (command) {
     doUpdate()
     break
   default:
+    ensureNativeModules()
     const port = !isNaN(command) ? parseInt(command) : DEFAULT_PORT
     const child = spawn(process.execPath, [serverEntry], {
       stdio: 'inherit',

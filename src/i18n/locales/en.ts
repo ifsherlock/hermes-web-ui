@@ -1,7 +1,7 @@
 export default {
   // Login
   login: {
-    title: 'Login',
+    title: 'Hermes Web UI',
     description: 'Enter your access token to continue. Find it in the server startup logs.',
     placeholder: 'Access token',
     submit: 'Login',
@@ -43,6 +43,7 @@ export default {
     logs: 'Logs',
     usage: 'Usage',
     channels: 'Channels',
+    terminal: 'Terminal',
     settings: 'Settings',
     connected: 'Connected',
     disconnected: 'Disconnected',
@@ -69,8 +70,8 @@ export default {
     enterNewTitle: 'Enter new title',
     other: 'Other',
     runFailed: 'Run failed',
+    error: 'Error',
     tool: 'Tool',
-    error: 'error',
     arguments: 'Arguments',
     result: 'Result',
     truncated: '... (truncated)',
@@ -350,6 +351,15 @@ export default {
     label: 'Language',
     zh: '中文',
     en: 'English',
+  },
+
+  // Terminal
+  terminal: {
+    sessions: 'Sessions',
+    newTab: 'New Terminal',
+    closeSession: 'Close this session?',
+    sessionExited: 'Exited',
+    processExited: 'Process exited with code {code}',
   },
 
   // Usage

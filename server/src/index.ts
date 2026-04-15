@@ -14,6 +14,7 @@ import { logRoutes } from './routes/logs'
 import { fsRoutes } from './routes/filesystem'
 import { configRoutes } from './routes/config'
 import { weixinRoutes } from './routes/weixin'
+import { setupTerminalWebSocket } from './routes/terminal'
 import * as hermesCli from './services/hermes-cli'
 import { getToken, authMiddleware } from './services/auth'
 
@@ -93,6 +94,9 @@ export async function bootstrap() {
 
   // 🚀 启动服务
   server = app.listen(config.port, '0.0.0.0')
+
+  // Terminal WebSocket (must be after server is created)
+  setupTerminalWebSocket(server)
 
   server.on('listening', () => {
     console.log(`➜ Server: http://localhost:${config.port}`)

@@ -55,6 +55,11 @@ const router = createRouter({
       name: 'channels',
       component: () => import('@/views/ChannelsView.vue'),
     },
+    {
+      path: '/terminal',
+      name: 'terminal',
+      component: () => import('@/views/TerminalView.vue'),
+    },
   ],
 })
 

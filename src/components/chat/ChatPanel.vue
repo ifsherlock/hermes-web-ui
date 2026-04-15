@@ -40,7 +40,7 @@ const renameSessionId = ref<string | null>(null)
 const renameInputRef = ref<InstanceType<typeof NInput> | null>(null)
 const collapsedGroups = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('hermes_collapsed_groups') || '[]')))
 
-const sourceLabel: Record<string, string> = {
+const sourceLabelKeys: Record<string, string> = {
   telegram: 'Telegram',
   api_server: 'API Server',
   cli: 'CLI',
@@ -62,7 +62,7 @@ const sourceLabel: Record<string, string> = {
 
 function getSourceLabel(source?: string): string {
   if (!source) return ''
-  return sourceLabel[source] || source
+  return sourceLabelKeys[source] || source
 }
 
 // Source sort order: api_server first, cron last, others alphabetical
