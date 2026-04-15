@@ -51,7 +51,12 @@ async function uploadFiles(attachments: Attachment[]): Promise<{ name: string; p
   for (const att of attachments) {
     if (att.file) formData.append('file', att.file, att.name)
   }
-  const res = await fetch('/upload', { method: 'POST', body: formData })
+  const token = localStorage.getItem('hermes_api_key') || ''
+  const res = await fetch('/upload', {
+    method: 'POST',
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
   const data = await res.json() as { files: { name: string; path: string }[] }
   return data.files
