@@ -155,26 +155,29 @@ function mapHermesSession(s: SessionSummary): Session {
 }
 
 export const useChatStore = defineStore('chat', () => {
+  const STORAGE_KEY = 'hermes_active_session'
   const sessions = ref<Session[]>([])
-  const activeSessionId = ref<string | null>(null)
-  const streamSessionId = ref<string | null>(null)
-  const _isStreaming = ref(false)
-  const abortController = ref<AbortController | null>(null)
-  const isStreaming = computed(() => _isStreaming.value && activeSessionId.value === streamSessionId.value)
+  const activeSessionId = ref<string | null>(localStorage.getItem(STORAGE_KEY))
+  const streamStates = ref<Map<string, AbortController>>(new Map())
+  const isStreaming = computed(() => activeSessionId.value != null && streamStates.value.has(activeSessionId.value))
   const isLoadingSessions = ref(false)
   const isLoadingMessages = ref(false)
 
   const activeSession = ref<Session | null>(null)
-  const messages = ref<Message[]>([])
+  const messages = computed<Message[]>(() => activeSession.value?.messages || [])
 
   async function loadSessions() {
     isLoadingSessions.value = true
     try {
       const list = await fetchSessions()
       sessions.value = list.map(mapHermesSession)
-      // Auto-select the most recent session
-      if (!activeSessionId.value && sessions.value.length > 0) {
-        await switchSession(sessions.value[0].id)
+      // Restore last active session, fallback to most recent
+      const savedId = activeSessionId.value
+      const targetId = savedId && sessions.value.some(s => s.id === savedId)
+        ? savedId
+        : sessions.value[0]?.id
+      if (targetId) {
+        await switchSession(targetId)
       }
     } catch (err) {
       console.error('Failed to load sessions:', err)
@@ -198,11 +201,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function switchSession(sessionId: string) {
-    // Sync current messages back to the streaming session before switching
-    if (streamSessionId.value && sessionId !== streamSessionId.value) {
-      syncMessagesToSession()
-    }
     activeSessionId.value = sessionId
+    localStorage.setItem(STORAGE_KEY, sessionId)
     activeSession.value = sessions.value.find(s => s.id === sessionId) || null
 
     // If session has no messages loaded, fetch from API
@@ -232,8 +232,6 @@ export const useChatStore = defineStore('chat', () => {
         isLoadingMessages.value = false
       }
     }
-
-    messages.value = activeSession.value ? [...activeSession.value.messages] : []
   }
 
   function newChat() {
@@ -269,30 +267,30 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  function syncMessagesToSession() {
-    const targetSession = sessions.value.find(s => s.id === streamSessionId.value)
-    if (targetSession) {
-      targetSession.messages = [...messages.value]
-    }
+  function getSessionMsgs(sessionId: string): Message[] {
+    const s = sessions.value.find(s => s.id === sessionId)
+    return s?.messages || []
   }
 
-  function addMessage(msg: Message) {
-    messages.value.push(msg)
+  function addMessage(sessionId: string, msg: Message) {
+    const s = sessions.value.find(s => s.id === sessionId)
+    if (s) s.messages.push(msg)
   }
 
-  function updateMessage(id: string, update: Partial<Message>) {
-    const idx = messages.value.findIndex(m => m.id === id)
+  function updateMessage(sessionId: string, id: string, update: Partial<Message>) {
+    const s = sessions.value.find(s => s.id === sessionId)
+    if (!s) return
+    const idx = s.messages.findIndex(m => m.id === id)
     if (idx !== -1) {
-      messages.value[idx] = { ...messages.value[idx], ...update }
+      s.messages[idx] = { ...s.messages[idx], ...update }
     }
   }
 
-  function updateSessionTitle() {
-    const target = sessions.value.find(s => s.id === (streamSessionId.value || activeSessionId.value))
+  function updateSessionTitle(sessionId: string) {
+    const target = sessions.value.find(s => s.id === sessionId)
     if (!target) return
-    const msgs = target.messages.length > 0 ? target.messages : messages.value
     if (target.title === 'New Chat') {
-      const firstUser = msgs.find(m => m.role === 'user')
+      const firstUser = target.messages.find(m => m.role === 'user')
       if (firstUser) {
         const title = firstUser.attachments?.length
           ? firstUser.attachments.map(a => a.name).join(', ')
@@ -311,6 +309,9 @@ export const useChatStore = defineStore('chat', () => {
       switchSession(session.id)
     }
 
+    // Capture session ID at send time — all callbacks use this, not activeSessionId
+    const sid = activeSessionId.value!
+
     const userMsg: Message = {
       id: uid(),
       role: 'user',
@@ -318,14 +319,13 @@ export const useChatStore = defineStore('chat', () => {
       timestamp: Date.now(),
       attachments: attachments && attachments.length > 0 ? attachments : undefined,
     }
-    addMessage(userMsg)
-    updateSessionTitle()
-
-    _isStreaming.value = true
+    addMessage(sid, userMsg)
+    updateSessionTitle(sid)
 
     try {
       // Build conversation history from past messages
-      const history: ChatMessage[] = messages.value
+      const sessionMsgs = getSessionMsgs(sid)
+      const history: ChatMessage[] = sessionMsgs
         .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content.trim())
         .map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }))
 
@@ -338,30 +338,32 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       const appStore = useAppStore()
-      // Use session-level model if set, otherwise fall back to global
       const sessionModel = activeSession.value?.model || appStore.selectedModel
-      streamSessionId.value = activeSessionId.value
       const run = await startRun({
         input: inputText,
         conversation_history: history,
-        session_id: activeSession.value?.id,
+        session_id: sid,
         model: sessionModel || undefined,
       })
 
       const runId = (run as any).run_id || (run as any).id
       if (!runId) {
-        addMessage({
+        addMessage(sid, {
           id: uid(),
           role: 'system',
           content: `Error: startRun returned no run ID. Response: ${JSON.stringify(run)}`,
           timestamp: Date.now(),
         })
-        _isStreaming.value = false
         return
       }
 
-      // Listen to SSE events
-      abortController.value = streamRunEvents(
+      // Helper to clean up this session's stream state
+      const cleanup = () => {
+        streamStates.value.delete(sid)
+      }
+
+      // Listen to SSE events — all closures capture `sid`
+      const ctrl = streamRunEvents(
         runId,
         // onEvent
         (evt: RunEvent) => {
@@ -370,11 +372,12 @@ export const useChatStore = defineStore('chat', () => {
               break
 
             case 'message.delta': {
-              const last = messages.value[messages.value.length - 1]
+              const msgs = getSessionMsgs(sid)
+              const last = msgs[msgs.length - 1]
               if (last?.role === 'assistant' && last.isStreaming) {
                 last.content += evt.delta || ''
               } else {
-                addMessage({
+                addMessage(sid, {
                   id: uid(),
                   role: 'assistant',
                   content: evt.delta || '',
@@ -386,11 +389,12 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'tool.started': {
-              const last = messages.value[messages.value.length - 1]
+              const msgs = getSessionMsgs(sid)
+              const last = msgs[msgs.length - 1]
               if (last?.isStreaming) {
-                updateMessage(last.id, { isStreaming: false })
+                updateMessage(sid, last.id, { isStreaming: false })
               }
-              addMessage({
+              addMessage(sid, {
                 id: uid(),
                 role: 'tool',
                 content: '',
@@ -403,113 +407,111 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'tool.completed': {
-              const toolMsgs = messages.value.filter(
+              const msgs = getSessionMsgs(sid)
+              const toolMsgs = msgs.filter(
                 m => m.role === 'tool' && m.toolStatus === 'running',
               )
               if (toolMsgs.length > 0) {
                 const last = toolMsgs[toolMsgs.length - 1]
-                updateMessage(last.id, { toolStatus: 'done' })
+                updateMessage(sid, last.id, { toolStatus: 'done' })
               }
               break
             }
 
-            case 'run.completed':
-              const lastMsg = messages.value[messages.value.length - 1]
+            case 'run.completed': {
+              const msgs = getSessionMsgs(sid)
+              const lastMsg = msgs[msgs.length - 1]
               if (lastMsg?.isStreaming) {
-                updateMessage(lastMsg.id, { isStreaming: false })
+                updateMessage(sid, lastMsg.id, { isStreaming: false })
               }
-              _isStreaming.value = false
-              streamSessionId.value = null
-              abortController.value = null
-              syncMessagesToSession()
-              updateSessionTitle()
+              cleanup()
+              updateSessionTitle(sid)
               break
+            }
 
-            case 'run.failed':
-              const lastErr = messages.value[messages.value.length - 1]
+            case 'run.failed': {
+              const msgs = getSessionMsgs(sid)
+              const lastErr = msgs[msgs.length - 1]
               if (lastErr?.isStreaming) {
-                updateMessage(lastErr.id, {
+                updateMessage(sid, lastErr.id, {
                   isStreaming: false,
                   content: evt.error ? `Error: ${evt.error}` : 'Run failed',
                   role: 'system',
                 })
               } else {
-                addMessage({
+                addMessage(sid, {
                   id: uid(),
                   role: 'system',
                   content: evt.error ? `Error: ${evt.error}` : 'Run failed',
                   timestamp: Date.now(),
                 })
               }
-              messages.value.forEach((m, i) => {
+              msgs.forEach((m, i) => {
                 if (m.role === 'tool' && m.toolStatus === 'running') {
-                  messages.value[i] = { ...m, toolStatus: 'error' }
+                  msgs[i] = { ...m, toolStatus: 'error' }
                 }
               })
-              _isStreaming.value = false
-              streamSessionId.value = null
-              abortController.value = null
+              cleanup()
               break
+            }
           }
         },
         // onDone
         () => {
-          const last = messages.value[messages.value.length - 1]
+          const msgs = getSessionMsgs(sid)
+          const last = msgs[msgs.length - 1]
           if (last?.isStreaming) {
-            updateMessage(last.id, { isStreaming: false })
+            updateMessage(sid, last.id, { isStreaming: false })
           }
-          _isStreaming.value = false
-          streamSessionId.value = null
-          abortController.value = null
-          syncMessagesToSession()
-          updateSessionTitle()
+          cleanup()
+          updateSessionTitle(sid)
         },
         // onError
         (err) => {
-          const last = messages.value[messages.value.length - 1]
+          const msgs = getSessionMsgs(sid)
+          const last = msgs[msgs.length - 1]
           if (last?.isStreaming) {
-            updateMessage(last.id, {
+            updateMessage(sid, last.id, {
               isStreaming: false,
               content: `Error: ${err.message}`,
               role: 'system',
             })
           } else {
-            addMessage({
+            addMessage(sid, {
               id: uid(),
               role: 'system',
               content: `Error: ${err.message}`,
               timestamp: Date.now(),
             })
           }
-          _isStreaming.value = false
-          streamSessionId.value = null
-          abortController.value = null
-          syncMessagesToSession()
+          cleanup()
         },
       )
+
+      streamStates.value.set(sid, ctrl)
     } catch (err: any) {
-      addMessage({
+      addMessage(sid, {
         id: uid(),
         role: 'system',
         content: `Error: ${err.message}`,
         timestamp: Date.now(),
       })
-      _isStreaming.value = false
-      streamSessionId.value = null
-      abortController.value = null
     }
   }
 
   function stopStreaming() {
-    abortController.value?.abort()
-    _isStreaming.value = false
-    streamSessionId.value = null
-    const lastMsg = messages.value[messages.value.length - 1]
-    if (lastMsg?.isStreaming) {
-      updateMessage(lastMsg.id, { isStreaming: false })
+    const sid = activeSessionId.value
+    if (!sid) return
+    const ctrl = streamStates.value.get(sid)
+    if (ctrl) {
+      ctrl.abort()
+      const msgs = getSessionMsgs(sid)
+      const lastMsg = msgs[msgs.length - 1]
+      if (lastMsg?.isStreaming) {
+        updateMessage(sid, lastMsg.id, { isStreaming: false })
+      }
+      streamStates.value.delete(sid)
     }
-    abortController.value = null
-    syncMessagesToSession()
   }
 
   // Load sessions on init

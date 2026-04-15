@@ -120,9 +120,18 @@ function toggleGroup(source: string) {
   localStorage.setItem('hermes_collapsed_groups', JSON.stringify([...collapsedGroups.value]))
 }
 
-// Default: expand only the first group if no saved state
+// Ensure the active session's group is expanded
 watch(groupedSessions, (groups) => {
-  if (localStorage.getItem('hermes_collapsed_groups') !== null) return
+  if (localStorage.getItem('hermes_collapsed_groups') !== null) {
+    // Has saved state — still ensure active session's group is visible
+    const activeSource = chatStore.activeSession?.source
+    if (activeSource && collapsedGroups.value.has(activeSource)) {
+      collapsedGroups.value = new Set([...collapsedGroups.value].filter(s => s !== activeSource))
+      localStorage.setItem('hermes_collapsed_groups', JSON.stringify([...collapsedGroups.value]))
+    }
+    return
+  }
+  // No saved state: expand only the first group
   collapsedGroups.value = new Set(groups.slice(1).map(g => g.source))
   localStorage.setItem('hermes_collapsed_groups', JSON.stringify([...collapsedGroups.value]))
 }, { once: true })

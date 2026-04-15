@@ -41,9 +41,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
   const res = await fetch(url, { ...options, headers })
 
-  // Global 401 handler — redirect to login
+  // Global 401 handler — clear auth and redirect to login
   if (res.status === 401) {
-    router.replace({ name: 'login' })
+    clearApiKey()
+    if (router.currentRoute.value.name !== 'login') {
+      router.replace({ name: 'login' })
+    }
     throw new Error('Unauthorized')
   }
 
