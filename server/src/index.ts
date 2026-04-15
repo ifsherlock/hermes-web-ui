@@ -196,7 +196,7 @@ async function ensureApiServerConfig() {
     let changed = false
 
     for (const [k, v] of Object.entries(defaults)) {
-      if (api[k] == null) {
+      if (api[k] != null && api[k] !== v) {
         api[k] = v
         changed = true
       }

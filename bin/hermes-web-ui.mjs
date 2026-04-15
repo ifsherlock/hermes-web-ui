@@ -3,6 +3,7 @@ import { spawn, execSync } from 'child_process'
 import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync } from 'fs'
+import { randomBytes } from 'crypto'
 import { homedir } from 'os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -21,6 +22,20 @@ function getToken() {
   } catch {
     return null
   }
+}
+
+function ensureToken() {
+  // If AUTH_DISABLED or AUTH_TOKEN is set, let server handle it
+  if (process.env.AUTH_DISABLED === '1' || process.env.AUTH_DISABLED === 'true') return null
+  if (process.env.AUTH_TOKEN) return process.env.AUTH_TOKEN
+
+  let token = getToken()
+  if (!token) {
+    mkdirSync(dirname(TOKEN_FILE), { recursive: true })
+    token = randomBytes(32).toString('hex')
+    writeFileSync(TOKEN_FILE, token + '\n', { mode: 0o600 })
+  }
+  return token
 }
 
 function getPort() {
@@ -90,11 +105,13 @@ function startDaemon(port) {
 
   mkdirSync(PID_DIR, { recursive: true })
 
+  const token = ensureToken()
+
   const logStream = openSync(LOG_FILE, 'a')
   const child = spawn(process.execPath, [serverEntry], {
     detached: true,
     stdio: ['ignore', logStream, logStream],
-    env: { ...process.env, PORT: String(port) },
+    env: { ...process.env, PORT: String(port), AUTH_TOKEN: token },
     windowsHide: true,
   })
 
@@ -110,14 +127,11 @@ function startDaemon(port) {
   setTimeout(() => {
     if (isRunning(child.pid)) {
       console.log(`  ✓ hermes-web-ui started (PID: ${child.pid}, port: ${port})`)
-      console.log(`    http://localhost:${port}`)
+      const url = token
+        ? `http://localhost:${port}/#/?token=${token}`
+        : `http://localhost:${port}`
+      console.log(`    ${url}`)
       console.log(`    Log: ${LOG_FILE}`)
-      const token = getToken()
-      if (token) {
-        console.log(`    Token: ${token}`)
-      }
-      // Open browser
-      const url = `http://localhost:${port}`
       const isWin = process.platform === 'win32'
       const cmd = isWin ? `start ${url}` : process.platform === 'darwin' ? `open ${url}` : `xdg-open ${url}`
       try { execSync(cmd, { stdio: 'ignore' }) } catch {}
