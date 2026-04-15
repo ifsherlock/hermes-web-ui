@@ -17,25 +17,27 @@ onMounted(() => {
 
 <template>
   <div class="usage-view">
-    <header class="usage-header">
-      <h2 class="usage-title">{{ t('usage.title') }}</h2>
+    <header class="page-header">
+      <h2 class="header-title">{{ t('usage.title') }}</h2>
       <NButton size="small" quaternary :loading="usageStore.isLoading" @click="usageStore.loadSessions()">
         {{ t('usage.refresh') }}
       </NButton>
     </header>
 
-    <div v-if="usageStore.isLoading && usageStore.sessions.length === 0" class="usage-loading">
-      {{ t('common.loading') }}
-    </div>
+    <div class="usage-content">
+      <div v-if="usageStore.isLoading && usageStore.sessions.length === 0" class="usage-loading">
+        {{ t('common.loading') }}
+      </div>
 
-    <template v-else-if="usageStore.sessions.length > 0">
-      <StatCards />
-      <ModelBreakdown />
-      <DailyTrend />
-    </template>
+      <template v-else-if="usageStore.sessions.length > 0">
+        <StatCards />
+        <ModelBreakdown />
+        <DailyTrend />
+      </template>
 
-    <div v-else class="usage-empty">
-      {{ t('usage.noData') }}
+      <div v-else class="usage-empty">
+        {{ t('usage.noData') }}
+      </div>
     </div>
   </div>
 </template>
@@ -44,23 +46,24 @@ onMounted(() => {
 @use '@/styles/variables' as *;
 
 .usage-view {
-  padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.usage-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
   max-width: 960px;
   margin: 0 auto;
-}
+  width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
-.usage-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.usage-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: $text-primary;
-  margin: 0;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .usage-loading,

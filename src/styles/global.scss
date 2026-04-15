@@ -58,3 +58,19 @@ a {
 ::selection {
   background: rgba($accent-primary, 0.3);
 }
+
+// Shared page header
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 21px 20px;
+  border-bottom: 1px solid $border-color;
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: $text-primary;
+}

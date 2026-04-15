@@ -86,7 +86,7 @@ onMounted(async () => {
 
 <template>
   <div class="logs-view">
-    <header class="logs-header">
+    <header class="page-header">
       <h2 class="header-title">{{ t('logs.title') }}</h2>
       <div class="header-actions">
         <NSelect
@@ -158,29 +158,16 @@ onMounted(async () => {
   flex-direction: column;
 }
 
-.logs-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  flex-shrink: 0;
+.page-header {
   gap: 12px;
   flex-wrap: wrap;
+}
 
-  .header-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: $text-primary;
-    white-space: nowrap;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .search-input {

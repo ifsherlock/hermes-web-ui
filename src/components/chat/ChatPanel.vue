@@ -556,7 +556,7 @@ async function handleRenameConfirm() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 21px 20px;
   border-bottom: 1px solid $border-color;
   flex-shrink: 0;
 }
@@ -571,8 +571,8 @@ async function handleRenameConfirm() {
 }
 
 .header-session-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   color: $text-primary;
   white-space: nowrap;
   overflow: hidden;

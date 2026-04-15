@@ -34,7 +34,7 @@ function handleSelect(category: string, skill: string) {
 
 <template>
   <div class="skills-view">
-    <header class="skills-header">
+    <header class="page-header">
       <h2 class="header-title">{{ t('skills.title') }}</h2>
       <NInput
         v-model:value="searchQuery"
@@ -83,23 +83,6 @@ function handleSelect(category: string, skill: string) {
   height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.skills-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  flex-shrink: 0;
-  gap: 12px;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
-  flex-shrink: 0;
 }
 
 .search-input {

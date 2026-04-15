@@ -30,7 +30,7 @@ async function saveApiServer(values: Record<string, any>) {
 
 <template>
   <div class="settings-view">
-    <header class="settings-header">
+    <header class="page-header">
       <h2 class="header-title">{{ t('settings.title') }}</h2>
     </header>
 
@@ -105,20 +105,6 @@ async function saveApiServer(values: Record<string, any>) {
   height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  flex-shrink: 0;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
 }
 
 .settings-content {

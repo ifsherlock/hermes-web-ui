@@ -15,7 +15,7 @@ onMounted(() => {
 
 <template>
   <div class="channels-view">
-    <header class="channels-header">
+    <header class="page-header">
       <h2 class="header-title">{{ t('sidebar.channels') }}</h2>
     </header>
 
@@ -34,20 +34,6 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.channels-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  flex-shrink: 0;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
 }
 
 .channels-content {

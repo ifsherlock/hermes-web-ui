@@ -30,9 +30,9 @@ async function handleSaved() {
 
 <template>
   <div class="models-view">
-    <header class="models-header">
+    <header class="page-header">
       <h2 class="header-title">{{ t('models.title') }}</h2>
-      <NButton type="primary" @click="openCreateModal">
+      <NButton type="primary" size="small" @click="openCreateModal">
         <template #icon>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </template>
@@ -61,21 +61,6 @@ async function handleSaved() {
   height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.models-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  flex-shrink: 0;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
 }
 
 .models-content {

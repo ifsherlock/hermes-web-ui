@@ -72,7 +72,7 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
 
 <template>
   <div class="memory-view">
-    <header class="memory-header">
+    <header class="page-header">
       <h2 class="header-title">{{ t('memory.title') }}</h2>
       <NButton size="small" quaternary @click="loadMemory">
         <template #icon>
@@ -191,21 +191,6 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
   height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.memory-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  flex-shrink: 0;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
 }
 
 .memory-content {
