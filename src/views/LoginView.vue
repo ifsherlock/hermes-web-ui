@@ -80,7 +80,7 @@ async function handleLogin() {
 @use "@/styles/variables" as *;
 
 .login-view {
-  height: 100vh;
+  height: calc(100 * var(--vh));
   display: flex;
   align-items: center;
   justify-content: center;

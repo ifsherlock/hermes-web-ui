@@ -315,7 +315,7 @@ function handleNav(key: string) {
 
 .sidebar {
   width: $sidebar-width;
-  height: 100vh;
+  height: calc(100 * var(--vh));
   background-color: $bg-sidebar;
   border-right: 1px solid $border-color;
   display: flex;
@@ -448,6 +448,12 @@ function handleNav(key: string) {
     display: none;
   }
 
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
   .sidebar {
     position: fixed;
     left: 0;
@@ -458,6 +464,11 @@ function handleNav(key: string) {
 
     &.open {
       transform: translateX(0);
+    }
+
+    // Override global utility — sidebar is always 240px wide
+    .input-sm {
+      width: 90px;
     }
   }
 }

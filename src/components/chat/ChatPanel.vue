@@ -14,6 +14,11 @@ const { t } = useI18n()
 const showSessions = ref(true)
 let mobileQuery: MediaQueryList | null = null
 
+function handleSessionClick(sessionId: string) {
+  chatStore.switchSession(sessionId)
+  if (mobileQuery?.matches) showSessions.value = false
+}
+
 function handleMobileChange(e: MediaQueryListEvent | MediaQueryList) {
   if (e.matches && showSessions.value) {
     showSessions.value = false
@@ -265,14 +270,20 @@ async function handleRenameConfirm() {
 <template>
   <div class="chat-panel">
     <!-- Session List -->
+    <div class="session-backdrop" :class="{ active: showSessions }" @click="showSessions = false" />
     <aside class="session-list" :class="{ collapsed: !showSessions }">
       <div class="session-list-header">
         <span v-if="showSessions" class="session-list-title">{{ t('chat.sessions') }}</span>
-        <NButton quaternary size="tiny" @click="handleNewChat" circle>
+        <div class="session-list-actions">
+          <button class="session-close-btn" @click="showSessions = false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <NButton quaternary size="tiny" @click="handleNewChat" circle>
           <template #icon>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </template>
         </NButton>
+        </div>
       </div>
       <div v-if="showSessions" class="session-items">
         <div v-if="chatStore.isLoadingSessions && chatStore.sessions.length === 0" class="session-loading">{{ t('common.loading') }}</div>
@@ -289,7 +300,7 @@ async function handleRenameConfirm() {
               :key="s.id"
               class="session-item"
               :class="{ active: s.id === chatStore.activeSessionId }"
-              @click="chatStore.switchSession(s.id)"
+              @click="handleSessionClick(s.id)"
               @contextmenu="handleContextMenu($event, s.id)"
             >
               <div class="session-item-content">
@@ -392,6 +403,7 @@ async function handleRenameConfirm() {
 .chat-panel {
   display: flex;
   height: 100%;
+  position: relative;
 }
 
 .session-list {
@@ -409,6 +421,43 @@ async function handleRenameConfirm() {
     opacity: 0;
     pointer-events: none;
   }
+
+  @media (max-width: $breakpoint-mobile) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 10;
+    background: $bg-card;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    width: 280px;
+
+    &.collapsed {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+  }
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .session-close-btn {
+    display: flex;
+  }
+
+  .session-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 9;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity $transition-fast;
+
+    &.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }
 
 .session-list-header {
@@ -417,6 +466,26 @@ async function handleRenameConfirm() {
   justify-content: space-between;
   padding: 12px;
   flex-shrink: 0;
+}
+
+.session-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.session-close-btn {
+  display: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: $text-secondary;
+  padding: 4px;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: rgba($accent-primary, 0.06);
+  }
 }
 
 .session-list-title {
@@ -546,7 +615,7 @@ async function handleRenameConfirm() {
 
 .session-item-delete {
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 0.5;
   padding: 2px;
   border: none;
   background: none;

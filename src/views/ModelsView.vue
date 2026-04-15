@@ -58,7 +58,7 @@ async function handleSaved() {
 @use '@/styles/variables' as *;
 
 .models-view {
-  height: 100vh;
+  height: calc(100 * var(--vh));
   display: flex;
   flex-direction: column;
 }

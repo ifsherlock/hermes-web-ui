@@ -469,16 +469,16 @@ const formattedToolResult = computed(() => {
 }
 
 @media (max-width: $breakpoint-mobile) {
-  .msg-user .msg-body {
-    max-width: 90%;
+  .message.user .msg-body {
+    max-width: 100%;
   }
 
-  .msg-assistant .msg-body {
-    max-width: 92%;
+  .message.assistant .msg-body {
+    max-width: 100%;
   }
 
-  .msg-system .msg-body {
-    max-width: 92%;
+  .message.system .msg-body {
+    max-width: 100%;
   }
 }
 </style>

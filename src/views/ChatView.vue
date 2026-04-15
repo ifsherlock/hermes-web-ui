@@ -21,7 +21,7 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .chat-view {
-  height: 100vh;
+  height: calc(100 * var(--vh));
   display: flex;
   flex-direction: column;
 }

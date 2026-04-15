@@ -102,7 +102,7 @@ async function saveApiServer(values: Record<string, any>) {
 @use '@/styles/variables' as *;
 
 .settings-view {
-  height: 100vh;
+  height: calc(100 * var(--vh));
   display: flex;
   flex-direction: column;
 }

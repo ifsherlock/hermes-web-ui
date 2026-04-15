@@ -1,7 +1,7 @@
 import { startRun, streamRunEvents, type ChatMessage, type RunEvent } from '@/api/chat'
 import { deleteSession as deleteSessionApi, fetchSession, fetchSessions, type HermesMessage, type SessionSummary } from '@/api/sessions'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from './app'
 
 export interface Attachment {
@@ -157,8 +157,10 @@ function mapHermesSession(s: SessionSummary): Session {
 export const useChatStore = defineStore('chat', () => {
   const sessions = ref<Session[]>([])
   const activeSessionId = ref<string | null>(null)
-  const isStreaming = ref(false)
+  const streamSessionId = ref<string | null>(null)
+  const _isStreaming = ref(false)
   const abortController = ref<AbortController | null>(null)
+  const isStreaming = computed(() => _isStreaming.value && activeSessionId.value === streamSessionId.value)
   const isLoadingSessions = ref(false)
   const isLoadingMessages = ref(false)
 
@@ -196,6 +198,10 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function switchSession(sessionId: string) {
+    // Sync current messages back to the streaming session before switching
+    if (streamSessionId.value && sessionId !== streamSessionId.value) {
+      syncMessagesToSession()
+    }
     activeSessionId.value = sessionId
     activeSession.value = sessions.value.find(s => s.id === sessionId) || null
 
@@ -263,6 +269,13 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  function syncMessagesToSession() {
+    const targetSession = sessions.value.find(s => s.id === streamSessionId.value)
+    if (targetSession) {
+      targetSession.messages = [...messages.value]
+    }
+  }
+
   function addMessage(msg: Message) {
     messages.value.push(msg)
   }
@@ -275,17 +288,19 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function updateSessionTitle() {
-    if (!activeSession.value) return
-    if (activeSession.value.title === 'New Chat') {
-      const firstUser = messages.value.find(m => m.role === 'user')
+    const target = sessions.value.find(s => s.id === (streamSessionId.value || activeSessionId.value))
+    if (!target) return
+    const msgs = target.messages.length > 0 ? target.messages : messages.value
+    if (target.title === 'New Chat') {
+      const firstUser = msgs.find(m => m.role === 'user')
       if (firstUser) {
         const title = firstUser.attachments?.length
           ? firstUser.attachments.map(a => a.name).join(', ')
           : firstUser.content
-        activeSession.value.title = title.slice(0, 40) + (title.length > 40 ? '...' : '')
+        target.title = title.slice(0, 40) + (title.length > 40 ? '...' : '')
       }
     }
-    activeSession.value.updatedAt = Date.now()
+    target.updatedAt = Date.now()
   }
 
   async function sendMessage(content: string, attachments?: Attachment[]) {
@@ -306,7 +321,7 @@ export const useChatStore = defineStore('chat', () => {
     addMessage(userMsg)
     updateSessionTitle()
 
-    isStreaming.value = true
+    _isStreaming.value = true
 
     try {
       // Build conversation history from past messages
@@ -325,6 +340,7 @@ export const useChatStore = defineStore('chat', () => {
       const appStore = useAppStore()
       // Use session-level model if set, otherwise fall back to global
       const sessionModel = activeSession.value?.model || appStore.selectedModel
+      streamSessionId.value = activeSessionId.value
       const run = await startRun({
         input: inputText,
         conversation_history: history,
@@ -340,7 +356,7 @@ export const useChatStore = defineStore('chat', () => {
           content: `Error: startRun returned no run ID. Response: ${JSON.stringify(run)}`,
           timestamp: Date.now(),
         })
-        isStreaming.value = false
+        _isStreaming.value = false
         return
       }
 
@@ -402,8 +418,10 @@ export const useChatStore = defineStore('chat', () => {
               if (lastMsg?.isStreaming) {
                 updateMessage(lastMsg.id, { isStreaming: false })
               }
-              isStreaming.value = false
+              _isStreaming.value = false
+              streamSessionId.value = null
               abortController.value = null
+              syncMessagesToSession()
               updateSessionTitle()
               break
 
@@ -428,7 +446,8 @@ export const useChatStore = defineStore('chat', () => {
                   messages.value[i] = { ...m, toolStatus: 'error' }
                 }
               })
-              isStreaming.value = false
+              _isStreaming.value = false
+              streamSessionId.value = null
               abortController.value = null
               break
           }
@@ -439,8 +458,10 @@ export const useChatStore = defineStore('chat', () => {
           if (last?.isStreaming) {
             updateMessage(last.id, { isStreaming: false })
           }
-          isStreaming.value = false
+          _isStreaming.value = false
+          streamSessionId.value = null
           abortController.value = null
+          syncMessagesToSession()
           updateSessionTitle()
         },
         // onError
@@ -460,8 +481,10 @@ export const useChatStore = defineStore('chat', () => {
               timestamp: Date.now(),
             })
           }
-          isStreaming.value = false
+          _isStreaming.value = false
+          streamSessionId.value = null
           abortController.value = null
+          syncMessagesToSession()
         },
       )
     } catch (err: any) {
@@ -471,19 +494,22 @@ export const useChatStore = defineStore('chat', () => {
         content: `Error: ${err.message}`,
         timestamp: Date.now(),
       })
-      isStreaming.value = false
+      _isStreaming.value = false
+      streamSessionId.value = null
       abortController.value = null
     }
   }
 
   function stopStreaming() {
     abortController.value?.abort()
-    isStreaming.value = false
+    _isStreaming.value = false
+    streamSessionId.value = null
     const lastMsg = messages.value[messages.value.length - 1]
     if (lastMsg?.isStreaming) {
       updateMessage(lastMsg.id, { isStreaming: false })
     }
     abortController.value = null
+    syncMessagesToSession()
   }
 
   // Load sessions on init

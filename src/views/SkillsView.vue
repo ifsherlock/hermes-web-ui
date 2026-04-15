@@ -44,6 +44,9 @@ async function loadSkills() {
 function handleSelect(category: string, skill: string) {
   selectedCategory.value = category
   selectedSkill.value = skill
+  if (window.innerWidth <= 768) {
+    showSidebar.value = false
+  }
 }
 </script>
 
@@ -61,13 +64,14 @@ function handleSelect(category: string, skill: string) {
         :placeholder="t('skills.searchPlaceholder')"
         size="small"
         clearable
-        class="search-input"
+        style="width: 160px"
       />
     </header>
 
     <div class="skills-content">
       <div v-if="loading && categories.length === 0" class="skills-loading">Loading...</div>
       <div v-else class="skills-layout">
+          <div class="mobile-backdrop" :class="{ active: showSidebar }" @click="showSidebar = false" />
           <div v-if="showSidebar" class="skills-sidebar">
             <SkillList
               :categories="categories"
@@ -100,13 +104,13 @@ function handleSelect(category: string, skill: string) {
 @use '@/styles/variables' as *;
 
 .skills-view {
-  height: 100vh;
+  height: calc(100 * var(--vh));
   display: flex;
   flex-direction: column;
 }
 
 .search-input {
-  width: 220px;
+  width: 100px;
 
   @media (max-width: $breakpoint-mobile) {
     width: 100%;
@@ -181,9 +185,22 @@ function handleSelect(category: string, skill: string) {
   .skills-layout {
     position: relative;
   }
-}
-  min-width: 0;
-  min-height: 0;
+
+  .mobile-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 9;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity $transition-fast;
+
+    &.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }
 
 .empty-detail {

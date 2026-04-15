@@ -8,6 +8,17 @@
   box-sizing: border-box;
 }
 
+:root {
+  --vh: 1vh;
+}
+
+// Fix mobile viewport height (address bar)
+@supports (height: 100dvh) {
+  :root {
+    --vh: 1dvh;
+  }
+}
+
 html, body, #app {
   height: 100%;
   width: 100%;

@@ -45,7 +45,7 @@ useKeyboard()
         <NNotificationProvider>
           <div v-if="ready" class="app-layout" :class="{ 'no-sidebar': isLoginPage }">
             <button v-if="!isLoginPage" class="hamburger-btn" @click="appStore.toggleSidebar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              <img src="/logo.png" alt="Menu" style="width: 24px; height: 24px;" />
             </button>
             <div v-if="!isLoginPage && appStore.sidebarOpen" class="mobile-backdrop" @click="appStore.closeSidebar" />
             <AppSidebar v-if="!isLoginPage" />
@@ -64,7 +64,7 @@ useKeyboard()
 
 .app-layout {
   display: flex;
-  height: 100vh;
+  height: calc(100 * var(--vh));
   width: 100vw;
   overflow: hidden;
 
@@ -79,7 +79,7 @@ useKeyboard()
   background-color: $bg-primary;
 
   .no-sidebar & {
-    height: 100vh;
+    height: calc(100 * var(--vh));
   }
 }
 </style>

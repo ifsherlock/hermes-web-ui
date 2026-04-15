@@ -31,7 +31,7 @@ onMounted(() => {
 @use '@/styles/variables' as *;
 
 .channels-view {
-  height: 100vh;
+  height: calc(100 * var(--vh));
   display: flex;
   flex-direction: column;
 }
