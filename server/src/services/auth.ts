@@ -58,7 +58,9 @@ export async function authMiddleware(token: string | null) {
     }
 
     const auth = ctx.headers.authorization || ''
-    const provided = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+    const provided = auth.startsWith('Bearer ')
+      ? auth.slice(7)
+      : (ctx.query.token as string) || ''
 
     if (!provided || provided !== token) {
       ctx.status = 401
