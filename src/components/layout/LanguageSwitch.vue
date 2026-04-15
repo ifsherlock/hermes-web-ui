@@ -24,7 +24,7 @@ function handleChange(val: string) {
     :options="options"
     size="tiny"
     :consistent-menu-width="false"
-    style="width: 90px"
+    class="input-sm"
     @update:value="handleChange"
   />
 </template>

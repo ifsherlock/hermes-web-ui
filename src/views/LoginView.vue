@@ -89,11 +89,16 @@ async function handleLogin() {
 
 .login-card {
   width: 480px;
-  padding: 56px 56px;
+  max-width: calc(100vw - 32px);
+  padding: 56px;
   border: 1px solid $border-color;
   border-radius: $radius-lg;
   background: $bg-card;
   text-align: center;
+
+  @media (max-width: $breakpoint-mobile) {
+    padding: 32px 24px;
+  }
 }
 
 .login-logo {

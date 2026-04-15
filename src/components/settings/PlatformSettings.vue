@@ -164,7 +164,7 @@ const platforms = [
       <!-- Telegram -->
       <template v-if="p.key === 'telegram'">
         <SettingRow :label="t('platform.botToken')" :hint="t('platform.botTokenHint')">
-          <NInput :value="getCreds('telegram').token || ''" clearable size="small" style="width: 300px" placeholder="123456:ABC-DEF..." @update:value="v => saveCredentials('telegram', { token: v })" />
+          <NInput :value="getCreds('telegram').token || ''" clearable size="small" class="input-lg" placeholder="123456:ABC-DEF..." @update:value="v => saveCredentials('telegram', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
           <NSwitch :value="settingsStore.telegram.require_mention" @update:value="v => saveChannel('telegram', { require_mention: v })" />
@@ -183,7 +183,7 @@ const platforms = [
       <!-- Discord -->
       <template v-if="p.key === 'discord'">
         <SettingRow :label="t('platform.botToken')" :hint="t('platform.botTokenHint')">
-          <NInput :value="getCreds('discord').token || ''" clearable size="small" style="width: 300px" placeholder="Bot token..." @update:value="v => saveCredentials('discord', { token: v })" />
+          <NInput :value="getCreds('discord').token || ''" clearable size="small" class="input-lg" placeholder="Bot token..." @update:value="v => saveCredentials('discord', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionChannel')">
           <NSwitch :value="settingsStore.discord.require_mention" @update:value="v => saveChannel('discord', { require_mention: v })" />
@@ -211,7 +211,7 @@ const platforms = [
       <!-- Slack -->
       <template v-if="p.key === 'slack'">
         <SettingRow :label="t('platform.botToken')" :hint="t('platform.botTokenHint')">
-          <NInput :value="getCreds('slack').token || ''" clearable size="small" style="width: 300px" placeholder="xoxb-..." @update:value="v => saveCredentials('slack', { token: v })" />
+          <NInput :value="getCreds('slack').token || ''" clearable size="small" class="input-lg" placeholder="xoxb-..." @update:value="v => saveCredentials('slack', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionChannel')">
           <NSwitch :value="settingsStore.slack.require_mention" @update:value="v => saveChannel('slack', { require_mention: v })" />
@@ -243,10 +243,10 @@ const platforms = [
       <!-- Matrix -->
       <template v-if="p.key === 'matrix'">
         <SettingRow :label="t('platform.accessToken')" :hint="t('platform.accessTokenHint')">
-          <NInput :value="getCreds('matrix').token || ''" clearable size="small" style="width: 300px" placeholder="syt_..." @update:value="v => saveCredentials('matrix', { token: v })" />
+          <NInput :value="getCreds('matrix').token || ''" clearable size="small" class="input-lg" placeholder="syt_..." @update:value="v => saveCredentials('matrix', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.homeserver')" :hint="t('platform.homeserverHint')">
-          <NInput :value="getCreds('matrix').extra?.homeserver || ''" clearable size="small" style="width: 300px" placeholder="https://matrix.org" @update:value="v => saveCredentials('matrix', { extra: { ...getCreds('matrix').extra, homeserver: v } })" />
+          <NInput :value="getCreds('matrix').extra?.homeserver || ''" clearable size="small" class="input-lg" placeholder="https://matrix.org" @update:value="v => saveCredentials('matrix', { extra: { ...getCreds('matrix').extra, homeserver: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionRoom')">
           <NSwitch :value="settingsStore.matrix.require_mention" @update:value="v => saveChannel('matrix', { require_mention: v })" />
@@ -265,10 +265,10 @@ const platforms = [
       <!-- Feishu -->
       <template v-if="p.key === 'feishu'">
         <SettingRow :label="t('platform.appId')" :hint="t('platform.appIdHint')">
-          <NInput :value="getCreds('feishu').extra?.app_id || ''" clearable size="small" style="width: 300px" placeholder="cli_..." @update:value="v => saveCredentials('feishu', { extra: { ...getCreds('feishu').extra, app_id: v } })" />
+          <NInput :value="getCreds('feishu').extra?.app_id || ''" clearable size="small" class="input-lg" placeholder="cli_..." @update:value="v => saveCredentials('feishu', { extra: { ...getCreds('feishu').extra, app_id: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.appSecret')" :hint="t('platform.appSecretHint')">
-          <NInput :value="getCreds('feishu').extra?.app_secret || ''" clearable size="small" style="width: 300px" placeholder="App Secret" @update:value="v => saveCredentials('feishu', { extra: { ...getCreds('feishu').extra, app_secret: v } })" />
+          <NInput :value="getCreds('feishu').extra?.app_secret || ''" clearable size="small" class="input-lg" placeholder="App Secret" @update:value="v => saveCredentials('feishu', { extra: { ...getCreds('feishu').extra, app_secret: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
           <NSwitch :value="settingsStore.feishu.require_mention" @update:value="v => saveChannel('feishu', { require_mention: v })" />
@@ -281,10 +281,10 @@ const platforms = [
       <!-- DingTalk -->
       <template v-if="p.key === 'dingtalk'">
         <SettingRow :label="t('platform.clientId')" :hint="t('platform.clientIdHint')">
-          <NInput :value="getCreds('dingtalk').extra?.client_id || ''" clearable size="small" style="width: 300px" placeholder="Client ID" @update:value="v => saveCredentials('dingtalk', { extra: { ...getCreds('dingtalk').extra, client_id: v } })" />
+          <NInput :value="getCreds('dingtalk').extra?.client_id || ''" clearable size="small" class="input-lg" placeholder="Client ID" @update:value="v => saveCredentials('dingtalk', { extra: { ...getCreds('dingtalk').extra, client_id: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.clientSecret')" :hint="t('platform.clientSecretHint')">
-          <NInput :value="getCreds('dingtalk').extra?.client_secret || ''" clearable size="small" style="width: 300px" placeholder="Client Secret" @update:value="v => saveCredentials('dingtalk', { extra: { ...getCreds('dingtalk').extra, client_secret: v } })" />
+          <NInput :value="getCreds('dingtalk').extra?.client_secret || ''" clearable size="small" class="input-lg" placeholder="Client Secret" @update:value="v => saveCredentials('dingtalk', { extra: { ...getCreds('dingtalk').extra, client_secret: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
           <NSwitch :value="settingsStore.dingtalk.require_mention" @update:value="v => saveChannel('dingtalk', { require_mention: v })" />
@@ -314,20 +314,20 @@ const platforms = [
           </div>
         </div>
         <SettingRow :label="t('platform.weixinToken')" :hint="t('platform.weixinTokenHint')">
-          <NInput :value="getCreds('weixin').token || ''" clearable size="small" style="width: 300px" placeholder="Token" @update:value="v => saveCredentials('weixin', { token: v })" />
+          <NInput :value="getCreds('weixin').token || ''" clearable size="small" class="input-lg" placeholder="Token" @update:value="v => saveCredentials('weixin', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.accountId')" :hint="t('platform.accountIdHint')">
-          <NInput :value="getCreds('weixin').extra?.account_id || ''" clearable size="small" style="width: 300px" placeholder="Account ID" @update:value="v => saveCredentials('weixin', { extra: { ...getCreds('weixin').extra, account_id: v } })" />
+          <NInput :value="getCreds('weixin').extra?.account_id || ''" clearable size="small" class="input-lg" placeholder="Account ID" @update:value="v => saveCredentials('weixin', { extra: { ...getCreds('weixin').extra, account_id: v } })" />
         </SettingRow>
       </template>
 
       <!-- WeCom -->
       <template v-if="p.key === 'wecom'">
         <SettingRow :label="t('platform.botId')" :hint="t('platform.botIdHint')">
-          <NInput :value="getCreds('wecom').extra?.bot_id || ''" clearable size="small" style="width: 300px" placeholder="Bot ID" @update:value="v => saveCredentials('wecom', { extra: { ...getCreds('wecom').extra, bot_id: v } })" />
+          <NInput :value="getCreds('wecom').extra?.bot_id || ''" clearable size="small" class="input-lg" placeholder="Bot ID" @update:value="v => saveCredentials('wecom', { extra: { ...getCreds('wecom').extra, bot_id: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.appSecret')" :hint="t('platform.wecomSecretHint')">
-          <NInput :value="getCreds('wecom').extra?.secret || ''" clearable size="small" style="width: 300px" placeholder="Secret" @update:value="v => saveCredentials('wecom', { extra: { ...getCreds('wecom').extra, secret: v } })" />
+          <NInput :value="getCreds('wecom').extra?.secret || ''" clearable size="small" class="input-lg" placeholder="Secret" @update:value="v => saveCredentials('wecom', { extra: { ...getCreds('wecom').extra, secret: v } })" />
         </SettingRow>
       </template>
     </PlatformCard>

@@ -24,7 +24,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.agent.max_turns"
         :min="1" :max="200" :step="5"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ max_turns: v })"
       />
     </SettingRow>
@@ -32,7 +32,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.agent.gateway_timeout"
         :min="60" :max="7200" :step="60"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ gateway_timeout: v })"
       />
     </SettingRow>
@@ -40,7 +40,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.agent.restart_drain_timeout"
         :min="10" :max="300" :step="10"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ restart_drain_timeout: v })"
       />
     </SettingRow>
@@ -52,7 +52,7 @@ async function save(values: Record<string, any>) {
           { label: t('settings.agent.always'), value: 'always' },
           { label: t('settings.agent.never'), value: 'never' },
         ]"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => save({ tool_use_enforcement: v })"
       />
     </SettingRow>

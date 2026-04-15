@@ -74,3 +74,56 @@ a {
   font-weight: 600;
   color: $text-primary;
 }
+
+// Responsive utility classes for inline width replacement
+.input-sm { width: 90px; }
+.input-md { width: 200px; }
+.input-lg { width: 300px; }
+
+// Mobile drawer backdrop
+.mobile-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+}
+
+// Hamburger button (mobile only)
+.hamburger-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 12px;
+  z-index: 1001;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: $bg-card;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+// Mobile responsive
+@media (max-width: $breakpoint-mobile) {
+  .mobile-backdrop {
+    display: block;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .page-header {
+    padding: 16px 12px 16px 52px;
+  }
+
+  .input-sm,
+  .input-md,
+  .input-lg {
+    width: 100%;
+  }
+}

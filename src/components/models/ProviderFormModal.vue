@@ -150,7 +150,7 @@ function handleClose() {
     v-model:show="showModal"
     preset="card"
     :title="t('models.addProvider')"
-    :style="{ width: '520px' }"
+    :style="{ width: 'min(520px, calc(100vw - 32px))' }"
     :mask-closable="!loading"
     @after-leave="emit('close')"
   >

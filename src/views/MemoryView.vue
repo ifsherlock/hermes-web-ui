@@ -215,6 +215,10 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
   gap: 16px;
   flex: 1;
   min-height: 0;
+
+  @media (max-width: $breakpoint-mobile) {
+    flex-direction: column;
+  }
 }
 
 .memory-section {

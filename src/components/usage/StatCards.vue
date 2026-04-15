@@ -88,4 +88,10 @@ function formatCost(n: number): string {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+@media (max-width: 480px) {
+  .stat-cards {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

@@ -2,7 +2,7 @@
 import { renameSession } from '@/api/sessions'
 import { useChatStore, type Session } from '@/stores/chat'
 import { NButton, NDropdown, NInput, NModal, NPopconfirm, NTooltip, useMessage } from 'naive-ui'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ChatInput from './ChatInput.vue'
 import MessageList from './MessageList.vue'
@@ -12,6 +12,23 @@ const message = useMessage()
 const { t } = useI18n()
 
 const showSessions = ref(true)
+let mobileQuery: MediaQueryList | null = null
+
+function handleMobileChange(e: MediaQueryListEvent | MediaQueryList) {
+  if (e.matches && showSessions.value) {
+    showSessions.value = false
+  }
+}
+
+onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 768px)')
+  handleMobileChange(mobileQuery)
+  mobileQuery.addEventListener('change', handleMobileChange)
+})
+
+onUnmounted(() => {
+  mobileQuery?.removeEventListener('change', handleMobileChange)
+})
 const showRenameModal = ref(false)
 const renameValue = ref('')
 const renameSessionId = ref<string | null>(null)
@@ -602,5 +619,15 @@ async function handleRenameConfirm() {
   font-size: 11px;
   color: $text-muted;
   flex-shrink: 0;
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .chat-header {
+    padding: 16px 12px 16px 52px;
+  }
+
+  .context-info {
+    padding: 0 12px 4px;
+  }
 }
 </style>

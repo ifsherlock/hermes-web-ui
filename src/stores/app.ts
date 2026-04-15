@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { checkHealth, fetchAvailableModels, updateDefaultModel, type AvailableModelGroup } from '@/api/system'
 
 export const useAppStore = defineStore('app', () => {
+  const sidebarOpen = ref(false)
+
   const connected = ref(false)
   const serverVersion = ref('')
   const modelGroups = ref<AvailableModelGroup[]>([])
@@ -59,7 +61,18 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function toggleSidebar() {
+    sidebarOpen.value = !sidebarOpen.value
+  }
+
+  function closeSidebar() {
+    sidebarOpen.value = false
+  }
+
   return {
+    sidebarOpen,
+    toggleSidebar,
+    closeSidebar,
     connected,
     serverVersion,
     modelGroups,

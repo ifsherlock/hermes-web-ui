@@ -66,7 +66,7 @@ function handleNav(key: string) {
 </script>
 
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ open: appStore.sidebarOpen }">
     <div class="sidebar-logo" @click="router.push('/chat')">
       <img src="/logo.png" alt="Hermes" class="logo-img" />
       <span class="logo-text">Hermes</span>
@@ -376,7 +376,7 @@ function handleNav(key: string) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px;
   border: none;
   background: none;
   color: $text-secondary;
@@ -441,5 +441,24 @@ function handleNav(key: string) {
   padding: 2px 12px 8px;
   font-size: 11px;
   color: $text-muted;
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .logo-dance {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform $transition-normal;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
 }
 </style>

@@ -467,4 +467,18 @@ const formattedToolResult = computed(() => {
     transform: scale(1);
   }
 }
+
+@media (max-width: $breakpoint-mobile) {
+  .msg-user .msg-body {
+    max-width: 90%;
+  }
+
+  .msg-assistant .msg-body {
+    max-width: 92%;
+  }
+
+  .msg-system .msg-body {
+    max-width: 92%;
+  }
+}
 </style>

@@ -30,7 +30,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.memory.memory_char_limit"
         :min="100" :max="10000" :step="100"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ memory_char_limit: v })"
       />
     </SettingRow>
@@ -38,7 +38,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.memory.user_char_limit"
         :min="100" :max="10000" :step="100"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ user_char_limit: v })"
       />
     </SettingRow>

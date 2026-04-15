@@ -28,7 +28,7 @@ async function save(values: Record<string, any>) {
           { label: t('settings.session.modeIdle'), value: 'idle' },
           { label: t('settings.session.modeHourly'), value: 'hourly' },
         ]"
-        size="small" style="width: 140px"
+        size="small" class="input-md"
         @update:value="v => save({ mode: v })"
       />
     </SettingRow>
@@ -36,7 +36,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.sessionReset.idle_minutes"
         :min="10" :max="10080" :step="30"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ idle_minutes: v })"
       />
     </SettingRow>
@@ -44,7 +44,7 @@ async function save(values: Record<string, any>) {
       <NInputNumber
         :value="settingsStore.sessionReset.at_hour"
         :min="0" :max="23" :step="1"
-        size="small" style="width: 120px"
+        size="small" class="input-sm"
         @update:value="v => v != null && save({ at_hour: v })"
       />
     </SettingRow>

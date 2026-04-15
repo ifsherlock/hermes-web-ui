@@ -36,6 +36,7 @@ const renderedHtml = computed(() => md.render(props.content))
 .markdown-body {
   font-size: 14px;
   line-height: 1.65;
+  overflow-x: auto;
 
   p {
     margin: 0 0 8px;
@@ -93,6 +94,8 @@ const renderedHtml = computed(() => md.render(props.content))
     width: 100%;
     border-collapse: collapse;
     margin: 8px 0;
+    display: block;
+    overflow-x: auto;
 
     th, td {
       padding: 6px 12px;

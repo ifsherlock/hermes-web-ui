@@ -52,4 +52,20 @@ defineProps<{
 .setting-control {
   flex-shrink: 0;
 }
+
+@media (max-width: $breakpoint-mobile) {
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .setting-info {
+    margin-right: 0;
+  }
+
+  .setting-control {
+    width: 100%;
+  }
+}
 </style>

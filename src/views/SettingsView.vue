@@ -63,7 +63,7 @@ async function saveApiServer(values: Record<string, any>) {
               <SettingRow :label="t('settings.apiServer.host')" :hint="t('settings.apiServer.hostHint')">
                 <NInput
                   :value="settingsStore.platforms?.api_server?.host || ''"
-                  size="small" style="width: 200px"
+                  size="small" class="input-md"
                   @update:value="v => saveApiServer({ host: v })"
                 />
               </SettingRow>
@@ -71,7 +71,7 @@ async function saveApiServer(values: Record<string, any>) {
                 <NInputNumber
                   :value="settingsStore.platforms?.api_server?.port"
                   :min="1024" :max="65535"
-                  size="small" style="width: 120px"
+                  size="small" class="input-sm"
                   @update:value="v => v != null && saveApiServer({ port: v })"
                 />
               </SettingRow>
@@ -79,14 +79,14 @@ async function saveApiServer(values: Record<string, any>) {
                 <NInput
                   :value="settingsStore.platforms?.api_server?.key || ''"
                   type="password" show-password-on="click"
-                  size="small" style="width: 200px"
+                  size="small" class="input-md"
                   @update:value="v => saveApiServer({ key: v })"
                 />
               </SettingRow>
               <SettingRow :label="t('settings.apiServer.cors')" :hint="t('settings.apiServer.corsHint')">
                 <NInput
                   :value="settingsStore.platforms?.api_server?.cors_origins || ''"
-                  size="small" style="width: 200px"
+                  size="small" class="input-md"
                   @update:value="v => saveApiServer({ cors_origins: v })"
                 />
               </SettingRow>

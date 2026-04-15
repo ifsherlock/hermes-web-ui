@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { NInput } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import SkillList from '@/components/skills/SkillList.vue'
@@ -12,8 +12,23 @@ const loading = ref(false)
 const selectedCategory = ref('')
 const selectedSkill = ref('')
 const searchQuery = ref('')
+const showSidebar = ref(true)
+let mobileQuery: MediaQueryList | null = null
 
-onMounted(loadSkills)
+function handleMobileChange(e: MediaQueryListEvent | MediaQueryList) {
+  showSidebar.value = !e.matches
+}
+
+onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 768px)')
+  handleMobileChange(mobileQuery)
+  mobileQuery.addEventListener('change', handleMobileChange)
+  loadSkills()
+})
+
+onUnmounted(() => {
+  mobileQuery?.removeEventListener('change', handleMobileChange)
+})
 
 async function loadSkills() {
   loading.value = true
@@ -35,7 +50,12 @@ function handleSelect(category: string, skill: string) {
 <template>
   <div class="skills-view">
     <header class="page-header">
-      <h2 class="header-title">{{ t('skills.title') }}</h2>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h2 class="header-title">{{ t('skills.title') }}</h2>
+        <button v-if="!showSidebar" class="sidebar-toggle" @click="showSidebar = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
       <NInput
         v-model:value="searchQuery"
         :placeholder="t('skills.searchPlaceholder')"
@@ -48,7 +68,7 @@ function handleSelect(category: string, skill: string) {
     <div class="skills-content">
       <div v-if="loading && categories.length === 0" class="skills-loading">Loading...</div>
       <div v-else class="skills-layout">
-          <div class="skills-sidebar">
+          <div v-if="showSidebar" class="skills-sidebar">
             <SkillList
               :categories="categories"
               :selected-skill="selectedCategory && selectedSkill ? `${selectedCategory}/${selectedSkill}` : null"
@@ -87,6 +107,10 @@ function handleSelect(category: string, skill: string) {
 
 .search-input {
   width: 220px;
+
+  @media (max-width: $breakpoint-mobile) {
+    width: 100%;
+  }
 }
 
 .skills-content {
@@ -122,6 +146,42 @@ function handleSelect(category: string, skill: string) {
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
+  min-width: 0;
+}
+
+.sidebar-toggle {
+  display: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: $text-secondary;
+  padding: 4px;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: rgba($accent-primary, 0.06);
+  }
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .sidebar-toggle {
+    display: flex;
+  }
+
+  .skills-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 10;
+    background: $bg-card;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .skills-layout {
+    position: relative;
+  }
+}
   min-width: 0;
   min-height: 0;
 }

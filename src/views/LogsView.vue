@@ -93,21 +93,21 @@ onMounted(async () => {
           v-model:value="selectedLog"
           :options="logOptions"
           size="small"
-          style="width: 200px"
+          class="input-md"
           @update:value="loadLogs"
         />
         <NSelect
           :value="levelFilter"
           :options="levelOptions"
           size="small"
-          style="width: 110px"
+          class="input-sm"
           @update:value="(v: string) => { levelFilter = v; loadLogs() }"
         />
         <NSelect
           :value="lineCount"
           :options="lineOptions"
           size="small"
-          style="width: 80px"
+          class="input-sm"
           @update:value="(v: number) => { lineCount = v; loadLogs() }"
         />
         <input
