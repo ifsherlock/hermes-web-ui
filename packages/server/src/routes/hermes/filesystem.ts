@@ -1,8 +1,64 @@
 import Router from '@koa/router'
 import { readdir, readFile, stat, writeFile, mkdir, copyFile } from 'fs/promises'
 import { join, resolve } from 'path'
-import { homedir } from 'os'
 import YAML from 'js-yaml'
+import { getActiveProfileDir, getActiveConfigPath, getActiveAuthPath, getActiveEnvPath } from '../../services/hermes-profile'
+import * as hermesCli from '../../services/hermes-cli'
+
+// --- Provider env var mapping (from hermes providers.py HERMES_OVERLAYS + config.py) ---
+// Maps provider key → { api_key_envs: all env var aliases for API key, base_url_env: env var for base URL }
+const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_env: string }> = {
+  openrouter: { api_key_env: 'OPENROUTER_API_KEY', base_url_env: 'OPENROUTER_BASE_URL' },
+  zai: { api_key_env: 'ZAI_API_KEY', base_url_env: '' },
+  'kimi-for-coding': { api_key_env: 'KIMI_API_KEY', base_url_env: '' },
+  minimax: { api_key_env: 'MINIMAX_API_KEY', base_url_env: 'MINIMAX_BASE_URL' },
+  'minimax-cn': { api_key_env: 'MINIMAX_API_KEY', base_url_env: 'MINIMAX_CN_BASE_URL' },
+  deepseek: { api_key_env: 'DEEPSEEK_API_KEY', base_url_env: 'DEEPSEEK_BASE_URL' },
+  alibaba: { api_key_env: 'DASHSCOPE_API_KEY', base_url_env: 'DASHSCOPE_BASE_URL' },
+  anthropic: { api_key_env: 'ANTHROPIC_API_KEY', base_url_env: '' },
+  xai: { api_key_env: 'XAI_API_KEY', base_url_env: 'XAI_BASE_URL' },
+  xiaomi: { api_key_env: 'XIAOMI_API_KEY', base_url_env: 'XIAOMI_BASE_URL' },
+  gemini: { api_key_env: 'GEMINI_API_KEY', base_url_env: '' },
+  kilo: { api_key_env: 'KILO_API_KEY', base_url_env: 'KILOCODE_BASE_URL' },
+  vercel: { api_key_env: 'AI_GATEWAY_API_KEY', base_url_env: '' },
+  opencode: { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_ZEN_BASE_URL' },
+  'opencode-go': { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_GO_BASE_URL' },
+  huggingface: { api_key_env: 'HF_TOKEN', base_url_env: 'HF_BASE_URL' },
+}
+
+async function saveEnvValue(key: string, value: string): Promise<void> {
+  const envPath = getActiveEnvPath()
+  let raw: string
+  try {
+    raw = await readFile(envPath, 'utf-8')
+  } catch {
+    raw = ''
+  }
+  const remove = !value
+  const lines = raw.split('\n')
+  let found = false
+  const result: string[] = []
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('#') && trimmed.startsWith(`# ${key}=`)) {
+      if (!remove) result.push(`${key}=${value}`)
+      found = true
+    } else {
+      const eqIdx = trimmed.indexOf('=')
+      if (eqIdx !== -1 && trimmed.slice(0, eqIdx).trim() === key) {
+        if (!remove) result.push(`${key}=${value}`)
+        found = true
+      } else {
+        result.push(line)
+      }
+    }
+  }
+  if (!found && !remove) {
+    result.push(`${key}=${value}`)
+  }
+  let output = result.join('\n').replace(/\n{3,}/g, '\n\n').replace(/\n+$/, '') + '\n'
+  await writeFile(envPath, output, 'utf-8')
+}
 
 // --- Auth / Credential Pool ---
 
@@ -18,11 +74,11 @@ interface AuthJson {
   credential_pool?: Record<string, CredentialPoolEntry[]>
 }
 
-const authPath = resolve(homedir(), '.hermes', 'auth.json')
+const authPath = () => getActiveAuthPath()
 
 async function loadAuthJson(): Promise<AuthJson | null> {
   try {
-    const raw = await readFile(authPath, 'utf-8')
+    const raw = await readFile(authPath(), 'utf-8')
     return JSON.parse(raw) as AuthJson
   } catch {
     return null
@@ -30,7 +86,7 @@ async function loadAuthJson(): Promise<AuthJson | null> {
 }
 
 async function saveAuthJson(auth: AuthJson): Promise<void> {
-  await writeFile(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
+  await writeFile(authPath(), JSON.stringify(auth, null, 2) + '\n', 'utf-8')
 }
 
 async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<string[]> {
@@ -62,7 +118,7 @@ const PROVIDER_MODEL_CATALOG = buildProviderModelMap()
 
 export const fsRoutes = new Router()
 
-const hermesDir = resolve(homedir(), '.hermes')
+const hermesDir = () => getActiveProfileDir()
 
 // --- Types ---
 
@@ -123,29 +179,30 @@ async function safeStat(filePath: string): Promise<{ mtime: number } | null> {
 
 // --- Config YAML helpers ---
 
-const configPath = resolve(homedir(), '.hermes/config.yaml')
+const configPath = () => getActiveConfigPath()
 
 async function readConfigYaml(): Promise<Record<string, any>> {
-  const raw = await safeReadFile(configPath)
+  const raw = await safeReadFile(configPath())
   if (!raw) return {}
   return (YAML.load(raw) as Record<string, any>) || {}
 }
 
 async function writeConfigYaml(config: Record<string, any>): Promise<void> {
-  await copyFile(configPath, configPath + '.bak')
+  const cp = configPath()
+  await copyFile(cp, cp + '.bak')
   const yamlStr = YAML.dump(config, {
     lineWidth: -1,
     noRefs: true,
     quotingType: '"',
   })
-  await writeFile(configPath, yamlStr, 'utf-8')
+  await writeFile(cp, yamlStr, 'utf-8')
 }
 
 // --- Skills Routes ---
 
 // List all skills grouped by category
 fsRoutes.get('/api/hermes/skills', async (ctx) => {
-  const skillsDir = join(hermesDir, 'skills')
+  const skillsDir = join(hermesDir(), 'skills')
 
   try {
     // Read disabled skills list from config.yaml
@@ -250,7 +307,7 @@ async function listFilesRecursive(dir: string, prefix: string): Promise<{ path: 
 
 fsRoutes.get('/api/hermes/skills/:category/:skill/files', async (ctx) => {
   const { category, skill } = ctx.params
-  const skillDir = join(hermesDir, 'skills', category, skill)
+  const skillDir = join(hermesDir(), 'skills', category, skill)
 
   try {
     const allFiles = await listFilesRecursive(skillDir, '')
@@ -265,9 +322,10 @@ fsRoutes.get('/api/hermes/skills/:category/:skill/files', async (ctx) => {
 // Read a specific file under skills/ (must be registered after the /files route)
 fsRoutes.get('/api/hermes/skills/{*path}', async (ctx) => {
   const filePath = (ctx.params as any).path
-  const fullPath = resolve(join(hermesDir, 'skills', filePath))
+  const hd = hermesDir()
+  const fullPath = resolve(join(hd, 'skills', filePath))
 
-  if (!fullPath.startsWith(join(hermesDir, 'skills'))) {
+  if (!fullPath.startsWith(join(hd, 'skills'))) {
     ctx.status = 403
     ctx.body = { error: 'Access denied' }
     return
@@ -286,21 +344,27 @@ fsRoutes.get('/api/hermes/skills/{*path}', async (ctx) => {
 // --- Memory Routes ---
 
 fsRoutes.get('/api/hermes/memory', async (ctx) => {
-  const memoryPath = join(hermesDir, 'memories', 'MEMORY.md')
-  const userPath = join(hermesDir, 'memories', 'USER.md')
+  const hd = hermesDir()
+  const memoryPath = join(hd, 'memories', 'MEMORY.md')
+  const userPath = join(hd, 'memories', 'USER.md')
+  const soulPath = join(hd, 'SOUL.md')
 
-  const [memory, user, memoryStat, userStat] = await Promise.all([
+  const [memory, user, soul, memoryStat, userStat, soulStat] = await Promise.all([
     safeReadFile(memoryPath),
     safeReadFile(userPath),
+    safeReadFile(soulPath),
     safeStat(memoryPath),
     safeStat(userPath),
+    safeStat(soulPath),
   ])
 
   ctx.body = {
     memory: memory || '',
     user: user || '',
+    soul: soul || '',
     memory_mtime: memoryStat?.mtime || null,
     user_mtime: userStat?.mtime || null,
+    soul_mtime: soulStat?.mtime || null,
   }
 })
 
@@ -313,14 +377,19 @@ fsRoutes.post('/api/hermes/memory', async (ctx) => {
     return
   }
 
-  if (section !== 'memory' && section !== 'user') {
+  if (section !== 'memory' && section !== 'user' && section !== 'soul') {
     ctx.status = 400
-    ctx.body = { error: 'Section must be "memory" or "user"' }
+    ctx.body = { error: 'Section must be "memory", "user", or "soul"' }
     return
   }
 
-  const fileName = section === 'memory' ? 'MEMORY.md' : 'USER.md'
-  const filePath = join(hermesDir, 'memories', fileName)
+  let filePath: string
+  if (section === 'soul') {
+    filePath = join(hermesDir(), 'SOUL.md')
+  } else {
+    const fileName = section === 'memory' ? 'MEMORY.md' : 'USER.md'
+    filePath = join(hermesDir(), 'memories', fileName)
+  }
 
   try {
     await writeFile(filePath, content, 'utf-8')
@@ -532,26 +601,27 @@ fsRoutes.post('/api/hermes/config/providers', async (ctx) => {
   }
 
   try {
-    // 1. Write to config.yaml custom_providers
-    const config = await readConfigYaml()
-
-    if (!Array.isArray(config.custom_providers)) {
-      config.custom_providers = []
-    }
-
-    config.custom_providers.push({ name, base_url, api_key, model })
-    await writeConfigYaml(config)
-
-    // 2. Write to auth.json credential_pool
+    // Determine if this is a built-in provider or a custom one
     const poolKey = providerKey
       || `custom:${name.trim().toLowerCase().replace(/ /g, '-')}`
+    const isBuiltin = poolKey in PROVIDER_ENV_MAP
+
+    if (!isBuiltin) {
+      // Custom provider: write to config.yaml custom_providers
+      const config = await readConfigYaml()
+      if (!Array.isArray(config.custom_providers)) {
+        config.custom_providers = []
+      }
+      config.custom_providers.push({ name, base_url, api_key, model })
+      await writeConfigYaml(config)
+    }
+
+    // Write to auth.json credential_pool (all providers)
     const auth = await loadAuthJson() || { credential_pool: {} }
     if (!auth.credential_pool) auth.credential_pool = {}
-
     if (!auth.credential_pool[poolKey]) {
       auth.credential_pool[poolKey] = []
     }
-
     auth.credential_pool[poolKey].push({
       id: `${poolKey}-${Date.now()}`,
       label: name,
@@ -559,10 +629,18 @@ fsRoutes.post('/api/hermes/config/providers', async (ctx) => {
       access_token: api_key,
       last_status: null,
     })
-
     await saveAuthJson(auth)
 
-    // 3. Auto-switch model to the newly added provider
+    // Write API key to .env (built-in providers only)
+    const envMapping = PROVIDER_ENV_MAP[poolKey] || PROVIDER_ENV_MAP[providerKey || '']
+    if (envMapping) {
+      await saveEnvValue(envMapping.api_key_env, api_key)
+      if (envMapping.base_url_env) {
+        await saveEnvValue(envMapping.base_url_env, base_url)
+      }
+    }
+
+    // Auto-switch model to the newly added provider
     const config2 = await readConfigYaml()
     if (typeof config2.model !== 'object' || config2.model === null) {
       config2.model = {}
@@ -570,6 +648,13 @@ fsRoutes.post('/api/hermes/config/providers', async (ctx) => {
     config2.model.default = model
     config2.model.provider = poolKey
     await writeConfigYaml(config2)
+
+    // Restart gateway to pick up .env and config.yaml changes
+    try {
+      await hermesCli.restartGateway()
+    } catch (e: any) {
+      console.error('[Provider] Gateway restart failed:', e.message)
+    }
 
     ctx.body = { success: true }
   } catch (err: any) {

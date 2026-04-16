@@ -3,10 +3,10 @@ import axios from 'axios'
 import { readFile, writeFile } from 'fs/promises'
 import { chmod } from 'fs/promises'
 import { resolve } from 'path'
-import { homedir } from 'os'
 import { restartGateway } from '../../services/hermes-cli'
+import { getActiveEnvPath } from '../../services/hermes-profile'
 
-const envPath = resolve(homedir(), '.hermes/.env')
+const envPath = () => getActiveEnvPath()
 const ILINK_BASE = 'https://ilinkai.weixin.qq.com'
 
 export const weixinRoutes = new Router()
@@ -84,7 +84,7 @@ weixinRoutes.post('/api/hermes/weixin/save', async (ctx) => {
   try {
     let raw: string
     try {
-      raw = await readFile(envPath, 'utf-8')
+      raw = await readFile(envPath(), 'utf-8')
     } catch {
       raw = ''
     }
@@ -124,8 +124,9 @@ weixinRoutes.post('/api/hermes/weixin/save', async (ctx) => {
     }
 
     let output = result.join('\n').replace(/\n{3,}/g, '\n\n').replace(/\n+$/, '') + '\n'
-    await writeFile(envPath, output, 'utf-8')
-    try { await chmod(envPath, 0o600) } catch { /* ignore */ }
+    const ep = envPath()
+    await writeFile(ep, output, 'utf-8')
+    try { await chmod(ep, 0o600) } catch { /* ignore */ }
     await restartGateway()
 
     ctx.body = { success: true }

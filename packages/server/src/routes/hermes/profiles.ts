@@ -1,5 +1,40 @@
 import Router from '@koa/router'
+import { createReadStream, existsSync, unlinkSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs'
+import { mkdir, writeFile } from 'fs/promises'
+import { basename, join } from 'path'
+import { tmpdir, homedir } from 'os'
+import YAML from 'js-yaml'
 import * as hermesCli from '../../services/hermes-cli'
+
+const apiServerDefaults = {
+  enabled: true,
+  host: '127.0.0.1',
+  port: 8642,
+  key: '',
+  cors_origins: '*',
+}
+
+function ensureApiServerConfig(profilePath: string) {
+  const configPath = join(profilePath, 'config.yaml')
+  try {
+    if (!existsSync(configPath)) {
+      // Profile has no config.yaml — run hermes setup --reset to generate full defaults,
+      // then inject api_server config (setup itself doesn't add it)
+      console.log(`[Profile] No config.yaml for ${profilePath}, running setup --reset`)
+      return { needSetup: true, path: profilePath }
+    }
+    const content = readFileSync(configPath, 'utf-8')
+    const cfg = YAML.load(content) as any || {}
+    if (!cfg.platforms) cfg.platforms = {}
+    if (!cfg.platforms.api_server) {
+      cfg.platforms.api_server = { ...apiServerDefaults }
+      writeFileSync(configPath, YAML.dump(cfg), 'utf-8')
+      console.log(`[Profile] Ensured api_server config for: ${profilePath}`)
+    }
+    return { needSetup: false, path: profilePath }
+  } catch { }
+  return { needSetup: false, path: profilePath }
+}
 
 export const profileRoutes = new Router()
 
@@ -106,10 +141,10 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
   }
 
   try {
-    // 1. Stop gateway (try launchd/systemd first, ignore if unavailable e.g. WSL)
+    // 1. Stop gateway
     try { await hermesCli.stopGateway() } catch { }
 
-    // 2. Kill gateway by port if still running (for WSL / background mode)
+    // 2. Kill gateway by port if still running
     try {
       const { execSync } = await import('child_process')
       const isWin = process.platform === 'win32'
@@ -135,11 +170,34 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
     const output = await hermesCli.useProfile(name)
     await new Promise(r => setTimeout(r, 1000))
 
-    // 4. Start gateway — try launchd/systemd first, fall back to background mode
+    // 4. Ensure api_server config for new profile
     try {
-      await hermesCli.restartGateway()
+      const detail = await hermesCli.getProfile(name)
+      console.log(`[Profile] detail.path = ${detail.path}`)
+      const result = ensureApiServerConfig(detail.path)
+      if (result?.needSetup) {
+        // No config.yaml — run setup --reset to create full default config,
+        // then ensure api_server is present
+        try { await hermesCli.setupReset() } catch { }
+        ensureApiServerConfig(detail.path)
+      }
+      // Create .env if target has none
+      const profileEnv = join(detail.path, '.env')
+      console.log(`[Profile] .env exists: ${existsSync(profileEnv)}, path: ${profileEnv}`)
+      if (!existsSync(profileEnv)) {
+        writeFileSync(profileEnv, '# Hermes Agent Environment Configuration\n', 'utf-8')
+        console.log(`[Profile] Created .env for: ${detail.path}`)
+      }
+    } catch (err: any) {
+      console.error(`[Profile] Ensure config failed:`, err.message)
+    }
+
+    // 5. Start gateway
+    try {
+      await hermesCli.startGateway()
+      console.log('[Profile] Gateway started')
     } catch {
-      // Fallback for WSL / environments without launchd/systemd
+      // Fallback: background mode (for WSL etc.)
       try {
         const pid = await hermesCli.startGatewayBackground()
         await new Promise(r => setTimeout(r, 3000))
@@ -156,34 +214,95 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
   }
 })
 
-// POST /api/profiles/:name/export - Export profile to archive
+// POST /api/profiles/:name/export - Export profile to archive and download
 profileRoutes.post('/api/hermes/profiles/:name/export', async (ctx) => {
   const { name } = ctx.params
-  const { output } = ctx.request.body as { output?: string }
+  const outputPath = join(tmpdir(), `hermes-profile-${name}.tar.gz`)
 
   try {
-    const result = await hermesCli.exportProfile(name, output)
-    ctx.body = { success: true, message: result.trim() }
+    await hermesCli.exportProfile(name, outputPath)
+
+    if (!existsSync(outputPath)) {
+      ctx.status = 500
+      ctx.body = { error: 'Export file not found' }
+      return
+    }
+
+    const filename = basename(outputPath)
+    ctx.set('Content-Disposition', `attachment; filename="${filename}"`)
+    ctx.set('Content-Type', 'application/gzip')
+    ctx.body = createReadStream(outputPath)
+
+    // Clean up temp file after response ends
+    ctx.res.on('finish', () => {
+      try { unlinkSync(outputPath) } catch { }
+    })
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
   }
 })
 
-// POST /api/profiles/import - Import profile from archive
+// POST /api/profiles/import - Import profile from uploaded archive
 profileRoutes.post('/api/hermes/profiles/import', async (ctx) => {
-  const { archive, name } = ctx.request.body as { archive?: string; name?: string }
-
-  if (!archive) {
+  const contentType = ctx.get('content-type') || ''
+  if (!contentType.startsWith('multipart/form-data')) {
     ctx.status = 400
-    ctx.body = { error: 'Missing archive path' }
+    ctx.body = { error: 'Expected multipart/form-data' }
+    return
+  }
+
+  const boundary = '--' + contentType.split('boundary=')[1]
+  if (!boundary || boundary === '--undefined') {
+    ctx.status = 400
+    ctx.body = { error: 'Missing boundary' }
+    return
+  }
+
+  const tmpDir = join(tmpdir(), 'hermes-import')
+  await mkdir(tmpDir, { recursive: true })
+
+  // Read raw body and parse multipart
+  const chunks: Buffer[] = []
+  for await (const chunk of ctx.req) chunks.push(chunk)
+  const body = Buffer.concat(chunks).toString('latin1')
+  const parts = body.split(boundary).slice(1, -1)
+
+  let archivePath = ''
+
+  for (const part of parts) {
+    const headerEnd = part.indexOf('\r\n\r\n')
+    if (headerEnd === -1) continue
+    const header = part.substring(0, headerEnd)
+    const data = part.substring(headerEnd + 4, part.length - 2)
+
+    const filenameMatch = header.match(/filename="([^"]+)"/)
+    if (!filenameMatch) continue
+
+    const filename = filenameMatch[1]
+    const ext = filename.includes('.') ? '.' + filename.split('.').pop() : ''
+    if (!['.gz', '.tar.gz', '.zip', '.tgz'].includes(ext)) continue
+
+    archivePath = join(tmpDir, filename)
+    await writeFile(archivePath, Buffer.from(data, 'binary'))
+    break
+  }
+
+  if (!archivePath) {
+    ctx.status = 400
+    ctx.body = { error: 'No archive file found (.gz, .zip, .tgz)' }
     return
   }
 
   try {
-    const result = await hermesCli.importProfile(archive, name)
+    const result = await hermesCli.importProfile(archivePath)
+
+    // Clean up temp file
+    try { unlinkSync(archivePath) } catch { }
+
     ctx.body = { success: true, message: result.trim() }
   } catch (err: any) {
+    try { unlinkSync(archivePath) } catch { }
     ctx.status = 500
     ctx.body = { error: err.message }
   }

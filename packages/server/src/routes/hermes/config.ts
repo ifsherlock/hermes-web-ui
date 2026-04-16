@@ -1,10 +1,10 @@
 import Router from '@koa/router'
 import { readFile, writeFile, copyFile } from 'fs/promises'
 import { chmod } from 'fs/promises'
-import { resolve } from 'path'
-import { homedir } from 'os'
+import { join } from 'path'
 import YAML from 'js-yaml'
 import { restartGateway } from '../../services/hermes-cli'
+import { getActiveConfigPath, getActiveEnvPath, getActiveProfileDir } from '../../services/hermes-profile'
 
 // Platform sections that require gateway restart after config change
 const PLATFORM_SECTIONS = new Set([
@@ -12,8 +12,8 @@ const PLATFORM_SECTIONS = new Set([
   'weixin', 'wecom', 'feishu', 'dingtalk',
 ])
 
-const configPath = resolve(homedir(), '.hermes/config.yaml')
-const envPath = resolve(homedir(), '.hermes/.env')
+const configPath = () => getActiveConfigPath()
+const envPath = () => getActiveEnvPath()
 
 // Env var → (platform, configPath in PlatformConfig) mapping
 // Matches hermes _apply_env_overrides() in gateway/config.py
@@ -81,7 +81,7 @@ function getNested(obj: Record<string, any>, path: string): any {
 
 async function readEnvPlatforms(): Promise<Record<string, any>> {
   try {
-    const raw = await readFile(envPath, 'utf-8')
+    const raw = await readFile(envPath(), 'utf-8')
     const env = parseEnv(raw)
     const platforms: Record<string, any> = {}
     for (const [envKey, [platform, cfgPath]] of Object.entries(envPlatformMap)) {
@@ -103,7 +103,7 @@ async function readEnvPlatforms(): Promise<Record<string, any>> {
 async function saveEnvValue(key: string, value: string): Promise<void> {
   let raw: string
   try {
-    raw = await readFile(envPath, 'utf-8')
+    raw = await readFile(envPath(), 'utf-8')
   } catch {
     raw = ''
   }
@@ -144,25 +144,26 @@ async function saveEnvValue(key: string, value: string): Promise<void> {
 
   // Remove trailing empty lines, keep exactly one trailing newline
   let output = result.join('\n').replace(/\n{3,}/g, '\n\n').replace(/\n+$/, '') + '\n'
-  await writeFile(envPath, output, 'utf-8')
+  await writeFile(envPath(), output, 'utf-8')
   // Set permissions to 0600 (owner only), matching hermes behavior
-  try { await chmod(envPath, 0o600) } catch { /* ignore */ }
+  try { await chmod(envPath(), 0o600) } catch { /* ignore */ }
 }
 
 async function readConfig(): Promise<Record<string, any>> {
-  const raw = await readFile(configPath, 'utf-8')
+  const raw = await readFile(configPath(), 'utf-8')
   return (YAML.load(raw) as Record<string, any>) || {}
 }
 
 async function writeConfig(data: Record<string, any>): Promise<void> {
-  await copyFile(configPath, configPath + '.bak')
+  const cp = configPath()
+  await copyFile(cp, cp + '.bak')
   const yamlStr = YAML.dump(data, {
     lineWidth: -1,
     noRefs: true,
     quotingType: '"',
     forceQuotes: false,
   })
-  await writeFile(configPath, yamlStr, 'utf-8')
+  await writeFile(cp, yamlStr, 'utf-8')
 }
 
 export const configRoutes = new Router()

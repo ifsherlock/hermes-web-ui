@@ -508,6 +508,22 @@ export async function exportProfile(name: string, outputPath?: string): Promise<
 }
 
 /**
+ * Run hermes setup --non-interactive --reset to generate default config for current profile
+ */
+export async function setupReset(): Promise<string> {
+  try {
+    const { stdout, stderr } = await execFileAsync('hermes', ['setup', '--non-interactive', '--reset'], {
+      timeout: 30000,
+      ...execOpts,
+    })
+    return stdout || stderr
+  } catch (err: any) {
+    console.error('[Hermes CLI] setup reset failed:', err.message)
+    throw new Error(`Failed to reset config: ${err.message}`)
+  }
+}
+
+/**
  * Import profile from archive
  */
 export async function importProfile(archivePath: string, name?: string): Promise<string> {

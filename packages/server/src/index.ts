@@ -5,12 +5,50 @@ import serve from 'koa-static'
 import send from 'koa-send'
 import { resolve } from 'path'
 import { mkdir } from 'fs/promises'
+import { readFileSync } from 'fs'
 import { config } from './config'
 import { hermesRoutes, setupTerminalWebSocket, proxyMiddleware } from './routes/hermes'
 import { uploadRoutes } from './routes/upload'
 import { webhookRoutes } from './routes/webhook'
 import * as hermesCli from './services/hermes-cli'
 import { getToken, authMiddleware } from './services/auth'
+
+function getLocalVersion(): string {
+  // production: dist/server → ../../package.json
+  // dev: packages/server/src → ../../../package.json
+  const candidates = [
+    resolve(__dirname, '../../package.json'),
+    resolve(__dirname, '../../../package.json'),
+  ]
+  for (const p of candidates) {
+    try {
+      return JSON.parse(readFileSync(p, 'utf-8')).version
+    } catch { }
+  }
+  return '0.0.0'
+}
+
+const LOCAL_VERSION = getLocalVersion()
+
+let cachedLatestVersion = ''
+
+async function checkLatestVersion(): Promise<void> {
+  try {
+    const res = await fetch('https://registry.npmjs.org/hermes-web-ui/latest', {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const latest = data.version || ''
+      if (latest && latest !== cachedLatestVersion) {
+        cachedLatestVersion = latest
+        if (latest !== LOCAL_VERSION) {
+          console.log(`⬆ New version available: v${LOCAL_VERSION} → v${latest}`)
+        }
+      }
+    }
+  } catch { }
+}
 
 const app = new Koa()
 const { restartGateway, startGateway, startGatewayBackground, getVersion } = hermesCli
@@ -40,6 +78,32 @@ export async function bootstrap() {
 
   app.use(webhookRoutes.routes())
   app.use(uploadRoutes.routes())
+
+  // update (must be before hermesRoutes which includes proxy routes)
+  app.use(async (ctx, next) => {
+    if (ctx.path === '/api/hermes/update' && ctx.method === 'POST') {
+      const isWin = process.platform === 'win32'
+      const cmd = isWin
+        ? 'cmd /c hermes-web-ui update'
+        : 'hermes-web-ui update'
+
+      try {
+        const { execSync } = await import('child_process')
+        const output = execSync(cmd, {
+          encoding: 'utf-8',
+          timeout: 120000,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
+        ctx.body = { success: true, message: output.trim() }
+      } catch (err: any) {
+        ctx.status = 500
+        ctx.body = { success: false, message: err.stderr || err.message }
+      }
+      return
+    }
+    await next()
+  })
+
   app.use(hermesRoutes.routes())
   app.use(proxyMiddleware)
 
@@ -47,7 +111,7 @@ export async function bootstrap() {
   app.use(async (ctx, next) => {
     if (ctx.path === '/health') {
       const raw = await getVersion()
-      const version = raw.split('\n')[0].replace('Hermes Agent ', '') || ''
+      const hermesVersion = raw.split('\n')[0].replace('Hermes Agent ', '') || ''
 
       let gatewayOk = false
       try {
@@ -60,8 +124,11 @@ export async function bootstrap() {
       ctx.body = {
         status: gatewayOk ? 'ok' : 'error',
         platform: 'hermes-agent',
-        version,
+        version: hermesVersion,
         gateway: gatewayOk ? 'running' : 'stopped',
+        webui_version: LOCAL_VERSION,
+        webui_latest: cachedLatestVersion,
+        webui_update_available: cachedLatestVersion && cachedLatestVersion !== LOCAL_VERSION,
       }
       return
     }
@@ -97,6 +164,10 @@ export async function bootstrap() {
 
   // 👇 绑定退出信号
   bindShutdown()
+
+  // Check for updates every 4 hours
+  checkLatestVersion()
+  setInterval(checkLatestVersion, 4 * 60 * 60 * 1000)
 }
 
 // ============================
@@ -159,10 +230,10 @@ function bindShutdown() {
 // ============================
 
 async function ensureApiServerConfig() {
-  const { homedir } = await import('os')
   const { readFileSync, writeFileSync, existsSync, copyFileSync } = await import('fs')
   const yaml = (await import('js-yaml')).default
-  const configPath = resolve(homedir(), '.hermes/config.yaml')
+  const { getActiveConfigPath } = await import('./services/hermes-profile')
+  const configPath = getActiveConfigPath()
 
   const defaults: Record<string, any> = {
     enabled: true,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, reactive, onUnmounted } from 'vue'
 import { NSwitch, NInput, NButton, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/hermes/settings'
@@ -11,29 +11,71 @@ const settingsStore = useSettingsStore()
 const message = useMessage()
 const { t } = useI18n()
 
-async function saveChannel(platform: string, values: Record<string, any>) {
-  try {
-    await settingsStore.saveSection(platform, values)
-    message.success(t('settings.saved'))
-  } catch (err: any) {
-    message.error(t('settings.saveFailed'))
-  }
+// Track saving state per platform.field
+const saving = reactive<Record<string, boolean>>({})
+
+function savingKey(platform: string, field: string) {
+  return `${platform}.${field}`
 }
 
-// Save credentials to .env (matching hermes gateway setup behavior)
-const savingCreds = ref(false)
+function isSaving(platform: string, field: string) {
+  return !!saving[savingKey(platform, field)]
+}
 
-async function saveCredentials(platform: string, values: Record<string, any>) {
-  savingCreds.value = true
+// Debounce timers
+const debounceTimers: Record<string, ReturnType<typeof setTimeout>> = {}
+
+function debounceSave(platform: string, field: string, saveFn: () => Promise<void>, delay = 600) {
+  const key = savingKey(platform, field)
+  if (debounceTimers[key]) clearTimeout(debounceTimers[key])
+  debounceTimers[key] = setTimeout(async () => {
+    saving[key] = true
+    try {
+      await saveFn()
+      message.success(t('settings.saved'))
+    } catch (err: any) {
+      message.error(t('settings.saveFailed'))
+    } finally {
+      saving[key] = false
+    }
+  }, delay)
+}
+
+// Immediate save for switches
+async function immediateSave(platform: string, field: string, saveFn: () => Promise<void>) {
+  const key = savingKey(platform, field)
+  saving[key] = true
   try {
-    await saveCredsApi(platform, values)
-    await settingsStore.fetchSettings()
+    await saveFn()
     message.success(t('settings.saved'))
   } catch (err: any) {
     message.error(t('settings.saveFailed'))
   } finally {
-    savingCreds.value = false
+    saving[key] = false
   }
+}
+
+async function saveChannel(platform: string, field: string, values: Record<string, any>) {
+  immediateSave(platform, field, () => settingsStore.saveSection(platform, values))
+}
+
+function debouncedSaveChannel(platform: string, field: string, values: Record<string, any>) {
+  debounceSave(platform, field, () => settingsStore.saveSection(platform, values))
+}
+
+// Save credentials to .env (matching hermes gateway setup behavior)
+async function saveCredentials(platform: string, field: string, values: Record<string, any>) {
+  immediateSave(platform, field, async () => {
+    await saveCredsApi(platform, values)
+    await settingsStore.fetchSettings()
+  })
+}
+
+function debouncedSaveCredentials(platform: string, field: string, values: Record<string, any>) {
+  debounceSave(platform, field, async () => {
+    await saveCredsApi(platform, values)
+    await settingsStore.fetchSettings()
+  })
 }
 
 function getCreds(key: string) {
@@ -104,6 +146,7 @@ function stopWeixinPoll() {
 
 onUnmounted(() => {
   stopWeixinPoll()
+  Object.values(debounceTimers).forEach(t => clearTimeout(t))
 })
 
 const platforms = [
@@ -168,133 +211,133 @@ const platforms = [
       <!-- Telegram -->
       <template v-if="p.key === 'telegram'">
         <SettingRow :label="t('platform.botToken')" :hint="t('platform.botTokenHint')">
-          <NInput :value="getCreds('telegram').token || ''" clearable size="small" class="input-lg" placeholder="123456:ABC-DEF..." @update:value="v => saveCredentials('telegram', { token: v })" />
+          <NInput :value="getCreds('telegram').token || ''" :loading="isSaving('telegram', 'token')" clearable size="small" class="input-lg" placeholder="123456:ABC-DEF..." @update:value="v => debouncedSaveCredentials('telegram', 'token', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
-          <NSwitch :value="settingsStore.telegram.require_mention" @update:value="v => saveChannel('telegram', { require_mention: v })" />
+          <NSwitch :value="settingsStore.telegram.require_mention" :loading="isSaving('telegram', 'require_mention')" @update:value="v => saveChannel('telegram', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.reactions')" :hint="t('platform.reactionsHint')">
-          <NSwitch :value="settingsStore.telegram.reactions" @update:value="v => saveChannel('telegram', { reactions: v })" />
+          <NSwitch :value="settingsStore.telegram.reactions" :loading="isSaving('telegram', 'reactions')" @update:value="v => saveChannel('telegram', 'reactions', { reactions: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseChats')" :hint="t('platform.freeResponseChatsHint')">
-          <NInput :value="settingsStore.telegram.free_response_chats || ''" size="small" placeholder="chat_id1,chat_id2" @update:value="v => saveChannel('telegram', { free_response_chats: v })" />
+          <NInput :value="settingsStore.telegram.free_response_chats || ''" :loading="isSaving('telegram', 'free_response_chats')" size="small" placeholder="chat_id1,chat_id2" @update:value="v => debouncedSaveChannel('telegram', 'free_response_chats', { free_response_chats: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.mentionPatterns')" :hint="t('platform.mentionPatternsHint')">
-          <NInput :value="(settingsStore.telegram.mention_patterns || []).join(', ')" size="small" placeholder="pattern1, pattern2" @update:value="v => saveChannel('telegram', { mention_patterns: v ? v.split(',').map(s => s.trim()) : [] })" />
+          <NInput :value="(settingsStore.telegram.mention_patterns || []).join(', ')" :loading="isSaving('telegram', 'mention_patterns')" size="small" placeholder="pattern1, pattern2" @update:value="v => debouncedSaveChannel('telegram', 'mention_patterns', { mention_patterns: v ? v.split(',').map(s => s.trim()) : [] })" />
         </SettingRow>
       </template>
 
       <!-- Discord -->
       <template v-if="p.key === 'discord'">
         <SettingRow :label="t('platform.botToken')" :hint="t('platform.botTokenHint')">
-          <NInput :value="getCreds('discord').token || ''" clearable size="small" class="input-lg" placeholder="Bot token..." @update:value="v => saveCredentials('discord', { token: v })" />
+          <NInput :value="getCreds('discord').token || ''" :loading="isSaving('discord', 'token')" clearable size="small" class="input-lg" placeholder="Bot token..." @update:value="v => debouncedSaveCredentials('discord', 'token', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionChannel')">
-          <NSwitch :value="settingsStore.discord.require_mention" @update:value="v => saveChannel('discord', { require_mention: v })" />
+          <NSwitch :value="settingsStore.discord.require_mention" :loading="isSaving('discord', 'require_mention')" @update:value="v => saveChannel('discord', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.autoThread')" :hint="t('platform.autoThreadHint')">
-          <NSwitch :value="settingsStore.discord.auto_thread" @update:value="v => saveChannel('discord', { auto_thread: v })" />
+          <NSwitch :value="settingsStore.discord.auto_thread" :loading="isSaving('discord', 'auto_thread')" @update:value="v => saveChannel('discord', 'auto_thread', { auto_thread: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.reactions')" :hint="t('platform.reactionsHint')">
-          <NSwitch :value="settingsStore.discord.reactions" @update:value="v => saveChannel('discord', { reactions: v })" />
+          <NSwitch :value="settingsStore.discord.reactions" :loading="isSaving('discord', 'reactions')" @update:value="v => saveChannel('discord', 'reactions', { reactions: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseChannels')" :hint="t('platform.freeResponseChannelsHint')">
-          <NInput :value="settingsStore.discord.free_response_channels || ''" size="small" placeholder="channel_id1,channel_id2" @update:value="v => saveChannel('discord', { free_response_channels: v })" />
+          <NInput :value="settingsStore.discord.free_response_channels || ''" :loading="isSaving('discord', 'free_response_channels')" size="small" placeholder="channel_id1,channel_id2" @update:value="v => debouncedSaveChannel('discord', 'free_response_channels', { free_response_channels: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.allowedChannels')" :hint="t('platform.allowedChannelsHint')">
-          <NInput :value="settingsStore.discord.allowed_channels || ''" size="small" placeholder="channel_id1,channel_id2" @update:value="v => saveChannel('discord', { allowed_channels: v })" />
+          <NInput :value="settingsStore.discord.allowed_channels || ''" :loading="isSaving('discord', 'allowed_channels')" size="small" placeholder="channel_id1,channel_id2" @update:value="v => debouncedSaveChannel('discord', 'allowed_channels', { allowed_channels: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.ignoredChannels')" :hint="t('platform.ignoredChannelsHint')">
-          <NInput :value="settingsStore.discord.ignored_channels || ''" size="small" placeholder="channel_id1,channel_id2" @update:value="v => saveChannel('discord', { ignored_channels: v })" />
+          <NInput :value="settingsStore.discord.ignored_channels || ''" :loading="isSaving('discord', 'ignored_channels')" size="small" placeholder="channel_id1,channel_id2" @update:value="v => debouncedSaveChannel('discord', 'ignored_channels', { ignored_channels: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.noThreadChannels')" :hint="t('platform.noThreadChannelsHint')">
-          <NInput :value="settingsStore.discord.no_thread_channels || ''" size="small" placeholder="channel_id1,channel_id2" @update:value="v => saveChannel('discord', { no_thread_channels: v })" />
+          <NInput :value="settingsStore.discord.no_thread_channels || ''" :loading="isSaving('discord', 'no_thread_channels')" size="small" placeholder="channel_id1,channel_id2" @update:value="v => debouncedSaveChannel('discord', 'no_thread_channels', { no_thread_channels: v })" />
         </SettingRow>
       </template>
 
       <!-- Slack -->
       <template v-if="p.key === 'slack'">
         <SettingRow :label="t('platform.botToken')" :hint="t('platform.botTokenHint')">
-          <NInput :value="getCreds('slack').token || ''" clearable size="small" class="input-lg" placeholder="xoxb-..." @update:value="v => saveCredentials('slack', { token: v })" />
+          <NInput :value="getCreds('slack').token || ''" :loading="isSaving('slack', 'token')" clearable size="small" class="input-lg" placeholder="xoxb-..." @update:value="v => debouncedSaveCredentials('slack', 'token', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionChannel')">
-          <NSwitch :value="settingsStore.slack.require_mention" @update:value="v => saveChannel('slack', { require_mention: v })" />
+          <NSwitch :value="settingsStore.slack.require_mention" :loading="isSaving('slack', 'require_mention')" @update:value="v => saveChannel('slack', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.allowBots')" :hint="t('platform.allowBotsHint')">
-          <NSwitch :value="settingsStore.slack.allow_bots" @update:value="v => saveChannel('slack', { allow_bots: v })" />
+          <NSwitch :value="settingsStore.slack.allow_bots" :loading="isSaving('slack', 'allow_bots')" @update:value="v => saveChannel('slack', 'allow_bots', { allow_bots: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseChannels')" :hint="t('platform.freeResponseChannelsHint')">
-          <NInput :value="settingsStore.slack.free_response_channels || ''" size="small" placeholder="channel_id1,channel_id2" @update:value="v => saveChannel('slack', { free_response_channels: v })" />
+          <NInput :value="settingsStore.slack.free_response_channels || ''" :loading="isSaving('slack', 'free_response_channels')" size="small" placeholder="channel_id1,channel_id2" @update:value="v => debouncedSaveChannel('slack', 'free_response_channels', { free_response_channels: v })" />
         </SettingRow>
       </template>
 
       <!-- WhatsApp -->
       <template v-if="p.key === 'whatsapp'">
         <SettingRow :label="t('platform.waEnabled')" :hint="t('platform.waEnabledHint')">
-          <NSwitch :value="getCreds('whatsapp').enabled" @update:value="v => saveCredentials('whatsapp', { enabled: v })" />
+          <NSwitch :value="getCreds('whatsapp').enabled" :loading="isSaving('whatsapp', 'enabled')" @update:value="v => saveCredentials('whatsapp', 'enabled', { enabled: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
-          <NSwitch :value="settingsStore.whatsapp.require_mention" @update:value="v => saveChannel('whatsapp', { require_mention: v })" />
+          <NSwitch :value="settingsStore.whatsapp.require_mention" :loading="isSaving('whatsapp', 'require_mention')" @update:value="v => saveChannel('whatsapp', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseChats')" :hint="t('platform.freeResponseChatsHint')">
-          <NInput :value="settingsStore.whatsapp.free_response_chats || ''" size="small" placeholder="chat_id1,chat_id2" @update:value="v => saveChannel('whatsapp', { free_response_chats: v })" />
+          <NInput :value="settingsStore.whatsapp.free_response_chats || ''" :loading="isSaving('whatsapp', 'free_response_chats')" size="small" placeholder="chat_id1,chat_id2" @update:value="v => debouncedSaveChannel('whatsapp', 'free_response_chats', { free_response_chats: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.mentionPatterns')" :hint="t('platform.mentionPatternsHint')">
-          <NInput :value="(settingsStore.whatsapp.mention_patterns || []).join(', ')" size="small" placeholder="pattern1, pattern2" @update:value="v => saveChannel('whatsapp', { mention_patterns: v ? v.split(',').map(s => s.trim()) : [] })" />
+          <NInput :value="(settingsStore.whatsapp.mention_patterns || []).join(', ')" :loading="isSaving('whatsapp', 'mention_patterns')" size="small" placeholder="pattern1, pattern2" @update:value="v => debouncedSaveChannel('whatsapp', 'mention_patterns', { mention_patterns: v ? v.split(',').map(s => s.trim()) : [] })" />
         </SettingRow>
       </template>
 
       <!-- Matrix -->
       <template v-if="p.key === 'matrix'">
         <SettingRow :label="t('platform.accessToken')" :hint="t('platform.accessTokenHint')">
-          <NInput :value="getCreds('matrix').token || ''" clearable size="small" class="input-lg" placeholder="syt_..." @update:value="v => saveCredentials('matrix', { token: v })" />
+          <NInput :value="getCreds('matrix').token || ''" :loading="isSaving('matrix', 'token')" clearable size="small" class="input-lg" placeholder="syt_..." @update:value="v => debouncedSaveCredentials('matrix', 'token', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.homeserver')" :hint="t('platform.homeserverHint')">
-          <NInput :value="getCreds('matrix').extra?.homeserver || ''" clearable size="small" class="input-lg" placeholder="https://matrix.org" @update:value="v => saveCredentials('matrix', { extra: { ...getCreds('matrix').extra, homeserver: v } })" />
+          <NInput :value="getCreds('matrix').extra?.homeserver || ''" :loading="isSaving('matrix', 'homeserver')" clearable size="small" class="input-lg" placeholder="https://matrix.org" @update:value="v => debouncedSaveCredentials('matrix', 'homeserver', { extra: { ...getCreds('matrix').extra, homeserver: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionRoom')">
-          <NSwitch :value="settingsStore.matrix.require_mention" @update:value="v => saveChannel('matrix', { require_mention: v })" />
+          <NSwitch :value="settingsStore.matrix.require_mention" :loading="isSaving('matrix', 'require_mention')" @update:value="v => saveChannel('matrix', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.autoThread')" :hint="t('platform.autoThreadHintRoom')">
-          <NSwitch :value="settingsStore.matrix.auto_thread" @update:value="v => saveChannel('matrix', { auto_thread: v })" />
+          <NSwitch :value="settingsStore.matrix.auto_thread" :loading="isSaving('matrix', 'auto_thread')" @update:value="v => saveChannel('matrix', 'auto_thread', { auto_thread: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.dmMentionThreads')" :hint="t('platform.dmMentionThreadsHint')">
-          <NSwitch :value="settingsStore.matrix.dm_mention_threads" @update:value="v => saveChannel('matrix', { dm_mention_threads: v })" />
+          <NSwitch :value="settingsStore.matrix.dm_mention_threads" :loading="isSaving('matrix', 'dm_mention_threads')" @update:value="v => saveChannel('matrix', 'dm_mention_threads', { dm_mention_threads: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseRooms')" :hint="t('platform.freeResponseRoomsHint')">
-          <NInput :value="settingsStore.matrix.free_response_rooms || ''" size="small" placeholder="room_id1,room_id2" @update:value="v => saveChannel('matrix', { free_response_rooms: v })" />
+          <NInput :value="settingsStore.matrix.free_response_rooms || ''" :loading="isSaving('matrix', 'free_response_rooms')" size="small" placeholder="room_id1,room_id2" @update:value="v => debouncedSaveChannel('matrix', 'free_response_rooms', { free_response_rooms: v })" />
         </SettingRow>
       </template>
 
       <!-- Feishu -->
       <template v-if="p.key === 'feishu'">
         <SettingRow :label="t('platform.appId')" :hint="t('platform.appIdHint')">
-          <NInput :value="getCreds('feishu').extra?.app_id || ''" clearable size="small" class="input-lg" placeholder="cli_..." @update:value="v => saveCredentials('feishu', { extra: { ...getCreds('feishu').extra, app_id: v } })" />
+          <NInput :value="getCreds('feishu').extra?.app_id || ''" :loading="isSaving('feishu', 'app_id')" clearable size="small" class="input-lg" placeholder="cli_..." @update:value="v => debouncedSaveCredentials('feishu', 'app_id', { extra: { ...getCreds('feishu').extra, app_id: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.appSecret')" :hint="t('platform.appSecretHint')">
-          <NInput :value="getCreds('feishu').extra?.app_secret || ''" clearable size="small" class="input-lg" placeholder="App Secret" @update:value="v => saveCredentials('feishu', { extra: { ...getCreds('feishu').extra, app_secret: v } })" />
+          <NInput :value="getCreds('feishu').extra?.app_secret || ''" :loading="isSaving('feishu', 'app_secret')" clearable size="small" class="input-lg" placeholder="App Secret" @update:value="v => debouncedSaveCredentials('feishu', 'app_secret', { extra: { ...getCreds('feishu').extra, app_secret: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
-          <NSwitch :value="settingsStore.feishu.require_mention" @update:value="v => saveChannel('feishu', { require_mention: v })" />
+          <NSwitch :value="settingsStore.feishu.require_mention" :loading="isSaving('feishu', 'require_mention')" @update:value="v => saveChannel('feishu', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseChats')" :hint="t('platform.freeResponseChatsHint')">
-          <NInput :value="settingsStore.feishu.free_response_chats || ''" size="small" placeholder="chat_id1,chat_id2" @update:value="v => saveChannel('feishu', { free_response_chats: v })" />
+          <NInput :value="settingsStore.feishu.free_response_chats || ''" :loading="isSaving('feishu', 'free_response_chats')" size="small" placeholder="chat_id1,chat_id2" @update:value="v => debouncedSaveChannel('feishu', 'free_response_chats', { free_response_chats: v })" />
         </SettingRow>
       </template>
 
       <!-- DingTalk -->
       <template v-if="p.key === 'dingtalk'">
         <SettingRow :label="t('platform.clientId')" :hint="t('platform.clientIdHint')">
-          <NInput :value="getCreds('dingtalk').extra?.client_id || ''" clearable size="small" class="input-lg" placeholder="Client ID" @update:value="v => saveCredentials('dingtalk', { extra: { ...getCreds('dingtalk').extra, client_id: v } })" />
+          <NInput :value="getCreds('dingtalk').extra?.client_id || ''" :loading="isSaving('dingtalk', 'client_id')" clearable size="small" class="input-lg" placeholder="Client ID" @update:value="v => debouncedSaveCredentials('dingtalk', 'client_id', { extra: { ...getCreds('dingtalk').extra, client_id: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.clientSecret')" :hint="t('platform.clientSecretHint')">
-          <NInput :value="getCreds('dingtalk').extra?.client_secret || ''" clearable size="small" class="input-lg" placeholder="Client Secret" @update:value="v => saveCredentials('dingtalk', { extra: { ...getCreds('dingtalk').extra, client_secret: v } })" />
+          <NInput :value="getCreds('dingtalk').extra?.client_secret || ''" :loading="isSaving('dingtalk', 'client_secret')" clearable size="small" class="input-lg" placeholder="Client Secret" @update:value="v => debouncedSaveCredentials('dingtalk', 'client_secret', { extra: { ...getCreds('dingtalk').extra, client_secret: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.requireMention')" :hint="t('platform.requireMentionGroup')">
-          <NSwitch :value="settingsStore.dingtalk.require_mention" @update:value="v => saveChannel('dingtalk', { require_mention: v })" />
+          <NSwitch :value="settingsStore.dingtalk.require_mention" :loading="isSaving('dingtalk', 'require_mention')" @update:value="v => saveChannel('dingtalk', 'require_mention', { require_mention: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.freeResponseChats')" :hint="t('platform.freeResponseChatsHint')">
-          <NInput :value="settingsStore.dingtalk.free_response_chats || ''" size="small" placeholder="chat_id1,chat_id2" @update:value="v => saveChannel('dingtalk', { free_response_chats: v })" />
+          <NInput :value="settingsStore.dingtalk.free_response_chats || ''" :loading="isSaving('dingtalk', 'free_response_chats')" size="small" placeholder="chat_id1,chat_id2" @update:value="v => debouncedSaveChannel('dingtalk', 'free_response_chats', { free_response_chats: v })" />
         </SettingRow>
       </template>
 
@@ -318,20 +361,20 @@ const platforms = [
           </div>
         </div>
         <SettingRow :label="t('platform.weixinToken')" :hint="t('platform.weixinTokenHint')">
-          <NInput :value="getCreds('weixin').token || ''" clearable size="small" class="input-lg" placeholder="Token" @update:value="v => saveCredentials('weixin', { token: v })" />
+          <NInput :value="getCreds('weixin').token || ''" :loading="isSaving('weixin', 'token')" clearable size="small" class="input-lg" placeholder="Token" @update:value="v => debouncedSaveCredentials('weixin', 'token', { token: v })" />
         </SettingRow>
         <SettingRow :label="t('platform.accountId')" :hint="t('platform.accountIdHint')">
-          <NInput :value="getCreds('weixin').extra?.account_id || ''" clearable size="small" class="input-lg" placeholder="Account ID" @update:value="v => saveCredentials('weixin', { extra: { ...getCreds('weixin').extra, account_id: v } })" />
+          <NInput :value="getCreds('weixin').extra?.account_id || ''" :loading="isSaving('weixin', 'account_id')" clearable size="small" class="input-lg" placeholder="Account ID" @update:value="v => debouncedSaveCredentials('weixin', 'account_id', { extra: { ...getCreds('weixin').extra, account_id: v } })" />
         </SettingRow>
       </template>
 
       <!-- WeCom -->
       <template v-if="p.key === 'wecom'">
         <SettingRow :label="t('platform.botId')" :hint="t('platform.botIdHint')">
-          <NInput :value="getCreds('wecom').extra?.bot_id || ''" clearable size="small" class="input-lg" placeholder="Bot ID" @update:value="v => saveCredentials('wecom', { extra: { ...getCreds('wecom').extra, bot_id: v } })" />
+          <NInput :value="getCreds('wecom').extra?.bot_id || ''" :loading="isSaving('wecom', 'bot_id')" clearable size="small" class="input-lg" placeholder="Bot ID" @update:value="v => debouncedSaveCredentials('wecom', 'bot_id', { extra: { ...getCreds('wecom').extra, bot_id: v } })" />
         </SettingRow>
         <SettingRow :label="t('platform.appSecret')" :hint="t('platform.wecomSecretHint')">
-          <NInput :value="getCreds('wecom').extra?.secret || ''" clearable size="small" class="input-lg" placeholder="Secret" @update:value="v => saveCredentials('wecom', { extra: { ...getCreds('wecom').extra, secret: v } })" />
+          <NInput :value="getCreds('wecom').extra?.secret || ''" :loading="isSaving('wecom', 'secret')" clearable size="small" class="input-lg" placeholder="Secret" @update:value="v => debouncedSaveCredentials('wecom', 'secret', { extra: { ...getCreds('wecom').extra, secret: v } })" />
         </SettingRow>
       </template>
     </PlatformCard>
