@@ -1,8 +1,15 @@
 import { WebSocketServer } from 'ws'
 import type { Server as HttpServer } from 'http'
 import { existsSync } from 'fs'
-import * as pty from 'node-pty'
 import { getToken } from '../../services/auth'
+
+let pty: any = null
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  pty = require('node-pty')
+} catch {
+  console.warn('[Terminal] node-pty failed to load, terminal feature disabled')
+}
 
 // ─── Shell detection ────────────────────────────────────────────
 
@@ -29,7 +36,7 @@ function shellName(shell: string): string {
 
 interface PtySession {
   id: string
-  pty: pty.IPty
+  pty: { pid: number; onData: (cb: (data: string) => void) => void; onExit: (cb: (e: { exitCode: number }) => void) => void; write: (data: string) => void; kill: (signal?: string) => void; resize: (cols: number, rows: number) => void }
   shell: string
   pid: number
   createdAt: number
@@ -49,7 +56,7 @@ function generateId(): string {
 
 function createSession(shell: string): PtySession {
   const id = generateId()
-  let ptyProcess: pty.IPty
+  let ptyProcess: PtySession['pty']
   try {
     ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-color',
@@ -75,6 +82,11 @@ function createSession(shell: string): PtySession {
 // ─── WebSocket server setup ─────────────────────────────────────
 
 export function setupTerminalWebSocket(httpServer: HttpServer) {
+  if (!pty) {
+    console.warn('[Terminal] node-pty not available, skipping terminal WebSocket setup')
+    return
+  }
+
   const wss = new WebSocketServer({ noServer: true })
   const defaultShell = findShell()
 
@@ -111,7 +123,7 @@ export function setupTerminalWebSocket(httpServer: HttpServer) {
     // ─── PTY output → WebSocket ──────────────────────────────────
 
     function attachPtyOutput(session: PtySession) {
-      session.pty.onData((data) => {
+      session.pty.onData((data: string) => {
         if (ws.readyState !== ws.OPEN) return
         if (conn.activeSessionId === session.id) {
           ws.send(data)
@@ -130,7 +142,7 @@ export function setupTerminalWebSocket(httpServer: HttpServer) {
         }
       })
 
-      session.pty.onExit(({ exitCode }) => {
+      session.pty.onExit(({ exitCode }: { exitCode: number }) => {
         conn.outputBuffers.delete(session.id)
         if (ws.readyState === ws.OPEN) {
           ws.send(JSON.stringify({ type: 'exited', id: session.id, exitCode }))

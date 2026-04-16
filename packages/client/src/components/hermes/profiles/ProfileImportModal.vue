@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NModal, NForm, NFormItem, NInput, NButton, useMessage } from 'naive-ui'
+import { NModal, NUpload, NButton, useMessage } from 'naive-ui'
+import type { UploadFileInfo } from 'naive-ui'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import { useI18n } from 'vue-i18n'
 
@@ -15,21 +16,39 @@ const message = useMessage()
 
 const showModal = ref(true)
 const loading = ref(false)
-const archive = ref('')
-const name = ref('')
+const fileList = ref<UploadFileInfo[]>([])
+
+const ACCEPT_TYPES = [
+  '.tar.gz',
+  '.tgz',
+  '.gz',
+  '.zip',
+]
+
+function beforeUpload({ file }: { file: UploadFileInfo }) {
+  const name = file.name?.toLowerCase() || ''
+  const valid = ACCEPT_TYPES.some(ext => name.endsWith(ext))
+  if (!valid) {
+    message.warning(t('profiles.importInvalidFile'))
+    return false
+  }
+  return true
+}
 
 async function handleSave() {
-  if (!archive.value.trim()) {
-    message.warning(t('profiles.archivePathPlaceholder'))
+  if (!fileList.value.length) {
+    message.warning(t('profiles.importSelectFile'))
     return
   }
 
   loading.value = true
   try {
-    const ok = await profilesStore.importProfile(
-      archive.value.trim(),
-      name.value.trim() || undefined,
-    )
+    const file = fileList.value[0].file
+    if (!file) {
+      message.error(t('profiles.importFailed'))
+      return
+    }
+    const ok = await profilesStore.importProfile(file)
     if (ok) {
       message.success(t('profiles.importSuccess'))
       emit('saved')
@@ -56,26 +75,20 @@ function handleClose() {
     :mask-closable="!loading"
     @after-leave="emit('close')"
   >
-    <NForm label-placement="top">
-      <NFormItem :label="t('profiles.archivePath')" required>
-        <NInput
-          v-model:value="archive"
-          :placeholder="t('profiles.archivePathPlaceholder')"
-        />
-      </NFormItem>
-
-      <NFormItem :label="t('profiles.importName')">
-        <NInput
-          v-model:value="name"
-          :placeholder="t('profiles.importNamePlaceholder')"
-        />
-      </NFormItem>
-    </NForm>
+    <NUpload
+      v-model:file-list="fileList"
+      :max="1"
+      :accept="ACCEPT_TYPES.join(',')"
+      :disabled="loading"
+      @before-upload="beforeUpload"
+    >
+      <NButton>{{ t('profiles.importSelectFile') }}</NButton>
+    </NUpload>
 
     <template #footer>
       <div class="modal-footer">
         <NButton @click="handleClose">{{ t('common.cancel') }}</NButton>
-        <NButton type="primary" :loading="loading" @click="handleSave">
+        <NButton type="primary" :loading="loading" :disabled="!fileList.length" @click="handleSave">
           {{ t('common.confirm') }}
         </NButton>
       </div>

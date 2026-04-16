@@ -6,7 +6,7 @@ import { useProfilesStore } from '@/stores/hermes/profiles'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ profile: HermesProfile }>()
-const emit = defineEmits<{ rename: [name: string] }>()
+const emit = defineEmits<{}>()
 
 const { t } = useI18n()
 const profilesStore = useProfilesStore()
@@ -153,9 +153,6 @@ async function handleExport() {
         @click="handleSwitch"
       >
         {{ t('profiles.switchTo') }}
-      </NButton>
-      <NButton size="tiny" quaternary @click="emit('rename', profile.name)">
-        {{ t('profiles.rename') }}
       </NButton>
       <NButton
         size="tiny"

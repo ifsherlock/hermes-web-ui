@@ -1,5 +1,6 @@
 import Router from '@koa/router'
 import { createReadStream, existsSync, unlinkSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs'
+import { mkdir, writeFile } from 'fs/promises'
 import { basename, join } from 'path'
 import { tmpdir, homedir } from 'os'
 import YAML from 'js-yaml'
@@ -242,20 +243,66 @@ profileRoutes.post('/api/hermes/profiles/:name/export', async (ctx) => {
   }
 })
 
-// POST /api/profiles/import - Import profile from archive
+// POST /api/profiles/import - Import profile from uploaded archive
 profileRoutes.post('/api/hermes/profiles/import', async (ctx) => {
-  const { archive, name } = ctx.request.body as { archive?: string; name?: string }
-
-  if (!archive) {
+  const contentType = ctx.get('content-type') || ''
+  if (!contentType.startsWith('multipart/form-data')) {
     ctx.status = 400
-    ctx.body = { error: 'Missing archive path' }
+    ctx.body = { error: 'Expected multipart/form-data' }
+    return
+  }
+
+  const boundary = '--' + contentType.split('boundary=')[1]
+  if (!boundary || boundary === '--undefined') {
+    ctx.status = 400
+    ctx.body = { error: 'Missing boundary' }
+    return
+  }
+
+  const tmpDir = join(tmpdir(), 'hermes-import')
+  await mkdir(tmpDir, { recursive: true })
+
+  // Read raw body and parse multipart
+  const chunks: Buffer[] = []
+  for await (const chunk of ctx.req) chunks.push(chunk)
+  const body = Buffer.concat(chunks).toString('latin1')
+  const parts = body.split(boundary).slice(1, -1)
+
+  let archivePath = ''
+
+  for (const part of parts) {
+    const headerEnd = part.indexOf('\r\n\r\n')
+    if (headerEnd === -1) continue
+    const header = part.substring(0, headerEnd)
+    const data = part.substring(headerEnd + 4, part.length - 2)
+
+    const filenameMatch = header.match(/filename="([^"]+)"/)
+    if (!filenameMatch) continue
+
+    const filename = filenameMatch[1]
+    const ext = filename.includes('.') ? '.' + filename.split('.').pop() : ''
+    if (!['.gz', '.tar.gz', '.zip', '.tgz'].includes(ext)) continue
+
+    archivePath = join(tmpDir, filename)
+    await writeFile(archivePath, Buffer.from(data, 'binary'))
+    break
+  }
+
+  if (!archivePath) {
+    ctx.status = 400
+    ctx.body = { error: 'No archive file found (.gz, .zip, .tgz)' }
     return
   }
 
   try {
-    const result = await hermesCli.importProfile(archive, name)
+    const result = await hermesCli.importProfile(archivePath)
+
+    // Clean up temp file
+    try { unlinkSync(archivePath) } catch { }
+
     ctx.body = { success: true, message: result.trim() }
   } catch (err: any) {
+    try { unlinkSync(archivePath) } catch { }
     ctx.status = 500
     ctx.body = { error: err.message }
   }

@@ -2,12 +2,10 @@
 import { computed, onMounted } from 'vue'
 import { NSelect } from 'naive-ui'
 import { useProfilesStore } from '@/stores/hermes/profiles'
-import { useAppStore } from '@/stores/hermes/app'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 const profilesStore = useProfilesStore()
-const appStore = useAppStore()
 
 const options = computed(() =>
   profilesStore.profiles.map(p => ({

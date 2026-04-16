@@ -100,13 +100,22 @@ export async function exportProfile(name: string): Promise<boolean> {
   }
 }
 
-export async function importProfile(archive: string, name?: string): Promise<boolean> {
+export async function importProfile(file: File): Promise<boolean> {
   try {
-    await request('/api/hermes/profiles/import', {
+    const baseUrl = getBaseUrlValue()
+    const token = getApiKey()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await fetch(`${baseUrl}/api/hermes/profiles/import`, {
       method: 'POST',
-      body: JSON.stringify({ archive, name }),
+      headers,
+      body: formData,
     })
-    return true
+    return res.ok
   } catch {
     return false
   }

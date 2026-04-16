@@ -428,6 +428,13 @@ async function handleUpdate() {
   padding-top: 12px;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .nav-item {

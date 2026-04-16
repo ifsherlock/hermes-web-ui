@@ -135,23 +135,60 @@ function startDaemon(port) {
   child.unref()
   writePid(child.pid)
 
-  setTimeout(() => {
-    if (isRunning(child.pid)) {
-      console.log(`  ✓ hermes-web-ui started (PID: ${child.pid}, port: ${port})`)
-      const url = token
-        ? `http://localhost:${port}/#/?token=${token}`
-        : `http://localhost:${port}`
-      console.log(`    ${url}`)
-      console.log(`    Log: ${LOG_FILE}`)
-      const isWin = process.platform === 'win32'
-      const cmd = isWin ? `start ${url}` : process.platform === 'darwin' ? `open ${url}` : `xdg-open ${url}`
-      try { execSync(cmd, { stdio: 'ignore' }) } catch {}
-    } else {
+  // Poll health endpoint until server is ready (setTimeout to avoid overlapping requests)
+  const healthUrl = `http://127.0.0.1:${port}/health`
+  const maxWait = 30000
+  const interval = 500
+  let waited = 0
+
+  console.log(`  ⏳ Starting hermes-web-ui (PID: ${child.pid}, port: ${port})...`)
+
+  function poll() {
+    waited += interval
+    if (!isRunning(child.pid)) {
       console.log('  ✗ Failed to start hermes-web-ui')
+      console.log(`    Check log: ${LOG_FILE}`)
       removePid()
       process.exit(1)
+      return
     }
-  }, 500)
+
+    fetch(healthUrl).then(res => {
+      if (res.ok) {
+        const url = token
+          ? `http://localhost:${port}/#/?token=${token}`
+          : `http://localhost:${port}`
+        console.log(`  ✓ hermes-web-ui started`)
+        console.log(`    ${url}`)
+        console.log(`    Log: ${LOG_FILE}`)
+        const isWin = process.platform === 'win32'
+        const cmd = isWin ? `start ${url}` : process.platform === 'darwin' ? `open ${url}` : `xdg-open ${url}`
+        try { execSync(cmd, { stdio: 'ignore' }) } catch {}
+      } else if (waited < maxWait) {
+        setTimeout(poll, interval)
+      } else {
+        console.log(`  ⚠ Server process is running but health check failed after ${maxWait / 1000}s`)
+        console.log(`    Check log: ${LOG_FILE}`)
+        const url = token
+          ? `http://localhost:${port}/#/?token=${token}`
+          : `http://localhost:${port}`
+        console.log(`    ${url}`)
+      }
+    }).catch(() => {
+      if (waited < maxWait) {
+        setTimeout(poll, interval)
+      } else {
+        console.log(`  ⚠ Server process is running but health check failed after ${maxWait / 1000}s`)
+        console.log(`    Check log: ${LOG_FILE}`)
+        const url = token
+          ? `http://localhost:${port}/#/?token=${token}`
+          : `http://localhost:${port}`
+        console.log(`    ${url}`)
+      }
+    })
+  }
+
+  setTimeout(poll, interval)
 }
 
 function stopDaemon() {

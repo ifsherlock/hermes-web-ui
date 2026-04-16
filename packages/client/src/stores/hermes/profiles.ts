@@ -72,8 +72,8 @@ export const useProfilesStore = defineStore('profiles', () => {
     return profilesApi.exportProfile(name)
   }
 
-  async function importProfile(archive: string, name?: string) {
-    const ok = await profilesApi.importProfile(archive, name)
+  async function importProfile(file: File) {
+    const ok = await profilesApi.importProfile(file)
     if (ok) await fetchProfiles()
     return ok
   }
