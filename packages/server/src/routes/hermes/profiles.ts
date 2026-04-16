@@ -1,4 +1,7 @@
 import Router from '@koa/router'
+import { createReadStream, existsSync, unlinkSync } from 'fs'
+import { basename, join } from 'path'
+import { tmpdir } from 'os'
 import * as hermesCli from '../../services/hermes-cli'
 
 export const profileRoutes = new Router()
@@ -156,14 +159,29 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
   }
 })
 
-// POST /api/profiles/:name/export - Export profile to archive
+// POST /api/profiles/:name/export - Export profile to archive and download
 profileRoutes.post('/api/hermes/profiles/:name/export', async (ctx) => {
   const { name } = ctx.params
-  const { output } = ctx.request.body as { output?: string }
+  const outputPath = join(tmpdir(), `hermes-profile-${name}.tar.gz`)
 
   try {
-    const result = await hermesCli.exportProfile(name, output)
-    ctx.body = { success: true, message: result.trim() }
+    await hermesCli.exportProfile(name, outputPath)
+
+    if (!existsSync(outputPath)) {
+      ctx.status = 500
+      ctx.body = { error: 'Export file not found' }
+      return
+    }
+
+    const filename = basename(outputPath)
+    ctx.set('Content-Disposition', `attachment; filename="${filename}"`)
+    ctx.set('Content-Type', 'application/gzip')
+    ctx.body = createReadStream(outputPath)
+
+    // Clean up temp file after response ends
+    ctx.res.on('finish', () => {
+      try { unlinkSync(outputPath) } catch { }
+    })
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }

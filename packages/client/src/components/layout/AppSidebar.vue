@@ -149,6 +149,27 @@ function handleNav(key: string) {
 
       <button
         class="nav-item"
+        :class="{ active: selectedKey === 'hermes.profiles' }"
+        @click="handleNav('hermes.profiles')"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        <span>{{ t("sidebar.profiles") }}</span>
+      </button>
+
+      <button
+        class="nav-item"
         :class="{ active: selectedKey === 'hermes.channels' }"
         @click="handleNav('hermes.channels')"
       >
