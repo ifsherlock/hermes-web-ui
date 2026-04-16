@@ -1,14 +1,42 @@
 import { WebSocketServer } from 'ws'
 import type { Server as HttpServer } from 'http'
-import { existsSync } from 'fs'
+import { accessSync, chmodSync, constants as fsConstants, existsSync } from 'fs'
+import { dirname, join } from 'path'
 import { getToken } from '../../services/auth'
 
 let pty: any = null
+
+function ensureNodePtySpawnHelperExecutable() {
+  if (process.platform !== 'darwin') return
+
+  try {
+    const nodePtyRoot = dirname(require.resolve('node-pty/package.json'))
+    const helperCandidates = [
+      join(nodePtyRoot, 'build', 'Release', 'spawn-helper'),
+      join(nodePtyRoot, 'build', 'Debug', 'spawn-helper'),
+      join(nodePtyRoot, 'prebuilds', `${process.platform}-${process.arch}`, 'spawn-helper'),
+    ]
+
+    for (const helperPath of helperCandidates) {
+      if (!existsSync(helperPath)) continue
+      try {
+        accessSync(helperPath, fsConstants.X_OK)
+      } catch {
+        chmodSync(helperPath, 0o755)
+        console.log(`[Terminal] Restored execute bit for node-pty helper: ${helperPath}`)
+      }
+    }
+  } catch (err: any) {
+    console.warn(`[Terminal] Could not normalize node-pty helper permissions: ${err?.message || err}`)
+  }
+}
+
 try {
+  ensureNodePtySpawnHelperExecutable()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   pty = require('node-pty')
-} catch {
-  console.warn('[Terminal] node-pty failed to load, terminal feature disabled')
+} catch (err: any) {
+  console.warn(`[Terminal] node-pty failed to load, terminal feature disabled (${err?.message || 'unknown error'})`)
 }
 
 // ─── Shell detection ────────────────────────────────────────────
@@ -65,7 +93,7 @@ function createSession(shell: string): PtySession {
       cwd: process.env.HOME || undefined,
     })
   } catch (err: any) {
-    throw new Error(`Failed to spawn shell "${shell}": ${err.message}. Run "npm rebuild node-pty" to fix.`)
+    throw new Error(`Failed to spawn shell "${shell}": ${err.message}`)
   }
 
   const session: PtySession = {
@@ -295,5 +323,5 @@ export function setupTerminalWebSocket(httpServer: HttpServer) {
     console.log(`[Terminal] First session created: ${firstSession.id} (${shellName(defaultShell)}, pid ${firstSession.pid})`)
   })
 
-  console.log(`[Terminal] WebSocket ready at /terminal (shell: ${defaultShell})`)
+  console.log(`[Terminal] WebSocket ready at /terminal (shell: ${defaultShell}, transport: node-pty)`)
 }
