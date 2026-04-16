@@ -201,7 +201,7 @@ const formattedToolResult = computed(() => {
 
     .message-bubble {
       background-color: $msg-user-bg;
-      border-radius: $radius-md $radius-md 4px $radius-md;
+      border-radius: 10px;
     }
   }
 
@@ -223,7 +223,7 @@ const formattedToolResult = computed(() => {
 
     .message-bubble {
       background-color: $msg-assistant-bg;
-      border-radius: $radius-md $radius-md $radius-md 4px;
+      border-radius: 10px;
     }
   }
 
@@ -238,7 +238,7 @@ const formattedToolResult = computed(() => {
       border-left: 3px solid $warning;
       border-radius: $radius-sm;
       max-width: 80%;
-      background-color: rgba($warning, 0.06);
+      background-color: rgba(var(--warning-rgb), 0.06);
     }
   }
 }
@@ -261,6 +261,7 @@ const formattedToolResult = computed(() => {
   font-size: 14px;
   line-height: 1.65;
   word-break: break-word;
+  border-radius: 10px;
 }
 
 .msg-attachments {
@@ -315,6 +316,10 @@ const formattedToolResult = computed(() => {
   color: $text-muted;
   margin-top: 4px;
   padding: 0 4px;
+
+  .dark & {
+    color: #999999;
+  }
 }
 
 .tool-line {
@@ -369,7 +374,7 @@ const formattedToolResult = computed(() => {
 .tool-error-badge {
   font-size: 9px;
   color: $error;
-  background: rgba($error, 0.08);
+  background: rgba(var(--error-rgb), 0.08);
   padding: 0 4px;
   border-radius: 3px;
   line-height: 14px;

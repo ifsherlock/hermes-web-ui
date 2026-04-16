@@ -150,7 +150,7 @@ async function handleToggle(category: string, skillName: string, newEnabled: boo
   border-radius: $radius-sm;
 
   &:hover {
-    background: rgba($accent-primary, 0.04);
+    background: rgba(var(--accent-primary-rgb), 0.04);
   }
 }
 
@@ -174,7 +174,7 @@ async function handleToggle(category: string, skillName: string, newEnabled: boo
 .category-count {
   font-size: 11px;
   color: $text-muted;
-  background: rgba($accent-primary, 0.06);
+  background: rgba(var(--accent-primary-rgb), 0.06);
   padding: 1px 6px;
   border-radius: 8px;
 }
@@ -200,12 +200,12 @@ async function handleToggle(category: string, skillName: string, newEnabled: boo
   gap: 8px;
 
   &:hover {
-    background: rgba($accent-primary, 0.06);
+    background: rgba(var(--accent-primary-rgb), 0.06);
     color: $text-primary;
   }
 
   &.active {
-    background: rgba($accent-primary, 0.1);
+    background: rgba(var(--accent-primary-rgb), 0.1);
     color: $text-primary;
     font-weight: 500;
   }

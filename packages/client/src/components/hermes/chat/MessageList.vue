@@ -91,7 +91,11 @@ watch(currentToolCalls, scrollToBottom)
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: #ffffff;
+  background-color: $bg-card;
+
+  .dark & {
+    background-color: #333333;
+  }
 }
 
 .empty-state {

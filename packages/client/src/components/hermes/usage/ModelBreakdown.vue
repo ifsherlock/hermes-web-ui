@@ -85,6 +85,10 @@ function formatTokens(n: number): string {
   border-radius: 3px;
   min-width: 2px;
   transition: width 0.3s ease;
+
+  .dark & {
+    background: #66bb6a;
+  }
 }
 
 .model-tokens {

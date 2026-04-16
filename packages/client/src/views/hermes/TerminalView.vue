@@ -562,7 +562,7 @@ onUnmounted(() => {
   margin-bottom: 2px;
 
   &:hover {
-    background: rgba($accent-primary, 0.06);
+    background: rgba(var(--accent-primary-rgb), 0.06);
     color: $text-primary;
 
     .session-item-delete {
@@ -571,7 +571,7 @@ onUnmounted(() => {
   }
 
   &.active {
-    background: rgba($accent-primary, 0.1);
+    background: rgba(var(--accent-primary-rgb), 0.1);
     color: $text-primary;
     font-weight: 500;
   }
@@ -604,7 +604,7 @@ onUnmounted(() => {
 .session-item-shell {
   font-size: 10px;
   color: $accent-primary;
-  background: rgba($accent-primary, 0.08);
+  background: rgba(var(--accent-primary-rgb), 0.08);
   padding: 0 5px;
   border-radius: 3px;
   line-height: 16px;
@@ -634,7 +634,7 @@ onUnmounted(() => {
 
   &:hover {
     color: $error;
-    background: rgba($error, 0.1);
+    background: rgba(var(--error-rgb), 0.1);
   }
 }
 
@@ -648,7 +648,7 @@ onUnmounted(() => {
   border-radius: $radius-sm;
 
   &:hover {
-    background: rgba($accent-primary, 0.06);
+    background: rgba(var(--accent-primary-rgb), 0.06);
   }
 }
 

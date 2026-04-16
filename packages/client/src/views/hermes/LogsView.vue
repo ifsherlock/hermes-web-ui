@@ -215,7 +215,7 @@ onMounted(async () => {
   border-left: 2px solid transparent;
 
   &:hover {
-    background-color: rgba($accent-primary, 0.03);
+    background-color: rgba(var(--accent-primary-rgb), 0.03);
   }
 
   &.level-error {
@@ -225,7 +225,7 @@ onMounted(async () => {
 
   &.level-warning {
     border-left-color: $warning;
-    .log-message { color: #d9720f; }
+    .log-message { color: $warning; }
   }
 }
 
@@ -244,10 +244,10 @@ onMounted(async () => {
   min-width: 42px;
   text-align: center;
 
-  &.level-error { background: rgba($error, 0.12); color: $error; }
-  &.level-warning { background: rgba($warning, 0.12); color: #d9720f; }
-  &.level-debug { background: rgba($accent-primary, 0.06); color: $text-muted; }
-  &.level-info { background: rgba($accent-primary, 0.06); color: $text-muted; }
+  &.level-error { background: rgba(var(--error-rgb), 0.12); color: $error; }
+  &.level-warning { background: rgba(var(--warning-rgb), 0.12); color: $warning; }
+  &.level-debug { background: rgba(var(--accent-primary-rgb), 0.06); color: $text-muted; }
+  &.level-info { background: rgba(var(--accent-primary-rgb), 0.06); color: $text-muted; }
 }
 
 .log-logger {

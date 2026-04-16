@@ -127,6 +127,10 @@ import { computed } from 'vue'
   border-radius: 2px 2px 0 0;
   min-height: 0;
   transition: height 0.3s ease;
+
+  .dark & {
+    background: #66bb6a;
+  }
 }
 
 .bar-col {
@@ -140,7 +144,7 @@ import { computed } from 'vue'
   left: 50%;
   transform: translateX(-50%);
   background: $text-primary;
-  color: #fff;
+  color: var(--text-on-accent);
   padding: 6px 10px;
   border-radius: $radius-sm;
   font-size: 11px;

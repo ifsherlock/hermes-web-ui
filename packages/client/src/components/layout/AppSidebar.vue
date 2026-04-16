@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useMessage } from "naive-ui";
@@ -7,61 +7,19 @@ import { useAppStore } from "@/stores/hermes/app";
 import ModelSelector from "./ModelSelector.vue";
 import ProfileSelector from "./ProfileSelector.vue";
 import LanguageSwitch from "./LanguageSwitch.vue";
-import danceVideo from "@/assets/dance.mp4";
+import ThemeSwitch from "./ThemeSwitch.vue";
+import danceVideoLight from "@/assets/dance-light.mp4";
+import danceVideoDark from "@/assets/dance-dark.mp4";
+
+import { useTheme } from "@/composables/useTheme";
 
 const { t } = useI18n();
+const { isDark } = useTheme();
 const message = useMessage();
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
-const canvasRef = ref<HTMLCanvasElement>();
-
 const selectedKey = computed(() => route.name as string);
-
-onMounted(() => {
-  const canvas = canvasRef.value;
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const video = document.createElement("video");
-  video.src = danceVideo;
-  video.muted = true;
-  video.playsInline = true;
-  video.autoplay = true;
-
-  video.addEventListener("loadeddata", () => {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-  });
-
-  function draw() {
-    if (video.readyState >= 2 && ctx && canvas) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    }
-    if (video.currentTime >= video.duration - 0.05) {
-      video.currentTime = 0;
-    }
-    requestAnimationFrame(draw);
-  }
-
-  video.addEventListener("canplay", () => {
-    draw();
-  });
-
-  video.play();
-
-  const onVisible = () => {
-    if (document.visibilityState === "visible" && video.paused) {
-      video.play();
-    }
-  };
-  document.addEventListener("visibilitychange", onVisible);
-
-  onUnmounted(() => {
-    document.removeEventListener("visibilitychange", onVisible);
-  });
-});
 
 function handleNav(key: string) {
   router.push({ name: key });
@@ -82,7 +40,7 @@ async function handleUpdate() {
     <div class="sidebar-logo" @click="router.push('/hermes/chat')">
       <img src="/logo.png" alt="Hermes" class="logo-img" />
       <span class="logo-text">Hermes</span>
-      <canvas ref="canvasRef" class="logo-dance" />
+      <video class="logo-dance" :src="isDark ? danceVideoDark : danceVideoLight" autoplay loop muted playsinline />
     </div>
 
     <nav class="sidebar-nav">
@@ -360,6 +318,7 @@ async function handleUpdate() {
       </div>
       <div class="version-info">
         <span>Hermes Web UI v{{ appStore.serverVersion || "0.1.0" }}</span>
+        <ThemeSwitch />
         <a v-if="appStore.updateAvailable" class="update-hint" :class="{ loading: appStore.updating }" @click="handleUpdate">
           {{ appStore.updating ? t('sidebar.updating') : t('sidebar.updateVersion', { version: appStore.latestVersion }) }}
         </a>
@@ -398,8 +357,12 @@ async function handleUpdate() {
   margin: 0 -12px;
   color: $text-primary;
   cursor: pointer;
-  background-color: #ffffff;
+  background-color: $bg-card;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  .dark & {
+    background-color: #333333;
+  }
   position: relative;
   overflow: hidden;
 
@@ -419,6 +382,7 @@ async function handleUpdate() {
     object-fit: contain;
     flex-shrink: 0;
     width: auto;
+    pointer-events: none;
   }
 }
 
@@ -453,12 +417,12 @@ async function handleUpdate() {
   text-align: left;
 
   &:hover {
-    background-color: rgba($accent-primary, 0.06);
+    background-color: rgba(var(--accent-primary-rgb), 0.06);
     color: $text-primary;
   }
 
   &.active {
-    background-color: rgba($accent-primary, 0.12);
+    background-color: rgba(var(--accent-primary-rgb), 0.12);
     color: $accent-primary;
   }
 }
@@ -490,7 +454,7 @@ async function handleUpdate() {
 
   &.connected .status-dot {
     background-color: $success;
-    box-shadow: 0 0 6px rgba($success, 0.5);
+    box-shadow: 0 0 6px rgba(var(--success-rgb), 0.5);
   }
 
   &.disconnected .status-dot {
@@ -507,8 +471,9 @@ async function handleUpdate() {
   font-size: 11px;
   color: $text-muted;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .update-hint {
@@ -516,15 +481,15 @@ async function handleUpdate() {
   margin-top: 4px;
   padding: 5px 10px;
   border-radius: $radius-sm;
-  background: #333333;
-  color: rgba(#fff, 0.7);
+  background: var(--accent-primary);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 11px;
   text-align: center;
   cursor: pointer;
   transition: background $transition-fast;
 
   &:hover {
-    background: #3d3d3d;
+    background: var(--accent-hover);
   }
 
   &.loading {

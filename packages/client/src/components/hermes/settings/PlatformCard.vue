@@ -57,7 +57,7 @@ const configured = computed(() => {
   overflow: hidden;
 
   &.configured {
-    border-color: rgba($success, 0.2);
+    border-color: rgba(var(--success-rgb), 0.2);
   }
 }
 
@@ -70,7 +70,7 @@ const configured = computed(() => {
   user-select: none;
 
   &:hover {
-    background-color: rgba($text-primary, 0.03);
+    background-color: rgba(var(--text-primary-rgb), 0.03);
   }
 }
 

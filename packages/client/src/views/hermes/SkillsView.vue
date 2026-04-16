@@ -163,7 +163,7 @@ function handleSelect(category: string, skill: string) {
   border-radius: $radius-sm;
 
   &:hover {
-    background: rgba($accent-primary, 0.06);
+    background: rgba(var(--accent-primary-rgb), 0.06);
   }
 }
 

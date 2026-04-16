@@ -105,7 +105,7 @@ const renderedHtml = computed(() => md.render(props.content))
     }
 
     th {
-      background: rgba($accent-primary, 0.08);
+      background: rgba(var(--accent-primary-rgb), 0.08);
       color: $text-primary;
       font-weight: 600;
     }
@@ -189,4 +189,20 @@ const renderedHtml = computed(() => md.render(props.content))
 .hljs-title\.function_ { color: #1a1a1a; }
 .hljs-params { color: #2a2a2a; }
 .hljs-meta { color: #999999; }
+
+// Dark mode highlight.js — inverted pure ink
+.dark .hljs { color: #d0d0d0; }
+.dark .hljs-keyword,
+.dark .hljs-selector-tag { color: #f0f0f0; font-weight: 600; }
+.dark .hljs-string,
+.dark .hljs-attr { color: #aaaaaa; }
+.dark .hljs-number { color: #cccccc; }
+.dark .hljs-comment { color: #666666; font-style: italic; }
+.dark .hljs-built_in { color: #bbbbbb; }
+.dark .hljs-type { color: #c6c6c6; }
+.dark .hljs-variable { color: #f0f0f0; }
+.dark .hljs-title,
+.dark .hljs-title\.function_ { color: #f0f0f0; }
+.dark .hljs-params { color: #d0d0d0; }
+.dark .hljs-meta { color: #666666; }
 </style>

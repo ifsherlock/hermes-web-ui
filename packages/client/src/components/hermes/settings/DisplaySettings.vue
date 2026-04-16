@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { NSwitch, useMessage } from 'naive-ui'
+import { NSwitch, NSelect, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/hermes/settings'
+import { useTheme, type ThemeMode } from '@/composables/useTheme'
 import SettingRow from './SettingRow.vue'
 
 const settingsStore = useSettingsStore()
 const message = useMessage()
 const { t } = useI18n()
+const { mode, setMode } = useTheme()
+
+const themeOptions = [
+  { label: t('settings.display.themeLight'), value: 'light' },
+  { label: t('settings.display.themeDark'), value: 'dark' },
+  { label: t('settings.display.themeSystem'), value: 'system' },
+]
 
 async function save(values: Record<string, any>) {
   try {
@@ -16,10 +24,19 @@ async function save(values: Record<string, any>) {
     message.error(t('settings.saveFailed'))
   }
 }
+
+function handleThemeChange(val: string) {
+  const m = val as ThemeMode
+  setMode(m)
+  save({ skin: m })
+}
 </script>
 
 <template>
   <section class="settings-section">
+    <SettingRow :label="t('settings.display.theme')" :hint="t('settings.display.themeHint')">
+      <NSelect :value="mode" :options="themeOptions" size="small" :consistent-menu-width="false" class="input-sm" @update:value="handleThemeChange" />
+    </SettingRow>
     <SettingRow :label="t('settings.display.streaming')" :hint="t('settings.display.streamingHint')">
       <NSwitch :value="settingsStore.display.streaming" @update:value="v => save({ streaming: v })" />
     </SettingRow>
