@@ -6,12 +6,12 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["packages/client/src/*"]
     },
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["packages/client/src/**/*.ts", "packages/client/src/**/*.tsx", "packages/client/src/**/*.vue"]
 }

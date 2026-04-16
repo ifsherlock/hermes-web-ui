@@ -1,5 +1,6 @@
 <p align="center">
   <strong>Hermes Web UI</strong>
+  <a href="./README_zh.md">中文</a>
 </p>
 
 <p align="center">
@@ -13,14 +14,14 @@
 </p>
 
 <p align="center">
-  <img src="https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/src/assets/output.gif" alt="Hermes Web UI Demo" width="680"/>
+  <img src="https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/packages/client/src/assets/output.gif" alt="Hermes Web UI Demo" width="680"/>
 </p>
 
 <p align="center">
   <strong>Mobile</strong>
 </p>
 <p align="center">
-  <video src="https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/src/assets/video.mp4?raw=true" width="360" controls></video>
+  <video src="https://github.com/EKKOLearnAI/hermes-web-ui/blob/main/packages/client/src/assets/video.mp4?raw=true" width="360" controls></video>
 </p>
 
 <p align="center">
@@ -106,6 +107,13 @@ Unified configuration for **8 platforms** in one page:
 - Privacy (PII redaction)
 - API server configuration
 
+### Web Terminal
+
+- Integrated terminal powered by node-pty and @xterm/xterm
+- Multi-session support — create, switch between, and close terminal sessions
+- Real-time keyboard input and PTY output streaming via WebSocket
+- Window resize support
+
 ---
 
 ## Quick Start
@@ -180,16 +188,18 @@ npm run build   # outputs to dist/
 ## Architecture
 
 ```
-Browser → BFF (Koa, :8648) → Hermes API (:8642)
+Browser → BFF (Koa, :8648) → Hermes Gateway (:8642)
                 ↓
            Hermes CLI (sessions, logs, version)
                 ↓
            ~/.hermes/config.yaml  (channel behavior)
-           ~/.hermes/.env         (platform credentials)
+           ~/.hermes/auth.json    (credential pool)
            Tencent iLink API      (WeChat QR login)
 ```
 
-The BFF layer handles API proxy, SSE streaming, file upload, session CRUD via CLI, config/credential management, WeChat QR login, model discovery, skills/memory management, log reading, and static file serving.
+The frontend is designed with **multi-agent extensibility** — all Hermes-specific code is namespaced under `hermes/` directories (API, components, views, stores), making it straightforward to add new agent integrations alongside.
+
+The BFF layer handles API proxy (with path rewriting), SSE streaming, file upload, session CRUD via CLI, config/credential management, WeChat QR login, model discovery, skills/memory management, log reading, and static file serving.
 
 ## Tech Stack
 

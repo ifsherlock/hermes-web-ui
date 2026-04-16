@@ -23,11 +23,16 @@ function createProxyConfig(): ProxyOptions {
 }
 
 export default defineConfig({
+  root: 'packages/client',
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(__dirname, 'packages/client/src'),
     },
+  },
+  build: {
+    outDir: '../../dist/client',
+    emptyOutDir: true,
   },
   server: {
     proxy: {

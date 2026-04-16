@@ -11,11 +11,12 @@ node_modules
 dist
 dist-ssr
 server/dist
+packages/server/dist
 *.local
 ROADMAP.md
 # Server data
-server/data/
-server/node_modules/
+packages/server/data/
+packages/server/node_modules/
 .hermes-web-ui/
 
 # Editor directories and files
