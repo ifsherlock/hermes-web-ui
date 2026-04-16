@@ -361,7 +361,7 @@ async function handleUpdate() {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   .dark & {
-    background-color: #333333;
+    background-color: #393939;
   }
   position: relative;
   overflow: hidden;

@@ -1,58 +1,75 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
-import MessageItem from './MessageItem.vue'
-import { useChatStore } from '@/stores/hermes/chat'
-import thinkingVideo from '@/assets/thinking.mp4'
+import { ref, computed, watch, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
+import MessageItem from "./MessageItem.vue";
+import { useChatStore } from "@/stores/hermes/chat";
+import thinkingVideoLight from "@/assets/thinking-light.mp4";
+import thinkingVideoDark from "@/assets/thinking-dark.mp4";
+import { useTheme } from "@/composables/useTheme";
 
-const chatStore = useChatStore()
-const { t } = useI18n()
-const listRef = ref<HTMLElement>()
+const chatStore = useChatStore();
+const { t } = useI18n();
+const { isDark } = useTheme();
+const listRef = ref<HTMLElement>();
 
 const displayMessages = computed(() =>
-  chatStore.messages.filter(m => m.role !== 'tool'),
-)
+  chatStore.messages.filter((m) => m.role !== "tool"),
+);
 
 const currentToolCalls = computed(() => {
-  const msgs = chatStore.messages
+  const msgs = chatStore.messages;
   // Find the last user message index
-  let lastUserIdx = -1
+  let lastUserIdx = -1;
   for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i].role === 'user') { lastUserIdx = i; break }
+    if (msgs[i].role === "user") {
+      lastUserIdx = i;
+      break;
+    }
   }
   // Only tool calls after the last user message, newest on top
-  const tools = msgs.filter((m, i) => m.role === 'tool' && i > lastUserIdx)
-  return [...tools].reverse()
-})
+  const tools = msgs.filter((m, i) => m.role === "tool" && i > lastUserIdx);
+  return [...tools].reverse();
+});
 
 function scrollToBottom() {
   nextTick(() => {
     if (listRef.value) {
-      listRef.value.scrollTop = listRef.value.scrollHeight
+      listRef.value.scrollTop = listRef.value.scrollHeight;
     }
-  })
+  });
 }
 
-watch(() => chatStore.messages.length, scrollToBottom)
-watch(() => chatStore.messages[chatStore.messages.length - 1]?.content, scrollToBottom)
-watch(() => chatStore.isStreaming, (v) => { if (v) scrollToBottom() })
-watch(currentToolCalls, scrollToBottom)
+watch(() => chatStore.messages.length, scrollToBottom);
+watch(
+  () => chatStore.messages[chatStore.messages.length - 1]?.content,
+  scrollToBottom,
+);
+watch(
+  () => chatStore.isStreaming,
+  (v) => {
+    if (v) scrollToBottom();
+  },
+);
+watch(currentToolCalls, scrollToBottom);
 </script>
 
 <template>
   <div ref="listRef" class="message-list">
     <div v-if="chatStore.messages.length === 0" class="empty-state">
       <img src="/logo.png" alt="Hermes" class="empty-logo" />
-      <p>{{ t('chat.emptyState') }}</p>
+      <p>{{ t("chat.emptyState") }}</p>
     </div>
-    <MessageItem
-      v-for="msg in displayMessages"
-      :key="msg.id"
-      :message="msg"
-    />
+    <MessageItem v-for="msg in displayMessages" :key="msg.id" :message="msg" />
     <Transition name="fade">
       <div v-if="chatStore.isStreaming" class="streaming-indicator">
-        <video :src="thinkingVideo" autoplay loop muted playsinline class="thinking-video" />
+        <video
+          :src="isDark ? thinkingVideoDark : thinkingVideoLight"
+          autoplay
+          loop
+          muted
+          playsinline
+          class="thinking-video"
+        />
         <div v-if="currentToolCalls.length > 0" class="tool-calls-panel">
           <div
             v-for="tc in currentToolCalls"
@@ -68,12 +85,21 @@ watch(currentToolCalls, scrollToBottom)
               stroke-width="1.5"
               class="tool-call-icon"
             >
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              <path
+                d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+              />
             </svg>
             <span class="tool-call-name">{{ tc.toolName }}</span>
-            <span v-if="tc.toolPreview" class="tool-call-preview">{{ tc.toolPreview }}</span>
-            <span v-if="tc.toolStatus === 'running'" class="tool-call-spinner"></span>
-            <span v-if="tc.toolStatus === 'error'" class="tool-call-error">{{ t('chat.error') }}</span>
+            <span v-if="tc.toolPreview" class="tool-call-preview">{{
+              tc.toolPreview
+            }}</span>
+            <span
+              v-if="tc.toolStatus === 'running'"
+              class="tool-call-spinner"
+            ></span>
+            <span v-if="tc.toolStatus === 'error'" class="tool-call-error">{{
+              t("chat.error")
+            }}</span>
           </div>
         </div>
       </div>
@@ -82,7 +108,7 @@ watch(currentToolCalls, scrollToBottom)
 </template>
 
 <style scoped lang="scss">
-@use '@/styles/variables' as *;
+@use "@/styles/variables" as *;
 
 .message-list {
   flex: 1;
@@ -132,10 +158,9 @@ watch(currentToolCalls, scrollToBottom)
   align-items: flex-start;
   gap: 12px;
   padding: 4px;
-
   .thinking-video {
     width: 120px;
-    height: 120px;
+    height: 213px;
     border-radius: $radius-md;
     object-fit: contain;
     flex-shrink: 0;
@@ -151,7 +176,9 @@ watch(currentToolCalls, scrollToBottom)
   padding-top: 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  &::-webkit-scrollbar { display: none; }
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .tool-call-item {
@@ -203,6 +230,8 @@ watch(currentToolCalls, scrollToBottom)
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
