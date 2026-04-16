@@ -25,8 +25,10 @@ export interface SkillFileEntry {
 export interface MemoryData {
   memory: string
   user: string
+  soul: string
   memory_mtime: number | null
   user_mtime: number | null
+  soul_mtime: number | null
 }
 
 export async function fetchSkills(): Promise<SkillCategory[]> {
@@ -48,7 +50,7 @@ export async function fetchMemory(): Promise<MemoryData> {
   return request<MemoryData>('/api/hermes/memory')
 }
 
-export async function saveMemory(section: 'memory' | 'user', content: string): Promise<void> {
+export async function saveMemory(section: 'memory' | 'user' | 'soul', content: string): Promise<void> {
   await request('/api/hermes/memory', {
     method: 'POST',
     body: JSON.stringify({ section, content }),

@@ -43,7 +43,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     label: 'DeepSeek',
     value: 'deepseek',
-    base_url: 'https://api.deepseek.com/v1',
+    base_url: 'https://api.deepseek.com',
     models: ['deepseek-chat', 'deepseek-reasoner'],
   },
   {
@@ -53,8 +53,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     models: ['glm-5', 'glm-5-turbo', 'glm-4.7', 'glm-4.5', 'glm-4.5-flash'],
   },
   {
-    label: 'Kimi Coding Plan',
-    value: 'kimi-coding',
+    label: 'Kimi for Coding',
+    value: 'kimi-for-coding',
     base_url: 'https://api.kimi.com/coding/v1',
     models: [
       'kimi-for-coding',
@@ -64,12 +64,6 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       'kimi-k2-turbo-preview',
       'kimi-k2-0905-preview',
     ],
-  },
-  {
-    label: 'Moonshot (Pay-as-you-go)',
-    value: 'moonshot',
-    base_url: 'https://api.moonshot.ai/v1',
-    models: ['kimi-k2.5', 'kimi-k2-thinking', 'kimi-k2-turbo-preview', 'kimi-k2-0905-preview'],
   },
   {
     label: 'xAI',
@@ -91,7 +85,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     label: 'MiniMax',
     value: 'minimax',
-    base_url: 'https://api.minimax.io/anthropic',
+    base_url: 'https://api.minimax.io/anthropic/v1',
     models: ['MiniMax-M2.7', 'MiniMax-M2.5', 'MiniMax-M2.1', 'MiniMax-M2'],
   },
   {
@@ -137,7 +131,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   {
     label: 'Kilo Code',
-    value: 'kilocode',
+    value: 'kilo',
     base_url: 'https://api.kilo.ai/api/gateway',
     models: [
       'anthropic/claude-opus-4.6',
@@ -148,8 +142,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ],
   },
   {
-    label: 'AI Gateway',
-    value: 'ai-gateway',
+    label: 'Vercel AI Gateway',
+    value: 'vercel',
     base_url: 'https://ai-gateway.vercel.sh/v1',
     models: [
       'anthropic/claude-opus-4.6',
@@ -168,7 +162,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   {
     label: 'OpenCode Zen',
-    value: 'opencode-zen',
+    value: 'opencode',
     base_url: 'https://opencode.ai/zen/v1',
     models: [
       'gpt-5.4-pro',

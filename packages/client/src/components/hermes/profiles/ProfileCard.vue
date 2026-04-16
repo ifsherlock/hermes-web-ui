@@ -41,12 +41,13 @@ function handleSwitch() {
     positiveText: t('common.confirm'),
     negativeText: t('common.cancel'),
     onPositiveClick: async () => {
-      const ok = await profilesStore.switchProfile(props.profile.name)
-      if (ok) {
-        message.success(t('profiles.switchSuccess', { name: props.profile.name }))
-      } else {
-        message.error(t('profiles.switchFailed'))
-      }
+      profilesStore.switchProfile(props.profile.name).then(ok => {
+        if (ok) {
+          window.location.reload()
+        } else {
+          message.error(t('profiles.switchFailed'))
+        }
+      })
     },
   })
 }
@@ -100,10 +101,6 @@ async function handleExport() {
       <div class="info-row">
         <span class="info-label">{{ t('profiles.gateway') }}</span>
         <code class="info-value mono">{{ profile.gateway }}</code>
-      </div>
-      <div v-if="profile.alias" class="info-row">
-        <span class="info-label">{{ t('profiles.alias') }}</span>
-        <span class="info-value">{{ profile.alias }}</span>
       </div>
     </div>
 
@@ -164,7 +161,7 @@ async function handleExport() {
         size="tiny"
         quaternary
         type="error"
-        :disabled="isDefault"
+        :disabled="isDefault || profile.active"
         @click="handleDelete"
       >
         {{ t('common.delete') }}

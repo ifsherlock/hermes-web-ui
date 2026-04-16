@@ -9,7 +9,7 @@ const { t } = useI18n()
 const message = useMessage()
 const loading = ref(false)
 const data = ref<MemoryData | null>(null)
-const editingSection = ref<'memory' | 'user' | null>(null)
+const editingSection = ref<'memory' | 'user' | 'soul' | null>(null)
 const editContent = ref('')
 const saving = ref(false)
 
@@ -27,7 +27,7 @@ async function loadMemory() {
   }
 }
 
-function startEdit(section: 'memory' | 'user') {
+function startEdit(section: 'memory' | 'user' | 'soul') {
   editingSection.value = section
   editContent.value = data.value?.[section] || ''
 }
@@ -65,9 +65,11 @@ function formatTime(ts: number | null): string {
 
 const memoryEmpty = computed(() => !data.value?.memory?.trim())
 const userEmpty = computed(() => !data.value?.user?.trim())
+const soulEmpty = computed(() => !data.value?.soul?.trim())
 
 const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '\n\n'))
 const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n'))
+const displaySoul = computed(() => (data.value?.soul || '').replace(/§/g, '\n\n'))
 </script>
 
 <template>
@@ -171,6 +173,53 @@ const displayUser = computed(() => (data.value?.user || '').replace(/§/g, '\n\n
                 v-model="editContent"
                 class="edit-textarea"
                 :placeholder="t('memory.profilePlaceholder')"
+                spellcheck="false"
+              ></textarea>
+              <div class="edit-actions">
+                <NButton size="small" @click="cancelEdit">{{ t('common.cancel') }}</NButton>
+                <NButton size="small" type="primary" :loading="saving" @click="handleSave">{{ t('common.save') }}</NButton>
+              </div>
+            </div>
+          </div>
+
+          <!-- Soul -->
+          <div class="memory-section">
+            <div class="section-header">
+              <div class="section-title-row">
+                <span class="section-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" />
+                    <line x1="15" y1="9" x2="15.01" y2="9" />
+                  </svg>
+                </span>
+                <span class="section-title">{{ t('memory.soul') }}</span>
+                <span v-if="data?.soul_mtime" class="section-mtime">{{ formatTime(data.soul_mtime) }}</span>
+              </div>
+              <NButton v-if="editingSection !== 'soul'" size="tiny" quaternary @click="startEdit('soul')">
+                <template #icon>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </template>
+                {{ t('common.edit') }}
+              </NButton>
+            </div>
+
+            <!-- View mode -->
+            <div v-if="editingSection !== 'soul'" class="section-body">
+              <MarkdownRenderer v-if="!soulEmpty" :content="displaySoul" />
+              <p v-else class="empty-text">{{ t('memory.noSoul') }}</p>
+            </div>
+
+            <!-- Edit mode -->
+            <div v-else class="section-edit">
+              <textarea
+                v-model="editContent"
+                class="edit-textarea"
+                :placeholder="t('memory.soulPlaceholder')"
                 spellcheck="false"
               ></textarea>
               <div class="edit-actions">

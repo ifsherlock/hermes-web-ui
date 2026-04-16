@@ -2,12 +2,15 @@
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useMessage } from "naive-ui";
 import { useAppStore } from "@/stores/hermes/app";
 import ModelSelector from "./ModelSelector.vue";
+import ProfileSelector from "./ProfileSelector.vue";
 import LanguageSwitch from "./LanguageSwitch.vue";
 import danceVideo from "@/assets/dance.mp4";
 
 const { t } = useI18n();
+const message = useMessage();
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
@@ -62,6 +65,15 @@ onMounted(() => {
 
 function handleNav(key: string) {
   router.push({ name: key });
+}
+
+async function handleUpdate() {
+  const ok = await appStore.doUpdate();
+  if (ok) {
+    message.success(t('sidebar.updateSuccess'), { duration: 5000 });
+  } else {
+    message.error(t('sidebar.updateFailed'));
+  }
 }
 </script>
 
@@ -145,27 +157,6 @@ function handleNav(key: string) {
           <path d="M16.95 7.05l2.83-2.83" />
         </svg>
         <span>{{ t("sidebar.models") }}</span>
-      </button>
-
-      <button
-        class="nav-item"
-        :class="{ active: selectedKey === 'hermes.profiles' }"
-        @click="handleNav('hermes.profiles')"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-        <span>{{ t("sidebar.profiles") }}</span>
       </button>
 
       <button
@@ -282,6 +273,27 @@ function handleNav(key: string) {
 
       <button
         class="nav-item"
+        :class="{ active: selectedKey === 'hermes.profiles' }"
+        @click="handleNav('hermes.profiles')"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        <span>{{ t("sidebar.profiles") }}</span>
+      </button>
+
+      <button
+        class="nav-item"
         :class="{ active: selectedKey === 'hermes.terminal' }"
         @click="handleNav('hermes.terminal')"
       >
@@ -325,6 +337,7 @@ function handleNav(key: string) {
       </button>
     </nav>
 
+    <ProfileSelector />
     <ModelSelector />
 
     <div class="sidebar-footer">
@@ -346,7 +359,10 @@ function handleNav(key: string) {
         <LanguageSwitch />
       </div>
       <div class="version-info">
-        Hermes {{ appStore.serverVersion || "v0.1.0" }}
+        <span>Hermes Web UI v{{ appStore.serverVersion || "0.1.0" }}</span>
+        <a v-if="appStore.updateAvailable" class="update-hint" :class="{ loading: appStore.updating }" @click="handleUpdate">
+          {{ appStore.updating ? t('sidebar.updating') : t('sidebar.updateVersion', { version: appStore.latestVersion }) }}
+        </a>
       </div>
     </div>
   </aside>
@@ -483,6 +499,31 @@ function handleNav(key: string) {
   padding: 2px 12px 8px;
   font-size: 11px;
   color: $text-muted;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.update-hint {
+  display: block;
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: $radius-sm;
+  background: #333333;
+  color: rgba(#fff, 0.7);
+  font-size: 11px;
+  text-align: center;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: #3d3d3d;
+  }
+
+  &.loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
 }
 
 @media (max-width: $breakpoint-mobile) {

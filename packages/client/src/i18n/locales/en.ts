@@ -51,6 +51,11 @@ export default {
     settings: 'Settings',
     connected: 'Connected',
     disconnected: 'Disconnected',
+    updateTip: 'Run "hermes-web-ui update" in terminal to update',
+    updateVersion: 'Upgrade to v{version}',
+    updating: 'Updating...',
+    updateSuccess: 'Update complete, please restart the server',
+    updateFailed: 'Update failed',
   },
 
   // Chat
@@ -163,6 +168,9 @@ export default {
     userProfile: 'User Profile',
     noProfile: 'No profile yet.',
     profilePlaceholder: 'Write your profile...',
+    soul: 'Soul',
+    noSoul: 'No soul configuration yet.',
+    soulPlaceholder: 'Write soul configuration...',
   },
 
   // Models

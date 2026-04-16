@@ -1,8 +1,39 @@
 import Router from '@koa/router'
-import { createReadStream, existsSync, unlinkSync } from 'fs'
+import { createReadStream, existsSync, unlinkSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs'
 import { basename, join } from 'path'
-import { tmpdir } from 'os'
+import { tmpdir, homedir } from 'os'
+import YAML from 'js-yaml'
 import * as hermesCli from '../../services/hermes-cli'
+
+const apiServerDefaults = {
+  enabled: true,
+  host: '127.0.0.1',
+  port: 8642,
+  key: '',
+  cors_origins: '*',
+}
+
+function ensureApiServerConfig(profilePath: string) {
+  const configPath = join(profilePath, 'config.yaml')
+  try {
+    if (!existsSync(configPath)) {
+      // Profile has no config.yaml — run hermes setup --reset to generate full defaults,
+      // then inject api_server config (setup itself doesn't add it)
+      console.log(`[Profile] No config.yaml for ${profilePath}, running setup --reset`)
+      return { needSetup: true, path: profilePath }
+    }
+    const content = readFileSync(configPath, 'utf-8')
+    const cfg = YAML.load(content) as any || {}
+    if (!cfg.platforms) cfg.platforms = {}
+    if (!cfg.platforms.api_server) {
+      cfg.platforms.api_server = { ...apiServerDefaults }
+      writeFileSync(configPath, YAML.dump(cfg), 'utf-8')
+      console.log(`[Profile] Ensured api_server config for: ${profilePath}`)
+    }
+    return { needSetup: false, path: profilePath }
+  } catch { }
+  return { needSetup: false, path: profilePath }
+}
 
 export const profileRoutes = new Router()
 
@@ -109,10 +140,10 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
   }
 
   try {
-    // 1. Stop gateway (try launchd/systemd first, ignore if unavailable e.g. WSL)
+    // 1. Stop gateway
     try { await hermesCli.stopGateway() } catch { }
 
-    // 2. Kill gateway by port if still running (for WSL / background mode)
+    // 2. Kill gateway by port if still running
     try {
       const { execSync } = await import('child_process')
       const isWin = process.platform === 'win32'
@@ -138,11 +169,34 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
     const output = await hermesCli.useProfile(name)
     await new Promise(r => setTimeout(r, 1000))
 
-    // 4. Start gateway — try launchd/systemd first, fall back to background mode
+    // 4. Ensure api_server config for new profile
     try {
-      await hermesCli.restartGateway()
+      const detail = await hermesCli.getProfile(name)
+      console.log(`[Profile] detail.path = ${detail.path}`)
+      const result = ensureApiServerConfig(detail.path)
+      if (result?.needSetup) {
+        // No config.yaml — run setup --reset to create full default config,
+        // then ensure api_server is present
+        try { await hermesCli.setupReset() } catch { }
+        ensureApiServerConfig(detail.path)
+      }
+      // Create .env if target has none
+      const profileEnv = join(detail.path, '.env')
+      console.log(`[Profile] .env exists: ${existsSync(profileEnv)}, path: ${profileEnv}`)
+      if (!existsSync(profileEnv)) {
+        writeFileSync(profileEnv, '# Hermes Agent Environment Configuration\n', 'utf-8')
+        console.log(`[Profile] Created .env for: ${detail.path}`)
+      }
+    } catch (err: any) {
+      console.error(`[Profile] Ensure config failed:`, err.message)
+    }
+
+    // 5. Start gateway
+    try {
+      await hermesCli.startGateway()
+      console.log('[Profile] Gateway started')
     } catch {
-      // Fallback for WSL / environments without launchd/systemd
+      // Fallback: background mode (for WSL etc.)
       try {
         const pid = await hermesCli.startGatewayBackground()
         await new Promise(r => setTimeout(r, 3000))

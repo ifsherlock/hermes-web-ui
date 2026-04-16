@@ -41,7 +41,7 @@ export default {
     chat: '对话',
     jobs: '任务',
     models: '模型',
-    profiles: '配置',
+    profiles: '用户',
     skills: '技能',
     memory: '记忆',
     logs: '日志',
@@ -51,6 +51,11 @@ export default {
     settings: '设置',
     connected: '已连接',
     disconnected: '未连接',
+    updateTip: '在终端运行 "hermes-web-ui update" 即可更新',
+    updateVersion: '升级版本 v{version}',
+    updating: '正在更新...',
+    updateSuccess: '更新完成，请重启服务',
+    updateFailed: '更新失败',
   },
 
   // 对话
@@ -163,6 +168,9 @@ export default {
     userProfile: '用户画像',
     noProfile: '暂无画像。',
     profilePlaceholder: '输入用户画像...',
+    soul: '灵魂',
+    noSoul: '暂无灵魂配置。',
+    soulPlaceholder: '输入灵魂配置...',
   },
 
   // 模型

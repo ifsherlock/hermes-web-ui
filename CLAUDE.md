@@ -333,6 +333,8 @@ Unmatched `/api/hermes/*` and `/v1/*` requests are forwarded to the upstream Her
 
 The proxy is implemented as both a route (`proxyRoutes.all('/api/hermes/{*any}', proxy)`) and a middleware (`proxyMiddleware`) registered on the main app to catch any requests that slip through route matching.
 
+**Important:** Custom API endpoints handled locally (not proxied) must be registered **before** `hermesRoutes.routes()` in `bootstrap()`. The proxy route `proxyRoutes.all('/api/hermes/{*any}')` matches all `/api/hermes/*` paths, so any middleware registered after it will never be reached. See the `update` middleware in `index.ts` for an example.
+
 ### Hermes CLI Wrapper (`packages/server/src/services/hermes-cli.ts`)
 
 All Hermes interactions go through `child_process.execFile('hermes', [...args])`. Each function wraps a CLI subcommand:
