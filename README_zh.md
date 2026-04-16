@@ -145,6 +145,32 @@ hermes-web-ui start
 
 > WSL 会自动检测并使用 `hermes gateway run` 进行后台启动（无需 launchd/systemd）。
 
+### Docker Compose
+
+使用仓库内置的 compose 文件联合运行 Hermes Agent + Web UI：
+
+```bash
+docker compose up -d --build hermes-agent hermes-webui
+docker compose logs -f hermes-webui
+```
+
+打开 **http://localhost:6060**
+
+- Hermes 持久化数据目录：`./hermes_data`
+- Web UI 服务镜像由本仓库 `Dockerfile` 本地构建
+- 运行参数全部由 `docker-compose.yml` 环境变量驱动
+
+可直接在命令行覆盖 compose 变量（不依赖 `.env` 文件）：
+
+```bash
+PORT=16060 \
+UPSTREAM=http://127.0.0.1:8642 \
+HERMES_BIN=/opt/hermes/.venv/bin/hermes \
+docker compose up -d --build hermes-agent hermes-webui
+```
+
+更详细的说明与排错见：[`docs/docker.md`](./docs/docker.md)
+
 ### CLI 命令
 
 | 命令 | 说明 |

@@ -1,6 +1,32 @@
 import type { Context } from 'koa'
 import { config } from '../../config'
 
+function isTransientGatewayError(err: any): boolean {
+  const msg = String(err?.message || '')
+  const causeCode = String(err?.cause?.code || '')
+  return (
+    causeCode === 'ECONNREFUSED' ||
+    causeCode === 'ECONNRESET' ||
+    /ECONNREFUSED|ECONNRESET|fetch failed|socket hang up/i.test(msg)
+  )
+}
+
+async function waitForGatewayReady(upstream: string, timeoutMs: number = 5000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  const healthUrl = `${upstream}/health`
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(healthUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(1200),
+      })
+      if (res.ok) return true
+    } catch { }
+    await new Promise(resolve => setTimeout(resolve, 250))
+  }
+  return false
+}
+
 export async function proxy(ctx: Context) {
   const upstream = config.upstream.replace(/\/$/, '')
   // Rewrite path for upstream gateway:
@@ -36,11 +62,23 @@ export async function proxy(ctx: Context) {
       body = (ctx as any).request.rawBody as string | undefined
     }
 
-    const res = await fetch(url, {
+    const requestInit: RequestInit = {
       method: ctx.req.method,
       headers,
       body,
-    })
+    }
+
+    let res: Response
+    try {
+      res = await fetch(url, requestInit)
+    } catch (err: any) {
+      // Gateway may be restarting; wait briefly and retry once.
+      if (isTransientGatewayError(err) && await waitForGatewayReady(upstream)) {
+        res = await fetch(url, requestInit)
+      } else {
+        throw err
+      }
+    }
 
     // Set response headers
     const resHeaders: Record<string, string> = {}

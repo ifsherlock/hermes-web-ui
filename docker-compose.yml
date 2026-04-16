@@ -1,0 +1,39 @@
+services:
+  hermes-agent:
+    image: ${HERMES_AGENT_IMAGE:-nousresearch/hermes-agent:latest}
+    container_name: ${HERMES_AGENT_CONTAINER_NAME:-hermes-agent}
+    volumes:
+      - ${HERMES_DATA_DIR:-./hermes_data}:/home/agent/.hermes
+      - hermes-agent-src:/opt/hermes
+    environment:
+      - HERMES_HOME=/home/agent/.hermes
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  hermes-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${HERMES_AGENT_IMAGE:-nousresearch/hermes-agent:latest}
+    image: ${WEBUI_IMAGE:-hermes-web-ui-local:latest}
+    container_name: ${WEBUI_CONTAINER_NAME:-hermes-webui}
+    entrypoint: ["node", "dist/server/index.js"]
+    depends_on:
+      - hermes-agent
+    ports:
+      - "${PORT:-6060}:${PORT:-6060}"
+    volumes:
+      - ${HERMES_DATA_DIR:-./hermes_data}:/home/agent/.hermes
+      - hermes-agent-src:/opt/hermes
+    environment:
+      - PORT=${PORT:-6060}
+      - UPSTREAM=${UPSTREAM:-http://127.0.0.1:8642}
+      - HERMES_HOME=/home/agent/.hermes
+      - HERMES_BIN=${HERMES_BIN:-/opt/hermes/.venv/bin/hermes}
+      - AUTH_DISABLED=${AUTH_DISABLED:-true}
+    restart: unless-stopped
+
+volumes:
+  hermes-agent-src:
