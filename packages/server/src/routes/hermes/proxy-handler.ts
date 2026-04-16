@@ -8,25 +8,20 @@ export async function proxy(ctx: Context) {
   //   /api/hermes/*     -> /api/* (upstream uses /api/ prefix)
   const upstreamPath = ctx.path.replace(/^\/api\/hermes\/v1/, '/v1').replace(/^\/api\/hermes/, '/api')
   const url = `${upstream}${upstreamPath}${ctx.search || ''}`
-  console.log(`[PROXY] ${ctx.method} ${ctx.path} -> ${url}`)
 
-  // Build headers — forward most, strip browser-specific ones
+  // Build headers — forward most, strip browser/web-ui specific ones
   const headers: Record<string, string> = {}
   for (const [key, value] of Object.entries(ctx.headers)) {
     if (value == null) continue
     const lower = key.toLowerCase()
     if (lower === 'host') {
       headers['host'] = new URL(upstream).host
-    } else if (lower !== 'origin' && lower !== 'referer' && lower !== 'connection') {
+    } else if (lower === 'authorization' || lower === 'origin' || lower === 'referer' || lower === 'connection') {
+      continue
+    } else {
       const v = Array.isArray(value) ? value[0] : value
       if (v) headers[key] = v
     }
-  }
-
-  // Add SSE-friendly headers
-  if (ctx.path.match(/\/events$/)) {
-    headers['x-accel-buffering'] = 'no'
-    headers['cache-control'] = 'no-cache'
   }
 
   try {
@@ -43,20 +38,14 @@ export async function proxy(ctx: Context) {
     })
 
     // Set response headers
-    const resHeaders: Record<string, string> = {}
     res.headers.forEach((value, key) => {
       const lower = key.toLowerCase()
       if (lower !== 'transfer-encoding' && lower !== 'connection') {
-        resHeaders[key] = value
+        ctx.set(key, value)
       }
     })
-    if (ctx.path.match(/\/events$/)) {
-      resHeaders['x-accel-buffering'] = 'no'
-      resHeaders['cache-control'] = 'no-cache'
-    }
 
     ctx.status = res.status
-    ctx.set(resHeaders)
 
     // Stream response body
     if (res.body) {
