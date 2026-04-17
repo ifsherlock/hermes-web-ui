@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { useMessage } from "naive-ui";
+import { NButton, useMessage } from "naive-ui";
 import { useAppStore } from "@/stores/hermes/app";
 import ModelSelector from "./ModelSelector.vue";
 import ProfileSelector from "./ProfileSelector.vue";
@@ -319,10 +319,10 @@ async function handleUpdate() {
       <div class="version-info">
         <span>Hermes Web UI v{{ appStore.serverVersion || "0.1.0" }}</span>
         <ThemeSwitch />
-        <a v-if="appStore.updateAvailable" class="update-hint" :class="{ loading: appStore.updating }" @click="handleUpdate">
-          {{ appStore.updating ? t('sidebar.updating') : t('sidebar.updateVersion', { version: appStore.latestVersion }) }}
-        </a>
       </div>
+      <NButton v-if="appStore.updateAvailable" type="primary" size="tiny" block class="update-btn" :loading="appStore.updating" @click="handleUpdate">
+        {{ appStore.updating ? t('sidebar.updating') : t('sidebar.updateVersion', { version: appStore.latestVersion }) }}
+      </NButton>
     </div>
   </aside>
 </template>
@@ -476,26 +476,9 @@ async function handleUpdate() {
   justify-content: space-between;
 }
 
-.update-hint {
-  display: block;
-  margin-top: 4px;
-  padding: 5px 10px;
-  border-radius: $radius-sm;
-  background: var(--accent-primary);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
-  text-align: center;
-  cursor: pointer;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: var(--accent-hover);
-  }
-
-  &.loading {
-    pointer-events: none;
-    opacity: 0.7;
-  }
+.update-btn {
+  margin: 4px 0 0;
+  border-radius: 4px;
 }
 
 @media (max-width: $breakpoint-mobile) {

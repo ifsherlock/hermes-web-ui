@@ -29,7 +29,7 @@ applyTheme(resolveDark(mode.value))
 const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 mediaQuery.addEventListener('change', () => {
   if (mode.value === 'system') {
-    applyTheme(true)
+    applyTheme(resolveDark('system'))
   }
 })
 

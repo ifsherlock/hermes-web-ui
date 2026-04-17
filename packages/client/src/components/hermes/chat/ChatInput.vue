@@ -356,10 +356,14 @@ function isImage(type: string): boolean {
   border: 1px solid $border-color;
   border-radius: $radius-md;
   padding: 10px 12px;
-  transition: border-color $transition-fast;
+  transition: border-color $transition-fast, background-color $transition-fast;
 
   &:focus-within {
     border-color: $accent-primary;
+  }
+
+  .dark & {
+    background-color: #333333;
   }
 }
 
