@@ -2,8 +2,8 @@ import Router from '@koa/router'
 import { readdir, readFile, stat, writeFile, mkdir, copyFile } from 'fs/promises'
 import { join, resolve } from 'path'
 import YAML from 'js-yaml'
-import { getActiveProfileDir, getActiveConfigPath, getActiveAuthPath, getActiveEnvPath } from '../../services/hermes-profile'
-import * as hermesCli from '../../services/hermes-cli'
+import { getActiveProfileDir, getActiveConfigPath, getActiveAuthPath, getActiveEnvPath } from '../../services/hermes/hermes-profile'
+import * as hermesCli from '../../services/hermes/hermes-cli'
 
 // --- Provider env var mapping (from hermes providers.py HERMES_OVERLAYS + config.py) ---
 // Maps provider key → { api_key_envs: all env var aliases for API key, base_url_env: env var for base URL }
@@ -513,21 +513,40 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
       for (const result of results) {
         if (result.status === 'fulfilled' && result.value.models.length > 0) {
           const { key, label, base_url, models } = result.value
-          groups.push({ provider: key, label, base_url, models })
+          groups.push({ provider: key, label, base_url, models: Array.from(new Set(models)) })
         } else if (result.status === 'rejected') {
           console.error(`[available-models] Failed: ${result.reason?.message || result.reason}`)
         }
       }
     }
 
+    // Deduplicate models within each group and merge groups with the same provider key
+    const dedupedGroups: typeof groups = []
+    const seenProviders = new Map<string, number>()
+    for (const g of groups) {
+      g.models = Array.from(new Set(g.models))
+      const existingIdx = seenProviders.get(g.provider)
+      if (existingIdx !== undefined) {
+        // Merge models into existing group
+        const existing = dedupedGroups[existingIdx]
+        const existingSet = new Set(existing.models)
+        for (const m of g.models) {
+          if (!existingSet.has(m)) existing.models.push(m)
+        }
+      } else {
+        seenProviders.set(g.provider, dedupedGroups.length)
+        dedupedGroups.push(g)
+      }
+    }
+
     // Fallback: if no providers returned models, fall back to config.yaml parsing
-    if (groups.length === 0) {
+    if (dedupedGroups.length === 0) {
       const fallback = buildModelGroups(config)
       ctx.body = fallback
       return
     }
 
-    ctx.body = { default: currentDefault, groups }
+    ctx.body = { default: currentDefault, groups: dedupedGroups }
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }

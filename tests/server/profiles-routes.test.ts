@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock hermes-cli
-vi.mock('../../packages/server/src/services/hermes-cli', () => ({
+vi.mock('../../packages/server/src/services/hermes/hermes-cli', () => ({
   listProfiles: vi.fn(),
   getProfile: vi.fn(),
   createProfile: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('../../packages/server/src/services/hermes-cli', () => ({
   importProfile: vi.fn(),
 }))
 
-import * as hermesCli from '../../packages/server/src/services/hermes-cli'
+import * as hermesCli from '../../packages/server/src/services/hermes/hermes-cli'
 
 describe('Profile Routes', () => {
   beforeEach(() => {

@@ -120,7 +120,15 @@ describe('Proxy Handler', () => {
   })
 
   it('returns 502 on connection failure', async () => {
-    mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    // waitForGatewayReady loops calling fetch(healthUrl) until res.ok or timeout.
+    // Return ok:true for health checks so the loop exits immediately (gateway
+    // "ready"), then the retry fetch also fails with ECONNREFUSED → 502.
+    mockFetch.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/health')) {
+        return Promise.resolve({ ok: true })
+      }
+      return Promise.reject(new Error('ECONNREFUSED'))
+    })
 
     const ctx = createMockCtx()
     await proxy(ctx)

@@ -10,7 +10,7 @@ import { config } from './config'
 import { hermesRoutes, setupTerminalWebSocket, proxyMiddleware } from './routes/hermes'
 import { uploadRoutes } from './routes/upload'
 import { webhookRoutes } from './routes/webhook'
-import * as hermesCli from './services/hermes-cli'
+import * as hermesCli from './services/hermes/hermes-cli'
 import { getToken, authMiddleware } from './services/auth'
 
 function getLocalVersion(): string {
@@ -232,7 +232,7 @@ function bindShutdown() {
 async function ensureApiServerConfig() {
   const { readFileSync, writeFileSync, existsSync, copyFileSync } = await import('fs')
   const yaml = (await import('js-yaml')).default
-  const { getActiveConfigPath } = await import('./services/hermes-profile')
+  const { getActiveConfigPath } = await import('./services/hermes/hermes-profile')
   const configPath = getActiveConfigPath()
 
   const defaults: Record<string, any> = {

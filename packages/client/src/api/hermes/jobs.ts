@@ -45,7 +45,7 @@ export interface CreateJobRequest {
 
 export interface UpdateJobRequest {
   name?: string
-  schedule?: string
+  schedule?: string | { kind: string; expr: string; display: string }
   prompt?: string
   deliver?: string
   skills?: string[]

@@ -3,8 +3,8 @@ import { readFile, writeFile, copyFile } from 'fs/promises'
 import { chmod } from 'fs/promises'
 import { join } from 'path'
 import YAML from 'js-yaml'
-import { restartGateway } from '../../services/hermes-cli'
-import { getActiveConfigPath, getActiveEnvPath, getActiveProfileDir } from '../../services/hermes-profile'
+import { restartGateway } from '../../services/hermes/hermes-cli'
+import { getActiveConfigPath, getActiveEnvPath, getActiveProfileDir } from '../../services/hermes/hermes-profile'
 
 // Platform sections that require gateway restart after config change
 const PLATFORM_SECTIONS = new Set([
@@ -77,6 +77,20 @@ function getNested(obj: Record<string, any>, path: string): any {
     cur = cur[p]
   }
   return cur
+}
+
+function deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) &&
+      target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])
+    ) {
+      target[key] = deepMerge(target[key], source[key])
+    } else {
+      target[key] = source[key]
+    }
+  }
+  return target
 }
 
 async function readEnvPlatforms(): Promise<Record<string, any>> {
@@ -217,7 +231,7 @@ configRoutes.put('/api/hermes/config', async (ctx) => {
 
   try {
     const config = await readConfig()
-    config[section] = { ...(config[section] || {}), ...values }
+    config[section] = deepMerge(config[section] || {}, values)
     await writeConfig(config)
     // Restart gateway for platform/channel config changes
     if (PLATFORM_SECTIONS.has(section)) {

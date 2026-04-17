@@ -1,5 +1,5 @@
 import Router from '@koa/router'
-import * as hermesCli from '../../services/hermes-cli'
+import * as hermesCli from '../../services/hermes/hermes-cli'
 
 export const sessionRoutes = new Router()
 

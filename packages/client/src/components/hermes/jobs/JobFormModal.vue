@@ -48,6 +48,8 @@ const targetOptions = computed(() => [
   { label: t('jobs.local'), value: 'local' },
 ])
 
+const originalSchedule = ref<{ kind: string; expr: string; display: string } | null>(null)
+
 onMounted(async () => {
   if (props.jobId) {
     try {
@@ -59,6 +61,9 @@ onMounted(async () => {
         prompt: job.prompt,
         deliver: job.deliver || 'origin',
         repeat_times: typeof job.repeat === 'number' ? job.repeat : (typeof job.repeat === 'object' ? job.repeat.times : null),
+      }
+      if (typeof job.schedule === 'object' && job.schedule) {
+        originalSchedule.value = job.schedule
       }
     } catch (e: any) {
       message.error(t('jobs.loadFailed') + ': ' + e.message)
@@ -84,6 +89,14 @@ async function handleSave() {
       prompt: formData.value.prompt,
       deliver: formData.value.deliver,
       repeat: formData.value.repeat_times ?? undefined,
+    }
+
+    if (isEdit.value && originalSchedule.value) {
+      (payload as any).schedule = {
+        kind: originalSchedule.value.kind,
+        expr: formData.value.schedule,
+        display: formData.value.schedule,
+      }
     }
 
     if (isEdit.value) {
