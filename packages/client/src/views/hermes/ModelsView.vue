@@ -5,9 +5,11 @@ import { useI18n } from 'vue-i18n'
 import ProvidersPanel from '@/components/hermes/models/ProvidersPanel.vue'
 import ProviderFormModal from '@/components/hermes/models/ProviderFormModal.vue'
 import { useModelsStore } from '@/stores/hermes/models'
+import { useAppStore } from '@/stores/hermes/app'
 
 const { t } = useI18n()
 const modelsStore = useModelsStore()
+const appStore = useAppStore()
 const showModal = ref(false)
 
 onMounted(() => {
@@ -24,6 +26,7 @@ function handleModalClose() {
 
 async function handleSaved() {
   await modelsStore.fetchProviders()
+  appStore.loadModels()
   handleModalClose()
 }
 </script>

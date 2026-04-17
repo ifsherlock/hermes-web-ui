@@ -21,7 +21,7 @@ onMounted(() => {
 
     <div class="channels-content">
       <NSpin :show="settingsStore.loading || settingsStore.saving" size="large" :description="t('common.loading')">
-        <PlatformSettings />
+        <PlatformSettings v-if="!settingsStore.loading" />
       </NSpin>
     </div>
   </div>

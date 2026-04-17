@@ -222,6 +222,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     models: ['glm-5.1', 'glm-5', 'kimi-k2.5', 'mimo-v2-pro', 'mimo-v2-omni', 'minimax-m2.7', 'minimax-m2.5'],
   },
   {
+    label: 'OpenAI Codex',
+    value: 'openai-codex',
+    base_url: 'https://chatgpt.com/backend-api/codex',
+    models: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max', 'gpt-5.1-codex-mini'],
+  },
+  {
     label: 'Arcee AI',
     value: 'arcee',
     base_url: 'https://api.arcee.ai/v1',

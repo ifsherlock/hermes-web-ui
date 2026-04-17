@@ -27,6 +27,7 @@ const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_env: stri
   'opencode-go': { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_GO_BASE_URL' },
   huggingface: { api_key_env: 'HF_TOKEN', base_url_env: 'HF_BASE_URL' },
   arcee: { api_key_env: 'ARCEE_API_KEY', base_url_env: '' },
+  'openai-codex': { api_key_env: '', base_url_env: 'HERMES_CODEX_BASE_URL' },
 }
 
 async function saveEnvValue(key: string, value: string): Promise<void> {
