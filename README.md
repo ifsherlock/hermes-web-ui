@@ -144,6 +144,32 @@ hermes-web-ui start
 
 > WSL auto-detects and uses `hermes gateway run` for background startup (no launchd/systemd).
 
+### Docker Compose
+
+Run Web UI together with Hermes Agent:
+
+```bash
+docker compose up -d --build hermes-agent hermes-webui
+docker compose logs -f hermes-webui
+```
+
+Open **http://localhost:6060**
+
+- Persistent Hermes data is stored in `./hermes_data`
+- The web UI service is built from this repository's `Dockerfile`
+- All runtime settings are environment-variable driven in `docker-compose.yml`
+
+Override compose variables directly from command line (no `.env` file required):
+
+```bash
+PORT=16060 \
+UPSTREAM=http://127.0.0.1:8642 \
+HERMES_BIN=/opt/hermes/.venv/bin/hermes \
+docker compose up -d --build hermes-agent hermes-webui
+```
+
+For detailed notes and troubleshooting, see [`docs/docker.md`](./docs/docker.md).
+
 ### CLI Commands
 
 | Command | Description |

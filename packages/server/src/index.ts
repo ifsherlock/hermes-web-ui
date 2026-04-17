@@ -268,6 +268,17 @@ async function ensureApiServerConfig() {
 
 async function ensureGatewayRunning() {
   const upstream = config.upstream.replace(/\/$/, '')
+  const waitForGatewayReady = async (timeoutMs: number = 15000) => {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(2000) })
+        if (res.ok) return true
+      } catch { }
+      await new Promise(r => setTimeout(r, 300))
+    }
+    return false
+  }
 
   try {
     const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
@@ -279,12 +290,10 @@ async function ensureGatewayRunning() {
   try {
     // 👉 关键：保存 PID
     gatewayPid = await startGatewayBackground()
-
-    await new Promise(r => setTimeout(r, 3000))
-
-    const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
-    if (res.ok) {
+    if (await waitForGatewayReady()) {
       console.log(`✓ Gateway started (PID: ${gatewayPid})`)
+    } else {
+      console.error('gateway start failed: timed out waiting for health')
     }
   } catch (err: any) {
     console.error('gateway start failed:', err.message)

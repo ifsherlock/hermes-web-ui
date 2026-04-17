@@ -18,6 +18,7 @@ ROADMAP.md
 packages/server/data/
 packages/server/node_modules/
 .hermes-web-ui/
+hermes_data/
 
 # Editor directories and files
 .vscode/*
