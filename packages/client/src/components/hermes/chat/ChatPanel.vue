@@ -577,7 +577,7 @@ async function handleRenameConfirm() {
   }
 
   &.active {
-    background: rgba($accent-primary, 0.1);
+    background: rgba(var(--accent-primary-rgb), 0.12);
     color: $text-primary;
     font-weight: 500;
   }
