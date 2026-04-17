@@ -45,7 +45,7 @@ watch(
   scrollToBottom,
 );
 watch(
-  () => chatStore.isStreaming,
+  () => chatStore.isRunActive,
   (v) => {
     if (v) scrollToBottom();
   },
@@ -61,7 +61,7 @@ watch(currentToolCalls, scrollToBottom);
     </div>
     <MessageItem v-for="msg in displayMessages" :key="msg.id" :message="msg" />
     <Transition name="fade">
-      <div v-if="chatStore.isStreaming" class="streaming-indicator">
+      <div v-if="chatStore.isRunActive" class="streaming-indicator">
         <video
           :src="isDark ? thinkingVideoDark : thinkingVideoLight"
           autoplay

@@ -11,7 +11,15 @@ const chatStore = useChatStore()
 const message = useMessage()
 const { t } = useI18n()
 
-const showSessions = ref(true)
+// Initialize synchronously from the media query so first paint is correct.
+// On narrow viewports the session list is an absolute-positioned overlay
+// (z-index 10) on top of the chat area; if we default to `true`, onMounted
+// only flips it to `false` AFTER the first render, causing a visible flash
+// where the session list covers the chat content ("auto-fixes after a
+// moment" — that was the race).
+const showSessions = ref(
+  typeof window === 'undefined' || !window.matchMedia('(max-width: 768px)').matches,
+)
 let mobileQuery: MediaQueryList | null = null
 
 function handleSessionClick(sessionId: string) {

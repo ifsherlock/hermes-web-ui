@@ -1,5 +1,7 @@
 import { vi } from 'vitest'
 
+// Vite injects this at build time; unit tests need a stable fallback.
+;(globalThis as any).__APP_VERSION__ = 'test'
 // Client-only setup (window/localStorage only exist in jsdom)
 if (typeof window !== 'undefined') {
   // Mock window.matchMedia
