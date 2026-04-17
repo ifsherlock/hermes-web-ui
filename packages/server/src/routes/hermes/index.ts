@@ -5,6 +5,7 @@ import { configRoutes } from './config'
 import { fsRoutes } from './filesystem'
 import { logRoutes } from './logs'
 import { weixinRoutes } from './weixin'
+import { codexAuthRoutes } from './codex-auth'
 import { proxyRoutes, proxyMiddleware } from './proxy'
 import { setupTerminalWebSocket } from './terminal'
 
@@ -16,6 +17,7 @@ hermesRoutes.use(configRoutes.routes())
 hermesRoutes.use(fsRoutes.routes())
 hermesRoutes.use(logRoutes.routes())
 hermesRoutes.use(weixinRoutes.routes())
+hermesRoutes.use(codexAuthRoutes.routes())
 hermesRoutes.use(proxyRoutes.routes())
 
 export { setupTerminalWebSocket, proxyMiddleware }
