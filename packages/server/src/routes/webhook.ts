@@ -1,5 +1,5 @@
 import Router from '@koa/router'
-import { emitWebhook } from '../services/hermes'
+import { emitWebhook } from '../services/hermes/hermes'
 
 export const webhookRoutes = new Router()
 

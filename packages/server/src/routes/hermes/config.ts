@@ -3,8 +3,8 @@ import { readFile, writeFile, copyFile } from 'fs/promises'
 import { chmod } from 'fs/promises'
 import { join } from 'path'
 import YAML from 'js-yaml'
-import { restartGateway } from '../../services/hermes-cli'
-import { getActiveConfigPath, getActiveEnvPath, getActiveProfileDir } from '../../services/hermes-profile'
+import { restartGateway } from '../../services/hermes/hermes-cli'
+import { getActiveConfigPath, getActiveEnvPath, getActiveProfileDir } from '../../services/hermes/hermes-profile'
 
 // Platform sections that require gateway restart after config change
 const PLATFORM_SECTIONS = new Set([

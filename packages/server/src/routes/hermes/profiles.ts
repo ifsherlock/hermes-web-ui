@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import { basename, join } from 'path'
 import { tmpdir, homedir } from 'os'
 import YAML from 'js-yaml'
-import * as hermesCli from '../../services/hermes-cli'
+import * as hermesCli from '../../services/hermes/hermes-cli'
 
 const apiServerDefaults = {
   enabled: true,

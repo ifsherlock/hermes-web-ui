@@ -3,8 +3,8 @@ import axios from 'axios'
 import { readFile, writeFile } from 'fs/promises'
 import { chmod } from 'fs/promises'
 import { resolve } from 'path'
-import { restartGateway } from '../../services/hermes-cli'
-import { getActiveEnvPath } from '../../services/hermes-profile'
+import { restartGateway } from '../../services/hermes/hermes-cli'
+import { getActiveEnvPath } from '../../services/hermes/hermes-profile'
 
 const envPath = () => getActiveEnvPath()
 const ILINK_BASE = 'https://ilinkai.weixin.qq.com'

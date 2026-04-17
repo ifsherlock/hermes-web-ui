@@ -2,8 +2,8 @@ import Router from '@koa/router'
 import { readdir, readFile, stat, writeFile, mkdir, copyFile } from 'fs/promises'
 import { join, resolve } from 'path'
 import YAML from 'js-yaml'
-import { getActiveProfileDir, getActiveConfigPath, getActiveAuthPath, getActiveEnvPath } from '../../services/hermes-profile'
-import * as hermesCli from '../../services/hermes-cli'
+import { getActiveProfileDir, getActiveConfigPath, getActiveAuthPath, getActiveEnvPath } from '../../services/hermes/hermes-profile'
+import * as hermesCli from '../../services/hermes/hermes-cli'
 
 // --- Provider env var mapping (from hermes providers.py HERMES_OVERLAYS + config.py) ---
 // Maps provider key → { api_key_envs: all env var aliases for API key, base_url_env: env var for base URL }
@@ -513,7 +513,7 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
       for (const result of results) {
         if (result.status === 'fulfilled' && result.value.models.length > 0) {
           const { key, label, base_url, models } = result.value
-          groups.push({ provider: key, label, base_url, models: [...new Set(models)] })
+          groups.push({ provider: key, label, base_url, models: Array.from(new Set(models)) })
         } else if (result.status === 'rejected') {
           console.error(`[available-models] Failed: ${result.reason?.message || result.reason}`)
         }
@@ -524,7 +524,7 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
     const dedupedGroups: typeof groups = []
     const seenProviders = new Map<string, number>()
     for (const g of groups) {
-      g.models = [...new Set(g.models)]
+      g.models = Array.from(new Set(g.models))
       const existingIdx = seenProviders.get(g.provider)
       if (existingIdx !== undefined) {
         // Merge models into existing group
