@@ -214,7 +214,8 @@ function handleClose() {
             v-model:value="formData.model"
             :options="modelOptions"
             filterable
-            :placeholder="t('models.selectModel')"
+            tag
+            :placeholder="t('models.selectOrInput')"
             style="flex: 1"
           />
           <NButton

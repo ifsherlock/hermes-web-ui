@@ -189,6 +189,7 @@ export default {
     apiKey: 'Cle API',
     apiKeyPlaceholder: 'sk-...',
     defaultModel: 'Modele par defaut',
+    selectOrInput: 'Sélectionner ou saisir un modèle...',
     selectModel: 'Selectionner un modele...',
     providerAdded: 'Fournisseur ajoute',
     providerDeleted: 'Fournisseur supprime',

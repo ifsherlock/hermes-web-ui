@@ -189,6 +189,7 @@ export default {
     apiKey: 'API Key',
     apiKeyPlaceholder: 'sk-...',
     defaultModel: '默认模型',
+    selectOrInput: '选择或输入模型名称...',
     selectModel: '选择模型...',
     providerAdded: 'Provider 已添加',
     providerDeleted: 'Provider 已删除',

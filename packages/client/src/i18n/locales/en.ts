@@ -189,6 +189,7 @@ export default {
     apiKey: 'API Key',
     apiKeyPlaceholder: 'sk-...',
     defaultModel: 'Default Model',
+    selectOrInput: 'Select or type a model name...',
     selectModel: 'Select a model...',
     providerAdded: 'Provider added',
     providerDeleted: 'Provider deleted',

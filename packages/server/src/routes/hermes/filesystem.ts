@@ -10,7 +10,9 @@ import * as hermesCli from '../../services/hermes/hermes-cli'
 const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_env: string }> = {
   openrouter: { api_key_env: 'OPENROUTER_API_KEY', base_url_env: 'OPENROUTER_BASE_URL' },
   zai: { api_key_env: 'ZAI_API_KEY', base_url_env: '' },
-  'kimi-for-coding': { api_key_env: 'KIMI_API_KEY', base_url_env: '' },
+  'kimi-coding': { api_key_env: 'KIMI_API_KEY', base_url_env: '' },
+  'kimi-coding-cn': { api_key_env: 'KIMI_API_KEY', base_url_env: '' },
+  moonshot: { api_key_env: 'MOONSHOT_API_KEY', base_url_env: 'MOONSHOT_BASE_URL' },
   minimax: { api_key_env: 'MINIMAX_API_KEY', base_url_env: 'MINIMAX_BASE_URL' },
   'minimax-cn': { api_key_env: 'MINIMAX_API_KEY', base_url_env: 'MINIMAX_CN_BASE_URL' },
   deepseek: { api_key_env: 'DEEPSEEK_API_KEY', base_url_env: 'DEEPSEEK_BASE_URL' },
@@ -19,11 +21,12 @@ const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_env: stri
   xai: { api_key_env: 'XAI_API_KEY', base_url_env: 'XAI_BASE_URL' },
   xiaomi: { api_key_env: 'XIAOMI_API_KEY', base_url_env: 'XIAOMI_BASE_URL' },
   gemini: { api_key_env: 'GEMINI_API_KEY', base_url_env: '' },
-  kilo: { api_key_env: 'KILO_API_KEY', base_url_env: 'KILOCODE_BASE_URL' },
-  vercel: { api_key_env: 'AI_GATEWAY_API_KEY', base_url_env: '' },
-  opencode: { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_ZEN_BASE_URL' },
+  kilocode: { api_key_env: 'KILO_API_KEY', base_url_env: 'KILOCODE_BASE_URL' },
+  'ai-gateway': { api_key_env: 'AI_GATEWAY_API_KEY', base_url_env: '' },
+  'opencode-zen': { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_ZEN_BASE_URL' },
   'opencode-go': { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_GO_BASE_URL' },
   huggingface: { api_key_env: 'HF_TOKEN', base_url_env: 'HF_BASE_URL' },
+  arcee: { api_key_env: 'ARCEE_API_KEY', base_url_env: '' },
 }
 
 async function saveEnvValue(key: string, value: string): Promise<void> {
@@ -415,7 +418,6 @@ interface ModelGroup {
 // Build model list from user's actual config.yaml using js-yaml
 function buildModelGroups(config: Record<string, any>): { default: string; groups: ModelGroup[] } {
   let defaultModel = ''
-  let defaultProvider = ''
   const groups: ModelGroup[] = []
   const allModelIds = new Set<string>()
 
@@ -423,7 +425,6 @@ function buildModelGroups(config: Record<string, any>): { default: string; group
   const modelSection = config.model
   if (typeof modelSection === 'object' && modelSection !== null) {
     defaultModel = String(modelSection.default || '').trim()
-    defaultProvider = String(modelSection.provider || '').trim()
   } else if (typeof modelSection === 'string') {
     defaultModel = modelSection.trim()
   }
@@ -539,7 +540,51 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
       }
     }
 
-    // Fallback: if no providers returned models, fall back to config.yaml parsing
+    // Merge custom_providers from config.yaml (ensures manually-input model names appear)
+    const customProviders = Array.isArray(config.custom_providers)
+      ? config.custom_providers as Array<{ name: string; base_url: string; model: string }>
+      : []
+    for (const cp of customProviders) {
+      if (!cp.base_url || !cp.model) continue
+      const baseUrl = cp.base_url.replace(/\/+$/, '')
+      // Check if we already have a group for this base_url
+      const existing = dedupedGroups.find(g => g.base_url.replace(/\/+$/, '') === baseUrl)
+      if (existing) {
+        if (!existing.models.includes(cp.model)) {
+          existing.models.push(cp.model)
+        }
+      } else {
+        dedupedGroups.push({
+          provider: `custom:${cp.name.trim().toLowerCase().replace(/ /g, '-')}`,
+          label: cp.name,
+          base_url: baseUrl,
+          models: [cp.model],
+        })
+      }
+    }
+
+    // Ensure config's current default model appears in the model list
+    if (currentDefault) {
+      const currentProvider = typeof config.model === 'object' ? String(config.model.provider || '').trim() : ''
+      if (currentProvider) {
+        const targetGroup = dedupedGroups.find(g => g.provider === currentProvider)
+        if (targetGroup && !targetGroup.models.includes(currentDefault)) {
+          targetGroup.models.unshift(currentDefault)
+        }
+      } else {
+        // No provider specified — add to the first group that matches via base_url
+        // or just prepend to all groups
+        let found = false
+        for (const g of dedupedGroups) {
+          if (!found && !g.models.includes(currentDefault)) {
+            g.models.unshift(currentDefault)
+            found = true
+          }
+        }
+      }
+    }
+
+    // Fallback: if still no providers, fall back to config.yaml parsing
     if (dedupedGroups.length === 0) {
       const fallback = buildModelGroups(config)
       ctx.body = fallback
@@ -702,22 +747,29 @@ fsRoutes.delete('/api/hermes/config/providers/:poolKey', async (ctx) => {
       return
     }
 
+    // Case-insensitive key lookup: normalize poolKey to match credential_pool
+    let resolvedKey = poolKey
     if (!(poolKey in auth.credential_pool)) {
-      ctx.status = 404
-      ctx.body = { error: `Provider "${poolKey}" not found` }
-      return
+      const normalized = poolKey.toLowerCase()
+      const match = Object.keys(auth.credential_pool).find(k => k.toLowerCase() === normalized)
+      if (!match) {
+        ctx.status = 404
+        ctx.body = { error: `Provider "${poolKey}" not found` }
+        return
+      }
+      resolvedKey = match
     }
 
     // Check if this is the current active provider
     const config = await readConfigYaml()
     const currentProvider = config.model?.provider
-    const isCurrent = currentProvider === poolKey
+    const isCurrent = currentProvider === poolKey || currentProvider === resolvedKey
 
     // Save base_url before deleting
-    const deletedBaseUrl = auth.credential_pool[poolKey]?.[0]?.base_url
+    const deletedBaseUrl = auth.credential_pool[resolvedKey]?.[0]?.base_url
 
     // 1. Delete from auth.json
-    delete auth.credential_pool[poolKey]
+    delete auth.credential_pool[resolvedKey]
     await saveAuthJson(auth)
 
     // 2. Remove matching entry from config.yaml custom_providers
