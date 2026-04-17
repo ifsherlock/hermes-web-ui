@@ -292,6 +292,11 @@ export default {
       bellOnCompleteHint: 'AI 回复完成时播放提示音',
       busyInputMode: '忙碌输入模式',
       busyInputModeHint: 'AI 处理中仍可输入',
+      theme: '主题',
+      themeHint: '选择浅色、暗色或跟随系统',
+      themeLight: '浅色',
+      themeDark: '暗色',
+      themeSystem: '跟随系统',
     },
     agent: {
       maxTurns: '最大轮次',

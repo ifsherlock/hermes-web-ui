@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider } from 'naive-ui'
-import { themeOverrides } from '@/styles/theme'
+import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider } from 'naive-ui'
+import { getThemeOverrides } from '@/styles/theme'
+import { useTheme } from '@/composables/useTheme'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import { useKeyboard } from '@/composables/useKeyboard'
 import { useAppStore } from '@/stores/hermes/app'
 
+const { isDark } = useTheme()
 const appStore = useAppStore()
 const route = useRoute()
 const router = useRouter()
 const ready = ref(false)
+
+const themeOverrides = computed(() => getThemeOverrides(isDark.value))
+const naiveTheme = computed(() => isDark.value ? darkTheme : null)
 
 const isLoginPage = computed(() => route.name === 'login')
 
@@ -39,7 +44,7 @@ useKeyboard()
 </script>
 
 <template>
-  <NConfigProvider :theme-overrides="themeOverrides">
+  <NConfigProvider :theme="naiveTheme" :theme-overrides="themeOverrides">
     <NMessageProvider>
       <NDialogProvider>
         <NNotificationProvider>

@@ -185,7 +185,7 @@ watch(() => `${props.category}/${props.skill}`, loadSkill, { immediate: true })
   border-radius: 4px;
 
   &:hover {
-    background: rgba($accent-primary, 0.06);
+    background: rgba(var(--accent-primary-rgb), 0.06);
   }
 }
 

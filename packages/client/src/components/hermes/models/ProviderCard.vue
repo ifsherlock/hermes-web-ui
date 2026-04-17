@@ -70,7 +70,7 @@ async function handleDelete() {
   transition: border-color $transition-fast;
 
   &:hover {
-    border-color: rgba($accent-primary, 0.3);
+    border-color: rgba(var(--accent-primary-rgb), 0.3);
   }
 }
 
@@ -98,12 +98,12 @@ async function handleDelete() {
   font-weight: 500;
 
   &.builtin {
-    background: rgba($accent-primary, 0.12);
+    background: rgba(var(--accent-primary-rgb), 0.12);
     color: $accent-primary;
   }
 
   &.custom {
-    background: rgba($success, 0.12);
+    background: rgba(var(--success-rgb), 0.12);
     color: $success;
   }
 }

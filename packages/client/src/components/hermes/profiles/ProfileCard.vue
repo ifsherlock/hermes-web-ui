@@ -181,11 +181,11 @@ async function handleExport() {
   transition: border-color $transition-fast;
 
   &:hover {
-    border-color: rgba($accent-primary, 0.3);
+    border-color: rgba(var(--accent-primary-rgb), 0.3);
   }
 
   &.active {
-    border-color: rgba($success, 0.4);
+    border-color: rgba(var(--success-rgb), 0.4);
   }
 }
 

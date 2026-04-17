@@ -331,7 +331,7 @@ function isImage(type: string): boolean {
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+  color: var(--text-on-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -394,8 +394,8 @@ function isImage(type: string): boolean {
 
 // Drag-over state
 .input-wrapper.drag-over {
-  border-color: #4a90d9;
+  border-color: var(--accent-info);
   border-style: dashed;
-  background-color: rgba(74, 144, 217, 0.04);
+  background-color: rgba(var(--accent-info-rgb), 0.04);
 }
 </style>

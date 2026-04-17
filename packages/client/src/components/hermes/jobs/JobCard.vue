@@ -152,7 +152,7 @@ async function handleDelete() {
   transition: border-color $transition-fast;
 
   &:hover {
-    border-color: rgba($accent-primary, 0.3);
+    border-color: rgba(var(--accent-primary-rgb), 0.3);
   }
 }
 
@@ -180,22 +180,22 @@ async function handleDelete() {
   font-weight: 500;
 
   &.success {
-    background: rgba($success, 0.12);
+    background: rgba(var(--success-rgb), 0.12);
     color: $success;
   }
 
   &.info {
-    background: rgba($accent-primary, 0.12);
+    background: rgba(var(--accent-primary-rgb), 0.12);
     color: $accent-primary;
   }
 
   &.warning {
-    background: rgba($warning, 0.12);
+    background: rgba(var(--warning-rgb), 0.12);
     color: $warning;
   }
 
   &.error {
-    background: rgba($error, 0.12);
+    background: rgba(var(--error-rgb), 0.12);
     color: $error;
   }
 }

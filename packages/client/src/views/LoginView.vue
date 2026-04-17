@@ -159,7 +159,7 @@ async function handleLogin() {
   border: none;
   border-radius: $radius-sm;
   background: $text-primary;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
