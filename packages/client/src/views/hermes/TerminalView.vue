@@ -5,11 +5,216 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { getApiKey, getBaseUrlValue } from "@/api/client";
-import { NButton, NPopconfirm, NTooltip, useMessage } from "naive-ui";
+import { NButton, NPopconfirm, NTooltip, NSelect, useMessage } from "naive-ui";
 import { useI18n } from "vue-i18n";
+import type { ITheme } from "@xterm/xterm";
 
 const { t } = useI18n();
 const message = useMessage();
+
+// ─── Terminal themes ────────────────────────────────────────────
+
+const TERMINAL_THEMES: Record<string, { label: string; theme: ITheme }> = {
+  default: {
+    label: "Default",
+    theme: {
+      background: "#1a1a2e",
+      foreground: "#e0e0e0",
+      cursor: "#4cc9f0",
+      cursorAccent: "#1a1a2e",
+      selectionBackground: "rgba(76, 201, 240, 0.3)",
+      black: "#000000", red: "#e06c75", green: "#98c379", yellow: "#e5c07b",
+      blue: "#61afef", magenta: "#c678dd", cyan: "#56b6c2", white: "#abb2bf",
+      brightBlack: "#5c6370", brightRed: "#e06c75", brightGreen: "#98c379",
+      brightYellow: "#e5c07b", brightBlue: "#61afef", brightMagenta: "#c678dd",
+      brightCyan: "#56b6c2", brightWhite: "#ffffff",
+    },
+  },
+  "solarized-dark": {
+    label: "Solarized Dark",
+    theme: {
+      background: "#002b36", foreground: "#839496",
+      cursor: "#93a1a1", cursorAccent: "#002b36",
+      selectionBackground: "rgba(147, 161, 161, 0.3)",
+      black: "#073642", red: "#dc322f", green: "#859900", yellow: "#b58900",
+      blue: "#268bd2", magenta: "#d33682", cyan: "#2aa198", white: "#eee8d5",
+      brightBlack: "#002b36", brightRed: "#cb4b16", brightGreen: "#586e75",
+      brightYellow: "#657b83", brightBlue: "#839496", brightMagenta: "#6c71c4",
+      brightCyan: "#93a1a1", brightWhite: "#fdf6e3",
+    },
+  },
+  "solarized-light": {
+    label: "Solarized Light",
+    theme: {
+      background: "#fdf6e3", foreground: "#657b83",
+      cursor: "#586e75", cursorAccent: "#fdf6e3",
+      selectionBackground: "rgba(88, 110, 117, 0.3)",
+      black: "#073642", red: "#dc322f", green: "#859900", yellow: "#b58900",
+      blue: "#268bd2", magenta: "#d33682", cyan: "#2aa198", white: "#eee8d5",
+      brightBlack: "#002b36", brightRed: "#cb4b16", brightGreen: "#586e75",
+      brightYellow: "#657b83", brightBlue: "#839496", brightMagenta: "#6c71c4",
+      brightCyan: "#93a1a1", brightWhite: "#fdf6e3",
+    },
+  },
+  monokai: {
+    label: "Monokai",
+    theme: {
+      background: "#272822", foreground: "#f8f8f2",
+      cursor: "#f8f8f0", cursorAccent: "#272822",
+      selectionBackground: "rgba(248, 248, 242, 0.2)",
+      black: "#272822", red: "#f92672", green: "#a6e22e", yellow: "#f4bf75",
+      blue: "#66d9ef", magenta: "#ae81ff", cyan: "#a1efe4", white: "#f8f8f2",
+      brightBlack: "#75715e", brightRed: "#fd971f", brightGreen: "#a6e22e",
+      brightYellow: "#e6db74", brightBlue: "#66d9ef", brightMagenta: "#ae81ff",
+      brightCyan: "#a1efe4", brightWhite: "#f9f8f5",
+    },
+  },
+  dracula: {
+    label: "Dracula",
+    theme: {
+      background: "#282a36", foreground: "#f8f8f2",
+      cursor: "#f8f8f2", cursorAccent: "#282a36",
+      selectionBackground: "rgba(248, 248, 242, 0.2)",
+      black: "#21222c", red: "#ff5555", green: "#50fa7b", yellow: "#f1fa8c",
+      blue: "#bd93f9", magenta: "#ff79c6", cyan: "#8be9fd", white: "#f8f8f2",
+      brightBlack: "#6272a4", brightRed: "#ff6e6e", brightGreen: "#69ff94",
+      brightYellow: "#ffffa5", brightBlue: "#d6acff", brightMagenta: "#ff92df",
+      brightCyan: "#a4ffff", brightWhite: "#ffffff",
+    },
+  },
+  nord: {
+    label: "Nord",
+    theme: {
+      background: "#2e3440", foreground: "#d8dee9",
+      cursor: "#d8dee9", cursorAccent: "#2e3440",
+      selectionBackground: "rgba(216, 222, 233, 0.2)",
+      black: "#3b4252", red: "#bf616a", green: "#a3be8c", yellow: "#ebcb8b",
+      blue: "#81a1c1", magenta: "#b48ead", cyan: "#88c0d0", white: "#e5e9f0",
+      brightBlack: "#4c566a", brightRed: "#bf616a", brightGreen: "#a3be8c",
+      brightYellow: "#ebcb8b", brightBlue: "#81a1c1", brightMagenta: "#b48ead",
+      brightCyan: "#8fbcbb", brightWhite: "#eceff4",
+    },
+  },
+  "one-dark": {
+    label: "One Dark",
+    theme: {
+      background: "#282c34", foreground: "#abb2bf",
+      cursor: "#528bff", cursorAccent: "#282c34",
+      selectionBackground: "rgba(82, 139, 255, 0.25)",
+      black: "#282c34", red: "#e06c75", green: "#98c379", yellow: "#e5c07b",
+      blue: "#61afef", magenta: "#c678dd", cyan: "#56b6c2", white: "#abb2bf",
+      brightBlack: "#5c6370", brightRed: "#e06c75", brightGreen: "#98c379",
+      brightYellow: "#e5c07b", brightBlue: "#61afef", brightMagenta: "#c678dd",
+      brightCyan: "#56b6c2", brightWhite: "#ffffff",
+    },
+  },
+  "github-dark": {
+    label: "GitHub Dark",
+    theme: {
+      background: "#0d1117", foreground: "#c9d1d9",
+      cursor: "#58a6ff", cursorAccent: "#0d1117",
+      selectionBackground: "rgba(88, 166, 255, 0.25)",
+      black: "#484f58", red: "#ff7b72", green: "#7ee787", yellow: "#ffa657",
+      blue: "#79c0ff", magenta: "#d2a8ff", cyan: "#a5d6ff", white: "#c9d1d9",
+      brightBlack: "#6e7681", brightRed: "#ffa198", brightGreen: "#56d364",
+      brightYellow: "#e3b341", brightBlue: "#58a6ff", brightMagenta: "#bc8cff",
+      brightCyan: "#79c0ff", brightWhite: "#f0f6fc",
+    },
+  },
+  "tokyo-night": {
+    label: "Tokyo Night",
+    theme: {
+      background: "#1a1b26", foreground: "#a9b1d6",
+      cursor: "#c0caf5", cursorAccent: "#1a1b26",
+      selectionBackground: "rgba(192, 202, 245, 0.2)",
+      black: "#15161e", red: "#f7768e", green: "#9ece6a", yellow: "#e0af68",
+      blue: "#7aa2f7", magenta: "#bb9af7", cyan: "#7dcfff", white: "#a9b1d6",
+      brightBlack: "#414868", brightRed: "#f7768e", brightGreen: "#9ece6a",
+      brightYellow: "#e0af68", brightBlue: "#7aa2f7", brightMagenta: "#bb9af7",
+      brightCyan: "#7dcfff", brightWhite: "#c0caf5",
+    },
+  },
+  "github-light": {
+    label: "GitHub Light",
+    theme: {
+      background: "#ffffff", foreground: "#24292f",
+      cursor: "#0969da", cursorAccent: "#ffffff",
+      selectionBackground: "rgba(9, 105, 218, 0.2)",
+      black: "#24292f", red: "#cf222e", green: "#116329", yellow: "#4d2d00",
+      blue: "#0969da", magenta: "#8250df", cyan: "#1b7c83", white: "#57606a",
+      brightBlack: "#57606a", brightRed: "#a40e26", brightGreen: "#1a7f37",
+      brightYellow: "#633c01", brightBlue: "#218bff", brightMagenta: "#a475f4",
+      brightCyan: "#3192aa", brightWhite: "#8c959f",
+    },
+  },
+  "catppuccin-latte": {
+    label: "Catppuccin Latte",
+    theme: {
+      background: "#eff1f5", foreground: "#4c4f69",
+      cursor: "#dc8a78", cursorAccent: "#eff1f5",
+      selectionBackground: "rgba(220, 138, 120, 0.2)",
+      black: "#5c5f77", red: "#d20f39", green: "#40a02b", yellow: "#df8e1d",
+      blue: "#1e66f5", magenta: "#ea76cb", cyan: "#179299", white: "#4c4f69",
+      brightBlack: "#6c6f85", brightRed: "#d20f39", brightGreen: "#40a02b",
+      brightYellow: "#df8e1d", brightBlue: "#1e66f5", brightMagenta: "#ea76cb",
+      brightCyan: "#179299", brightWhite: "#bcc0cc",
+    },
+  },
+  "alabaster-light": {
+    label: "Alabaster",
+    theme: {
+      background: "#f7f7f7", foreground: "#434343",
+      cursor: "#528bff", cursorAccent: "#f7f7f7",
+      selectionBackground: "rgba(82, 139, 255, 0.2)",
+      black: "#000000", red: "#aa3731", green: "#448c27", yellow: "#cb9000",
+      blue: "#325cc0", magenta: "#7a3e9d", cyan: "#0083b2", white: "#434343",
+      brightBlack: "#777777", brightRed: "#f05050", brightGreen: "#60cb00",
+      brightYellow: "#ffbc5d", brightBlue: "#0070ea", brightMagenta: "#ca64e2",
+      brightCyan: "#00aacb", brightWhite: "#999999",
+    },
+  },
+  "xterm-light": {
+    label: "XTerm Light",
+    theme: {
+      background: "#fafafa", foreground: "#383a42",
+      cursor: "#526fff", cursorAccent: "#fafafa",
+      selectionBackground: "rgba(82, 111, 255, 0.2)",
+      black: "#383a42", red: "#e45649", green: "#50a14f", yellow: "#c18401",
+      blue: "#4078f2", magenta: "#a626a4", cyan: "#0184bc", white: "#a0a1a7",
+      brightBlack: "#4f525e", brightRed: "#e06c75", brightGreen: "#98c379",
+      brightYellow: "#e5c07b", brightBlue: "#61afef", brightMagenta: "#c678dd",
+      brightCyan: "#56b6c2", brightWhite: "#ffffff",
+    },
+  },
+  "one-light": {
+    label: "One Light",
+    theme: {
+      background: "#fafafa", foreground: "#383a42",
+      cursor: "#526eff", cursorAccent: "#fafafa",
+      selectionBackground: "rgba(82, 110, 255, 0.2)",
+      black: "#383a42", red: "#e45649", green: "#50a14f", yellow: "#c18401",
+      blue: "#4078f2", magenta: "#a626a4", cyan: "#0184bc", white: "#a0a1a7",
+      brightBlack: "#4f525e", brightRed: "#e06c75", brightGreen: "#98c379",
+      brightYellow: "#e5c07b", brightBlue: "#61afef", brightMagenta: "#c678dd",
+      brightCyan: "#56b6c2", brightWhite: "#ffffff",
+    },
+  },
+  "gruvbox-light": {
+    label: "Gruvbox Light",
+    theme: {
+      background: "#fbf1c7", foreground: "#3c3836",
+      cursor: "#9d0006", cursorAccent: "#fbf1c7",
+      selectionBackground: "rgba(157, 0, 6, 0.15)",
+      black: "#fbf1c7", red: "#cc241d", green: "#98971a", yellow: "#d79921",
+      blue: "#458588", magenta: "#b16286", cyan: "#689d6a", white: "#504945",
+      brightBlack: "#928374", brightRed: "#9d0006", brightGreen: "#79740e",
+      brightYellow: "#b57614", brightBlue: "#076678", brightMagenta: "#8f3f71",
+      brightCyan: "#427b58", brightWhite: "#3c3836",
+    },
+  },
+};
+
+const STORAGE_KEY_THEME = "hermes_terminal_theme";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -28,6 +233,7 @@ const terminalRef = ref<HTMLDivElement | null>(null);
 const showSessions = ref(true);
 const sessions = ref<SessionInfo[]>([]);
 const activeSessionId = ref<string | null>(null);
+const selectedTheme = ref(localStorage.getItem(STORAGE_KEY_THEME) || "default");
 
 let ws: WebSocket | null = null;
 // Keep all terminal instances alive, only dispose on close
@@ -44,6 +250,17 @@ let mobileQuery: MediaQueryList | null = null;
 
 const activeSession = computed(
   () => sessions.value.find((s) => s.id === activeSessionId.value) || null,
+);
+
+const themeOptions = computed(() =>
+  Object.entries(TERMINAL_THEMES).map(([key, val]) => ({
+    label: val.label,
+    value: key,
+  })),
+);
+
+const terminalBg = computed(
+  () => TERMINAL_THEMES[selectedTheme.value]?.theme.background ?? "#1a1a2e",
 );
 
 // ─── WebSocket ──────────────────────────────────────────────────
@@ -161,21 +378,7 @@ function getOrCreateTerm(id: string): { term: Terminal; fitAddon: FitAddon } {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      theme: {
-        background: "#1a1a2e",
-        foreground: "#e0e0e0",
-        cursor: "#4cc9f0",
-        cursorAccent: "#1a1a2e",
-        selectionBackground: "rgba(76, 201, 240, 0.3)",
-        black: "#000000",
-        red: "#e06c75",
-        green: "#98c379",
-        yellow: "#e5c07b",
-        blue: "#61afef",
-        magenta: "#c678dd",
-        cyan: "#56b6c2",
-        white: "#abb2bf",
-      },
+      theme: { ...TERMINAL_THEMES[selectedTheme.value].theme },
     });
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
@@ -283,6 +486,18 @@ function sendResize() {
       rows: activeTerm.rows,
     });
   } catch {}
+}
+
+// ─── Theme ───────────────────────────────────────────────────────
+
+function applyTheme(themeName: string) {
+  selectedTheme.value = themeName;
+  localStorage.setItem(STORAGE_KEY_THEME, themeName);
+  const themeObj = TERMINAL_THEMES[themeName]?.theme;
+  if (!themeObj) return;
+  for (const entry of termMap.values()) {
+    entry.term.options.theme = { ...themeObj };
+  }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -440,6 +655,14 @@ onUnmounted(() => {
           }}</span>
         </div>
         <div class="header-actions">
+          <NSelect
+            :value="selectedTheme"
+            :options="themeOptions"
+            size="small"
+            :consistent-menu-width="false"
+            class="theme-select"
+            @update:value="applyTheme"
+          />
           <NButton size="small" @click="createSession">
             <template #icon>
               <svg
@@ -459,7 +682,7 @@ onUnmounted(() => {
         </div>
       </header>
       <div class="terminal-container">
-        <div ref="terminalRef" class="terminal-xterm" />
+        <div ref="terminalRef" class="terminal-xterm" :style="{ backgroundColor: terminalBg }" />
       </div>
     </div>
   </div>
@@ -692,8 +915,12 @@ onUnmounted(() => {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.theme-select {
+  width: 130px;
 }
 
 // ─── Terminal container ─────────────────────────────────────────
@@ -711,7 +938,6 @@ onUnmounted(() => {
   flex: 1;
   border-radius: $radius-md;
   overflow: hidden;
-  background-color: #1a1a2e;
   border: 1px solid $border-color;
 
   :deep(.xterm) {
