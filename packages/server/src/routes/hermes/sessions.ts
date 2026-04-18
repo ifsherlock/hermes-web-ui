@@ -1,5 +1,6 @@
 import Router from '@koa/router'
 import * as hermesCli from '../../services/hermes/hermes-cli'
+import { listSessionSummaries } from '../../services/hermes/sessions-db'
 
 export const sessionRoutes = new Router()
 
@@ -7,6 +8,15 @@ export const sessionRoutes = new Router()
 sessionRoutes.get('/api/hermes/sessions', async (ctx) => {
   const source = (ctx.query.source as string) || undefined
   const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
+
+  try {
+    const sessions = await listSessionSummaries(source, limit && limit > 0 ? limit : 2000)
+    ctx.body = { sessions }
+    return
+  } catch (err) {
+    console.warn('[Hermes Session DB] summary query failed, falling back to CLI:', err)
+  }
+
   const sessions = await hermesCli.listSessions(source, limit)
   ctx.body = { sessions }
 })
