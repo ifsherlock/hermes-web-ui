@@ -52,6 +52,8 @@ export default {
     settings: 'Settings',
     connected: 'Connected',
     disconnected: 'Disconnected',
+    collapse: 'Collapse menu',
+    expand: 'Expand menu',
     updateTip: 'Run "hermes-web-ui update" in terminal to update',
     updateVersion: 'Upgrade to v{version}',
     updating: 'Updating...',

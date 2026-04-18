@@ -36,17 +36,43 @@ async function handleUpdate() {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ open: appStore.sidebarOpen }">
-    <div class="sidebar-logo" @click="router.push('/hermes/chat')">
-      <img src="/logo.png" alt="Hermes" class="logo-img" />
-      <span class="logo-text">Hermes</span>
-      <video class="logo-dance" :src="isDark ? danceVideoDark : danceVideoLight" autoplay loop muted playsinline />
+  <aside class="sidebar" :class="{ open: appStore.sidebarOpen, collapsed: appStore.sidebarCollapsed }">
+    <div class="sidebar-logo">
+      <button
+        type="button"
+        class="logo-main"
+        :title="appStore.sidebarCollapsed ? t('sidebar.expand') : 'Hermes'"
+        @click="router.push('/hermes/chat')"
+      >
+        <img src="/logo.png" alt="Hermes" class="logo-img" />
+        <span class="logo-text">Hermes</span>
+      </button>
+      <video
+        class="logo-dance"
+        :src="isDark ? danceVideoDark : danceVideoLight"
+        autoplay
+        loop
+        muted
+        playsinline
+      />
+      <button
+        type="button"
+        class="sidebar-collapse-btn"
+        :title="appStore.sidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse')"
+        @click="appStore.toggleSidebarCollapsed"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline v-if="appStore.sidebarCollapsed" points="9 18 15 12 9 6" />
+          <polyline v-else points="15 18 9 12 15 6" />
+        </svg>
+      </button>
     </div>
 
     <nav class="sidebar-nav">
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.chat' }"
+        :title="t('sidebar.chat')"
         @click="handleNav('hermes.chat')"
       >
         <svg
@@ -69,6 +95,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.jobs' }"
+        :title="t('sidebar.jobs')"
         @click="handleNav('hermes.jobs')"
       >
         <svg
@@ -92,6 +119,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.models' }"
+        :title="t('sidebar.models')"
         @click="handleNav('hermes.models')"
       >
         <svg
@@ -120,6 +148,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.channels' }"
+        :title="t('sidebar.channels')"
         @click="handleNav('hermes.channels')"
       >
         <svg
@@ -140,6 +169,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.skills' }"
+        :title="t('sidebar.skills')"
         @click="handleNav('hermes.skills')"
       >
         <svg
@@ -162,6 +192,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.memory' }"
+        :title="t('sidebar.memory')"
         @click="handleNav('hermes.memory')"
       >
         <svg
@@ -184,6 +215,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.logs' }"
+        :title="t('sidebar.logs')"
         @click="handleNav('hermes.logs')"
       >
         <svg
@@ -210,6 +242,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.usage' }"
+        :title="t('sidebar.usage')"
         @click="handleNav('hermes.usage')"
       >
         <svg
@@ -253,6 +286,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.terminal' }"
+        :title="t('sidebar.terminal')"
         @click="handleNav('hermes.terminal')"
       >
         <svg
@@ -274,6 +308,7 @@ async function handleUpdate() {
       <button
         class="nav-item"
         :class="{ active: selectedKey === 'hermes.settings' }"
+        :title="t('sidebar.settings')"
         @click="handleNav('hermes.settings')"
       >
         <svg
@@ -355,11 +390,10 @@ async function handleUpdate() {
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 20px 12px;
   margin: 0 -12px;
   color: $text-primary;
-  cursor: pointer;
   background-color: $bg-card;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
@@ -369,6 +403,20 @@ async function handleUpdate() {
   position: relative;
   overflow: hidden;
 
+  .logo-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    text-align: left;
+  }
+
   .logo-text {
     font-size: 18px;
     font-weight: 600;
@@ -377,7 +425,8 @@ async function handleUpdate() {
 
   .logo-dance {
     position: absolute;
-    right: 12px;
+    // Give the 36-wide collapse button + 12px sidebar padding breathing room.
+    right: 54px;
     top: 50%;
     transform: translateY(-50%);
     height: 100px;
@@ -386,6 +435,53 @@ async function handleUpdate() {
     flex-shrink: 0;
     width: auto;
     pointer-events: none;
+  }
+}
+
+.sidebar-collapse-btn {
+  flex-shrink: 0;
+  // 36×36 meets the 44dp Material / 44pt Apple touch-target floor after
+  // typical zoom-out (e.g. Chrome mobile at 80% → ~29 physical px, still
+  // finger-friendly). The 14×14 SVG inside keeps the chevron visually small.
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $border-color;
+  background: $bg-card;
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 2;
+  transition: all $transition-fast;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+
+  // Invisible padding via ::before extends the hit box a further 6px on each
+  // side without affecting layout — makes the button easy to tap even with
+  // imprecise touch input.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: $text-primary;
+    border-color: $accent-muted;
+    background: $bg-card-hover;
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.06);
+    transform: scale(0.94);
   }
 }
 
@@ -496,8 +592,75 @@ async function handleUpdate() {
   border-radius: 4px;
 }
 
+// Desktop-only collapsed ("icon rail") state. Mobile continues to use the
+// slide-in open/close behaviour below.
+@media (min-width: #{$breakpoint-mobile + 1px}) {
+  .sidebar.collapsed {
+    width: $sidebar-collapsed-width;
+    padding: 0 6px 16px;
+
+    .sidebar-logo {
+      padding: 16px 6px;
+      margin: 0 -6px;
+      gap: 4px;
+      justify-content: center;
+
+      .logo-main {
+        flex: 0 0 auto;
+        justify-content: center;
+      }
+
+      .logo-text,
+      .logo-dance {
+        display: none;
+      }
+    }
+
+    .nav-item {
+      justify-content: center;
+      padding: 12px 0;
+      gap: 0;
+
+      span {
+        display: none;
+      }
+    }
+
+    :deep(.model-selector) {
+      display: none;
+    }
+
+    .sidebar-footer {
+      padding-top: 12px;
+    }
+
+    .status-row {
+      padding: 8px 0;
+      justify-content: center;
+
+      :deep(.input-sm),
+      .status-text {
+        display: none;
+      }
+
+      .status-indicator {
+        gap: 0;
+      }
+    }
+
+    .version-info {
+      display: none;
+    }
+  }
+}
+
 @media (max-width: $breakpoint-mobile) {
   .logo-dance {
+    display: none;
+  }
+
+  // Desktop-only collapse toggle — mobile relies on the slide-in open state.
+  .sidebar-collapse-btn {
     display: none;
   }
 

@@ -52,6 +52,8 @@ export default {
     settings: '设置',
     connected: '已连接',
     disconnected: '未连接',
+    collapse: '收起菜单',
+    expand: '展开菜单',
     updateTip: '在终端运行 "hermes-web-ui update" 即可更新',
     updateVersion: '升级版本 v{version}',
     updating: '正在更新...',
