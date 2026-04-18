@@ -1,5 +1,9 @@
-import { DatabaseSync } from 'node:sqlite'
 import { getActiveProfileDir } from './hermes-profile'
+
+const SQLITE_AVAILABLE = (() => {
+  const [major, minor] = process.versions.node.split('.').map(Number)
+  return major > 22 || (major === 22 && minor >= 5)
+})()
 
 export interface HermesSessionRow {
   id: string
@@ -115,6 +119,11 @@ const BASE_SELECT = `
 `
 
 export async function listSessionSummaries(source?: string, limit = 2000): Promise<HermesSessionRow[]> {
+  if (!SQLITE_AVAILABLE) {
+    throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
+  }
+
+  const { DatabaseSync } = await import('node:sqlite')
   const db = new DatabaseSync(sessionDbPath(), { open: true, readOnly: true })
 
   try {

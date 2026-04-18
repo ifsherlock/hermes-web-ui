@@ -6,7 +6,7 @@ const closeMock = vi.fn()
 const databaseSyncMock = vi.fn(() => ({ prepare: prepareMock, close: closeMock }))
 const getActiveProfileDirMock = vi.fn(() => '/tmp/hermes-profile')
 
-vi.mock('node:sqlite', () => ({
+vi.doMock('node:sqlite', () => ({
   DatabaseSync: databaseSyncMock,
 }))
 
