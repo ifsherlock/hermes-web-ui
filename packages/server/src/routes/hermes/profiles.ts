@@ -5,36 +5,7 @@ import { basename, join } from 'path'
 import { tmpdir, homedir } from 'os'
 import YAML from 'js-yaml'
 import * as hermesCli from '../../services/hermes/hermes-cli'
-
-const apiServerDefaults = {
-  enabled: true,
-  host: '127.0.0.1',
-  port: 8642,
-  key: '',
-  cors_origins: '*',
-}
-
-function ensureApiServerConfig(profilePath: string) {
-  const configPath = join(profilePath, 'config.yaml')
-  try {
-    if (!existsSync(configPath)) {
-      // Profile has no config.yaml — run hermes setup --reset to generate full defaults,
-      // then inject api_server config (setup itself doesn't add it)
-      console.log(`[Profile] No config.yaml for ${profilePath}, running setup --reset`)
-      return { needSetup: true, path: profilePath }
-    }
-    const content = readFileSync(configPath, 'utf-8')
-    const cfg = YAML.load(content) as any || {}
-    if (!cfg.platforms) cfg.platforms = {}
-    if (!cfg.platforms.api_server) {
-      cfg.platforms.api_server = { ...apiServerDefaults }
-      writeFileSync(configPath, YAML.dump(cfg), 'utf-8')
-      console.log(`[Profile] Ensured api_server config for: ${profilePath}`)
-    }
-    return { needSetup: false, path: profilePath }
-  } catch { }
-  return { needSetup: false, path: profilePath }
-}
+import { getGatewayManager } from './gateways'
 
 export const profileRoutes = new Router()
 
@@ -92,6 +63,12 @@ profileRoutes.delete('/api/hermes/profiles/:name', async (ctx) => {
   }
 
   try {
+    // Stop gateway for this profile before deleting
+    const mgr = getGatewayManager()
+    if (mgr) {
+      try { await mgr.stop(name) } catch { }
+    }
+
     const ok = await hermesCli.deleteProfile(name)
     if (ok) {
       ctx.body = { success: true }
@@ -141,70 +118,32 @@ profileRoutes.put('/api/hermes/profiles/active', async (ctx) => {
   }
 
   try {
-    // 1. Stop gateway
-    try { await hermesCli.stopGateway() } catch { }
-
-    // 2. Kill gateway by port if still running
-    try {
-      const { execSync } = await import('child_process')
-      const isWin = process.platform === 'win32'
-      let pids = ''
-      if (isWin) {
-        const out = execSync('netstat -aon | findstr :8642', { encoding: 'utf-8', timeout: 5000 }).trim()
-        const lines = out.split('\n').filter(l => l.includes('LISTENING'))
-        pids = Array.from(new Set(lines.map(l => l.trim().split(/\s+/).pop()).filter(Boolean))).join(' ')
-      } else {
-        pids = execSync('lsof -ti:8642', { encoding: 'utf-8', timeout: 5000 }).trim()
-      }
-      if (pids) {
-        if (isWin) {
-          execSync(`taskkill /F /PID ${pids.split(' ').join(' /PID ')}`, { timeout: 5000 })
-        } else {
-          execSync(`kill -9 ${pids}`, { timeout: 5000 })
-        }
-        await new Promise(r => setTimeout(r, 2000))
-      }
-    } catch { }
-
-    // 3. Switch profile
+    // 1. Switch profile only (no gateway stop/restart)
     const output = await hermesCli.useProfile(name)
     await new Promise(r => setTimeout(r, 1000))
 
-    // 4. Ensure api_server config for new profile
+    // 2. Update GatewayManager active profile
+    const mgr = getGatewayManager()
+    if (mgr) {
+      mgr.setActiveProfile(name)
+    }
+
+    // 3. Ensure api_server config for new profile
     try {
       const detail = await hermesCli.getProfile(name)
       console.log(`[Profile] detail.path = ${detail.path}`)
-      const result = ensureApiServerConfig(detail.path)
-      if (result?.needSetup) {
-        // No config.yaml — run setup --reset to create full default config,
-        // then ensure api_server is present
+      if (!existsSync(join(detail.path, 'config.yaml'))) {
+        // No config.yaml — run setup --reset to create full default config
         try { await hermesCli.setupReset() } catch { }
-        ensureApiServerConfig(detail.path)
       }
       // Create .env if target has none
       const profileEnv = join(detail.path, '.env')
-      console.log(`[Profile] .env exists: ${existsSync(profileEnv)}, path: ${profileEnv}`)
       if (!existsSync(profileEnv)) {
         writeFileSync(profileEnv, '# Hermes Agent Environment Configuration\n', 'utf-8')
         console.log(`[Profile] Created .env for: ${detail.path}`)
       }
     } catch (err: any) {
       console.error(`[Profile] Ensure config failed:`, err.message)
-    }
-
-    // 5. Start gateway
-    try {
-      await hermesCli.startGateway()
-      console.log('[Profile] Gateway started')
-    } catch {
-      // Fallback: background mode (for WSL etc.)
-      try {
-        const pid = await hermesCli.startGatewayBackground()
-        await new Promise(r => setTimeout(r, 3000))
-        console.log(`[Profile] Gateway started in background mode (PID: ${pid})`)
-      } catch (err: any) {
-        console.error('[Profile] Gateway start failed:', err.message)
-      }
     }
 
     ctx.body = { success: true, message: output.trim() }

@@ -35,6 +35,8 @@ export default {
     confirm: '确定',
     expand: '展开',
     collapse: '收起',
+    start: '启动',
+    stop: '停止',
   },
 
   // 侧边栏
@@ -48,7 +50,14 @@ export default {
     logs: '日志',
     usage: '用量',
     channels: '频道',
+    gateways: '网关',
     terminal: '终端',
+    groupConversation: '对话',
+    groupPlatform: '平台',
+    groupAgent: '代理',
+    groupSystem: '系统',
+    groupMonitoring: '监控',
+    groupTools: '工具',
     settings: '设置',
     connected: '已连接',
     disconnected: '未连接',
@@ -65,6 +74,8 @@ export default {
     inputPlaceholder: '输入消息... (Enter 发送，Shift+Enter 换行)',
     attachFiles: '添加附件',
     stop: '停止',
+    start: '启动',
+    stopGateway: '停止网关',
     send: '发送',
     contextUsed: '上下文已用:',
     sessions: '会话',
@@ -415,6 +426,16 @@ export default {
     qrFetching: '正在获取二维码...',
     qrScanHint: '使用微信扫描二维码登录',
     qrScanedHint: '已扫描，请在手机上确认...',
+  },
+
+  // 网关
+  gateways: {
+    title: '网关',
+    running: '运行中',
+    stopped: '已停止',
+    started: '已启动',
+    startFailed: '启动失败',
+    stopFailed: '停止失败',
   },
 
   // 语言

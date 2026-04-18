@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { NSelect } from 'naive-ui'
+import { NSelect, useMessage } from 'naive-ui'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const message = useMessage()
 const profilesStore = useProfilesStore()
 
 const options = computed(() =>
@@ -20,6 +21,7 @@ function handleChange(value: string | number | Array<string | number>) {
   if (typeof value === 'string' && value !== activeName.value) {
     profilesStore.switchProfile(value).then(ok => {
       if (ok) {
+        message.success(t('profiles.switchSuccess', { name: value }))
         window.location.reload()
       }
     })

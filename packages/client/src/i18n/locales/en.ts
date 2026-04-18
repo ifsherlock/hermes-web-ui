@@ -35,6 +35,8 @@ export default {
     confirm: 'Confirm',
     expand: 'Expand',
     collapse: 'Collapse',
+    start: 'Start',
+    stop: 'Stop',
   },
 
   // Sidebar
@@ -48,7 +50,14 @@ export default {
     logs: 'Logs',
     usage: 'Usage',
     channels: 'Channels',
+    gateways: 'Gateways',
     terminal: 'Terminal',
+    groupConversation: 'Conversation',
+    groupPlatform: 'Platform',
+    groupAgent: 'Agent',
+    groupSystem: 'System',
+    groupMonitoring: 'Monitoring',
+    groupTools: 'Tools',
     settings: 'Settings',
     connected: 'Connected',
     disconnected: 'Disconnected',
@@ -65,6 +74,8 @@ export default {
     inputPlaceholder: 'Type a message... (Enter to send, Shift+Enter for new line)',
     attachFiles: 'Attach files',
     stop: 'Stop',
+    start: 'Start',
+    stopGateway: 'Stop Gateway',
     send: 'Send',
     contextUsed: 'Context used:',
     sessions: 'Sessions',
@@ -218,6 +229,14 @@ export default {
   },
 
   // Profiles
+  gateways: {
+    title: 'Gateways',
+    running: 'Running',
+    stopped: 'Stopped',
+    started: 'Started',
+    startFailed: 'Failed to start gateway',
+    stopFailed: 'Failed to stop gateway',
+  },
   profiles: {
     title: 'Profiles',
     create: 'Create Profile',

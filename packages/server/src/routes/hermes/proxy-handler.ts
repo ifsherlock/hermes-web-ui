@@ -1,5 +1,6 @@
 import type { Context } from 'koa'
 import { config } from '../../config'
+import { getGatewayManager } from './gateways'
 
 function isTransientGatewayError(err: any): boolean {
   const msg = String(err?.message || '')
@@ -27,8 +28,24 @@ async function waitForGatewayReady(upstream: string, timeoutMs: number = 5000): 
   return false
 }
 
+/** Resolve upstream URL for a request based on profile header/query */
+function resolveUpstream(ctx: Context): string {
+  const mgr = getGatewayManager()
+  if (mgr) {
+    // Check X-Hermes-Profile header or ?profile= query param
+    const profile = ctx.get('x-hermes-profile') || (ctx.query.profile as string)
+    if (profile) {
+      return mgr.getUpstream(profile)
+    }
+    // Default to active profile's upstream
+    return mgr.getUpstream()
+  }
+  // Fallback: static upstream from config
+  return config.upstream.replace(/\/$/, '')
+}
+
 export async function proxy(ctx: Context) {
-  const upstream = config.upstream.replace(/\/$/, '')
+  const upstream = resolveUpstream(ctx)
   // Rewrite path for upstream gateway:
   //   /api/hermes/v1/* -> /v1/*  (upstream uses /v1/ prefix)
   //   /api/hermes/*     -> /api/* (upstream uses /api/ prefix)

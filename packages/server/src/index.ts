@@ -58,6 +58,7 @@ let isShuttingDown = false
 
 // 👉 如果你有子进程，一定要存
 let gatewayPid: number | null = null
+let gatewayManager: any = null
 
 export async function bootstrap() {
   await mkdir(config.uploadDir, { recursive: true })
@@ -70,8 +71,7 @@ export async function bootstrap() {
     console.log(`🔐 Auth enabled — token: ${authToken}`)
   }
 
-  await ensureApiServerConfig()
-  await ensureGatewayRunning()
+  await initGatewayManager()
 
   app.use(cors({ origin: config.corsOrigins }))
   app.use(bodyParser())
@@ -115,7 +115,8 @@ export async function bootstrap() {
 
       let gatewayOk = false
       try {
-        const res = await fetch(`${config.upstream.replace(/\/$/, '')}/health`, {
+        const upstream = gatewayManager?.getUpstream() || config.upstream
+        const res = await fetch(`${upstream.replace(/\/$/, '')}/health`, {
           signal: AbortSignal.timeout(5000),
         })
         gatewayOk = res.ok
@@ -191,13 +192,7 @@ function bindShutdown() {
         })
       }
 
-      // ✅ 2. 关闭子进程（如果有）
-      if (gatewayPid) {
-        try {
-          process.kill(gatewayPid)
-          console.log(`✓ gateway process killed: ${gatewayPid}`)
-        } catch { }
-      }
+      // gateway 是系统服务，不随 dev server 退出而停止
 
     } catch (err) {
       console.error('shutdown error:', err)
@@ -226,78 +221,23 @@ function bindShutdown() {
 }
 
 // ============================
-// 你的原逻辑（基本不动）
+// Gateway Manager
 // ============================
 
-async function ensureApiServerConfig() {
-  const { readFileSync, writeFileSync, existsSync, copyFileSync } = await import('fs')
-  const yaml = (await import('js-yaml')).default
-  const { getActiveConfigPath } = await import('./services/hermes/hermes-profile')
-  const configPath = getActiveConfigPath()
+async function initGatewayManager() {
+  const { GatewayManager } = await import('./services/hermes/gateway-manager')
+  const { getActiveProfileName } = await import('./services/hermes/hermes-profile')
+  const { setGatewayManager } = await import('./routes/hermes/gateways')
 
-  const defaults: Record<string, any> = {
-    enabled: true,
-    host: '127.0.0.1',
-    port: 8642,
-    key: '',
-    cors_origins: '*',
-  }
+  const activeProfile = getActiveProfileName()
+  gatewayManager = new GatewayManager(activeProfile)
+  setGatewayManager(gatewayManager)
 
-  try {
-    if (!existsSync(configPath)) {
-      console.log('✗ config.yaml not found')
-      return
-    }
+  // Detect all running gateways
+  await gatewayManager.detectAllOnStartup()
 
-    const content = readFileSync(configPath, 'utf-8')
-    const cfg = yaml.load(content) as any || {}
-
-    if (!cfg.platforms) cfg.platforms = {}
-    if (!cfg.platforms.api_server) cfg.platforms.api_server = {}
-
-    cfg.platforms.api_server = defaults
-
-    copyFileSync(configPath, configPath + '.bak')
-    writeFileSync(configPath, yaml.dump(cfg), 'utf-8')
-
-    await restartGateway()
-  } catch (err: any) {
-    console.error('config error:', err.message)
-  }
-}
-
-async function ensureGatewayRunning() {
-  const upstream = config.upstream.replace(/\/$/, '')
-  const waitForGatewayReady = async (timeoutMs: number = 15000) => {
-    const deadline = Date.now() + timeoutMs
-    while (Date.now() < deadline) {
-      try {
-        const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(2000) })
-        if (res.ok) return true
-      } catch { }
-      await new Promise(r => setTimeout(r, 300))
-    }
-    return false
-  }
-
-  try {
-    const res = await fetch(`${upstream}/health`, { signal: AbortSignal.timeout(5000) })
-    if (res.ok) return
-  } catch { }
-
-  console.log('⚠ Gateway not running, starting...')
-
-  try {
-    // 👉 关键：保存 PID
-    gatewayPid = await startGatewayBackground()
-    if (await waitForGatewayReady()) {
-      console.log(`✓ Gateway started (PID: ${gatewayPid})`)
-    } else {
-      console.error('gateway start failed: timed out waiting for health')
-    }
-  } catch (err: any) {
-    console.error('gateway start failed:', err.message)
-  }
+  // Start all gateways that aren't running
+  await gatewayManager.startAll()
 }
 
 bootstrap()
