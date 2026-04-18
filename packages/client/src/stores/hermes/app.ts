@@ -4,8 +4,12 @@ import { checkHealth, fetchAvailableModels, updateDefaultModel, triggerUpdate, t
 
 const WEB_UI_VERSION = __APP_VERSION__
 
+const SIDEBAR_COLLAPSED_KEY = 'hermes_sidebar_collapsed'
+
 export const useAppStore = defineStore('app', () => {
   const sidebarOpen = ref(false)
+  // Desktop-only collapsed state (icon-rail mode). Persisted to localStorage.
+  const sidebarCollapsed = ref(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1')
 
   const connected = ref(false)
   const serverVersion = ref(WEB_UI_VERSION)
@@ -90,10 +94,21 @@ export const useAppStore = defineStore('app', () => {
     sidebarOpen.value = false
   }
 
+  function toggleSidebarCollapsed() {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed.value ? '1' : '0')
+    } catch {
+      // ignore quota errors — fallback to in-memory only
+    }
+  }
+
   return {
     sidebarOpen,
+    sidebarCollapsed,
     toggleSidebar,
     closeSidebar,
+    toggleSidebarCollapsed,
     connected,
     serverVersion,
     latestVersion,
