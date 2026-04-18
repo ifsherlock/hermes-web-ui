@@ -190,6 +190,7 @@ export default {
   // 模型
   models: {
     title: '模型',
+    searchPlaceholder: '搜索模型...',
     addProvider: '添加 Provider',
     providerType: 'Provider 类型',
     preset: '预设',
