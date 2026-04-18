@@ -120,6 +120,6 @@ describe('session DB summaries', () => {
     expect(allMock).toHaveBeenCalledWith('telegram', 2)
     expect(rows[0].last_active).toBe(1710000100)
     expect(rows[0].source).toBe('telegram')
-    expect(rows[0].title).toBeNull()
+    expect(rows[0].title).toBe('preview text')
   })
 })

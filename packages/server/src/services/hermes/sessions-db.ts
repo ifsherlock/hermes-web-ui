@@ -48,12 +48,16 @@ function normalizeNullableString(value: unknown): string | null {
 
 function mapRow(row: Record<string, unknown>): HermesSessionRow {
   const startedAt = normalizeNumber(row.started_at)
+  const rawTitle = normalizeNullableString(row.title)
+  const preview = String(row.preview || '')
+  // Fallback: when no explicit title, use first user message as title (same as CLI path)
+  const title = rawTitle || (preview ? (preview.length > 40 ? preview.slice(0, 40) + '...' : preview) : null)
   return {
     id: String(row.id || ''),
     source: String(row.source || ''),
     user_id: normalizeNullableString(row.user_id),
     model: String(row.model || ''),
-    title: normalizeNullableString(row.title),
+    title,
     started_at: startedAt,
     ended_at: normalizeNullableNumber(row.ended_at),
     end_reason: normalizeNullableString(row.end_reason),
