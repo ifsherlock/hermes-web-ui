@@ -4,10 +4,6 @@ import {
   NTabs,
   NTabPane,
   NSpin,
-  NSwitch,
-  NInput,
-  NInputNumber,
-  useMessage,
 } from "naive-ui";
 import { useI18n } from "vue-i18n";
 import { useSettingsStore } from "@/stores/hermes/settings";
@@ -16,23 +12,13 @@ import AgentSettings from "@/components/hermes/settings/AgentSettings.vue";
 import MemorySettings from "@/components/hermes/settings/MemorySettings.vue";
 import SessionSettings from "@/components/hermes/settings/SessionSettings.vue";
 import PrivacySettings from "@/components/hermes/settings/PrivacySettings.vue";
-import SettingRow from "@/components/hermes/settings/SettingRow.vue";
 
 const settingsStore = useSettingsStore();
-const message = useMessage();
 const { t } = useI18n();
 
 onMounted(() => {
   settingsStore.fetchSettings();
 });
-async function saveApiServer(values: Record<string, any>) {
-  try {
-    await settingsStore.saveSection("platforms", { api_server: values });
-    message.success(t("settings.saved"));
-  } catch (err: any) {
-    message.error(t("settings.saveFailed"));
-  }
-}
 </script>
 
 <template>

@@ -32,6 +32,15 @@ profileRoutes.post('/api/hermes/profiles', async (ctx) => {
 
   try {
     const output = await hermesCli.createProfile(name, clone)
+
+    // 创建完成后启动该 profile 的网关
+    const mgr = getGatewayManager()
+    if (mgr) {
+      try { await mgr.start(name) } catch (err: any) {
+        console.error(`[Profile] Failed to start gateway for ${name}:`, err.message)
+      }
+    }
+
     ctx.body = { success: true, message: output.trim() }
   } catch (err: any) {
     ctx.status = 500

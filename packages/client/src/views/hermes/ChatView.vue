@@ -3,12 +3,16 @@ import { onMounted } from 'vue'
 import ChatPanel from '@/components/hermes/chat/ChatPanel.vue'
 import { useAppStore } from '@/stores/hermes/app'
 import { useChatStore } from '@/stores/hermes/chat'
+import { useProfilesStore } from '@/stores/hermes/profiles'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
+const profilesStore = useProfilesStore()
 
-onMounted(() => {
+onMounted(async () => {
   appStore.loadModels()
+  // 先加载 profile，确保缓存 key 使用正确的 profile name
+  await profilesStore.fetchProfiles()
   chatStore.loadSessions()
 })
 </script>

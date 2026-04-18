@@ -3,6 +3,7 @@ import { deleteSession as deleteSessionApi, fetchSession, fetchSessions, type He
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAppStore } from './app'
+import { useProfilesStore } from './profiles'
 
 export interface Attachment {
   id: string
@@ -160,17 +161,30 @@ function mapHermesSession(s: SessionSummary): Session {
 }
 
 // Cache keys for stale-while-revalidate loading of sessions / messages.
+// All keys include the active profile name to isolate cache between profiles.
 // Rendering from cache on boot avoids the multi-round-trip wait the user sees
 // every time they open the page (esp. noticeable on mobile).
-const STORAGE_KEY = 'hermes_active_session'
-const SESSIONS_CACHE_KEY = 'hermes_sessions_cache_v1'
-const MSGS_CACHE_KEY_PREFIX = 'hermes_session_msgs_v1_'
-// tmux-like resume: persist active run info so a refresh/reopen mid-run can
-// pick up the working indicator and poll fetchSession for new progress.
-const IN_FLIGHT_KEY_PREFIX = 'hermes_in_flight_v1_'
+const STORAGE_KEY_PREFIX = 'hermes_active_session_'
+const SESSIONS_CACHE_KEY_PREFIX = 'hermes_sessions_cache_v1_'
 const IN_FLIGHT_TTL_MS = 15 * 60 * 1000 // Give up after 15 minutes
 const POLL_INTERVAL_MS = 2000
 const POLL_STABLE_EXITS = 3 // 3 × 2s = 6s of no change → assume run finished
+
+// 获取当前 profile 名称，用于隔离缓存。
+// 从 profiles store 的 activeProfileName（同步 localStorage）读取，
+// 避免异步加载导致 chat store 初始化时拿到 null。
+function getProfileName(): string {
+  try {
+    return useProfilesStore().activeProfileName || 'default'
+  } catch {
+    return 'default'
+  }
+}
+
+function storageKey(): string { return STORAGE_KEY_PREFIX + getProfileName() }
+function sessionsCacheKey(): string { return SESSIONS_CACHE_KEY_PREFIX + getProfileName() }
+function msgsCacheKey(sid: string): string { return `hermes_session_msgs_v1_${getProfileName()}_${sid}_` }
+function inFlightKey(sid: string): string { return `hermes_in_flight_v1_${getProfileName()}_${sid}` }
 
 interface InFlightRun {
   runId: string
@@ -216,7 +230,7 @@ function sanitizeForCache(msgs: Message[]): Message[] {
 
 export const useChatStore = defineStore('chat', () => {
   const sessions = ref<Session[]>([])
-  const activeSessionId = ref<string | null>(localStorage.getItem(STORAGE_KEY))
+  const activeSessionId = ref<string | null>(null)
   const streamStates = ref<Map<string, AbortController>>(new Map())
   const isStreaming = computed(() => activeSessionId.value != null && streamStates.value.has(activeSessionId.value))
   const isLoadingSessions = ref(false)
@@ -235,25 +249,10 @@ export const useChatStore = defineStore('chat', () => {
   const activeSession = ref<Session | null>(null)
   const messages = computed<Message[]>(() => activeSession.value?.messages || [])
 
-  // Hydrate from cache synchronously so the UI renders instantly on boot.
-  // Network revalidation happens in loadSessions() below.
-  const cachedSessions = loadJson<Session[]>(SESSIONS_CACHE_KEY)
-  if (cachedSessions?.length) {
-    sessions.value = cachedSessions
-    if (activeSessionId.value) {
-      const cachedActive = cachedSessions.find(s => s.id === activeSessionId.value) || null
-      if (cachedActive) {
-        const cachedMsgs = loadJson<Message[]>(MSGS_CACHE_KEY_PREFIX + activeSessionId.value)
-        if (cachedMsgs) cachedActive.messages = cachedMsgs
-        activeSession.value = cachedActive
-      }
-    }
-  }
-
   function persistSessionsList() {
     // Cache lightweight summaries only (messages are cached per-session).
     saveJson(
-      SESSIONS_CACHE_KEY,
+      sessionsCacheKey(),
       sessions.value.map(s => ({ ...s, messages: [] })),
     )
   }
@@ -262,22 +261,22 @@ export const useChatStore = defineStore('chat', () => {
     const sid = activeSessionId.value
     if (!sid) return
     const s = sessions.value.find(sess => sess.id === sid)
-    if (s) saveJson(MSGS_CACHE_KEY_PREFIX + sid, sanitizeForCache(s.messages))
+    if (s) saveJson(msgsCacheKey(sid), sanitizeForCache(s.messages))
   }
 
   function markInFlight(sid: string, runId: string) {
-    saveJson(IN_FLIGHT_KEY_PREFIX + sid, { runId, startedAt: Date.now() } as InFlightRun)
+    saveJson(inFlightKey(sid), { runId, startedAt: Date.now() } as InFlightRun)
   }
 
   function clearInFlight(sid: string) {
-    removeItem(IN_FLIGHT_KEY_PREFIX + sid)
+    removeItem(inFlightKey(sid))
   }
 
   function readInFlight(sid: string): InFlightRun | null {
-    const rec = loadJson<InFlightRun>(IN_FLIGHT_KEY_PREFIX + sid)
+    const rec = loadJson<InFlightRun>(inFlightKey(sid))
     if (!rec) return null
     if (Date.now() - rec.startedAt > IN_FLIGHT_TTL_MS) {
-      removeItem(IN_FLIGHT_KEY_PREFIX + sid)
+      removeItem(inFlightKey(sid))
       return null
     }
     return rec
@@ -379,6 +378,22 @@ export const useChatStore = defineStore('chat', () => {
   async function loadSessions() {
     isLoadingSessions.value = true
     try {
+      // 从 profile 对应的缓存中恢复，实现 instant render
+      const cachedSessions = loadJson<Session[]>(sessionsCacheKey())
+      if (cachedSessions?.length) {
+        sessions.value = cachedSessions
+        const savedId = localStorage.getItem(storageKey())
+        if (savedId) {
+          const cachedActive = cachedSessions.find(s => s.id === savedId) || null
+          if (cachedActive) {
+            const cachedMsgs = loadJson<Message[]>(msgsCacheKey(savedId))
+            if (cachedMsgs) cachedActive.messages = cachedMsgs
+            activeSession.value = cachedActive
+            activeSessionId.value = savedId
+          }
+        }
+      }
+
       const list = await fetchSessions()
       const fresh = list.map(mapHermesSession)
       const freshIds = new Set(fresh.map(s => s.id))
@@ -455,7 +470,7 @@ export const useChatStore = defineStore('chat', () => {
 
   async function switchSession(sessionId: string) {
     activeSessionId.value = sessionId
-    localStorage.setItem(STORAGE_KEY, sessionId)
+    localStorage.setItem(storageKey(), sessionId)
     activeSession.value = sessions.value.find(s => s.id === sessionId) || null
 
     if (!activeSession.value) return
@@ -465,7 +480,7 @@ export const useChatStore = defineStore('chat', () => {
     // loading state while we fetch.
     const hasLocalMessages = activeSession.value.messages.length > 0
     if (!hasLocalMessages) {
-      const cachedMsgs = loadJson<Message[]>(MSGS_CACHE_KEY_PREFIX + sessionId)
+      const cachedMsgs = loadJson<Message[]>(msgsCacheKey(sessionId))
       if (cachedMsgs?.length) {
         activeSession.value.messages = cachedMsgs
       }
@@ -559,7 +574,7 @@ export const useChatStore = defineStore('chat', () => {
   async function deleteSession(sessionId: string) {
     await deleteSessionApi(sessionId)
     sessions.value = sessions.value.filter(s => s.id !== sessionId)
-    removeItem(MSGS_CACHE_KEY_PREFIX + sessionId)
+    removeItem(msgsCacheKey(sessionId))
     persistSessionsList()
     if (activeSessionId.value === sessionId) {
       if (sessions.value.length > 0) {
@@ -878,29 +893,11 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // Load sessions on init (cache has already hydrated the UI above).
-  loadSessions()
-
-  // tmux-like resume on boot: if the last active session has a persisted
-  // in-flight run that's still fresh, show the working indicator immediately
-  // and start polling the server. loadSessions() above will call
-  // switchSession which also triggers this path, but doing it synchronously
-  // here means the UI shows "working" from the very first frame even while
-  // loadSessions is still in flight.
-  if (activeSessionId.value && readInFlight(activeSessionId.value)) {
-    startPolling(activeSessionId.value)
-  }
-
-  // When the tab returns to the foreground, re-sync the active session from
-  // the server. Mobile browsers suspend tabs aggressively, and any in-flight
-  // run that completed while we were backgrounded won't have reached the
-  // in-memory state otherwise.
+  // Tab visibility: re-sync when returning to foreground
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && activeSessionId.value && !isStreaming.value) {
         void refreshActiveSession()
-        // Resume polling too in case we put a run in-flight before going to
-        // background and the SSE got killed.
         if (readInFlight(activeSessionId.value)) {
           startPolling(activeSessionId.value)
         }

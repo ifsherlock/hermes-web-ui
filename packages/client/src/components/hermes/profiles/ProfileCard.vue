@@ -35,20 +35,12 @@ async function toggleDetail() {
 }
 
 function handleSwitch() {
-  dialog.warning({
-    title: t('profiles.switchTo'),
-    content: t('profiles.switchConfirm', { name: props.profile.name }),
-    positiveText: t('common.confirm'),
-    negativeText: t('common.cancel'),
-    onPositiveClick: async () => {
-      profilesStore.switchProfile(props.profile.name).then(ok => {
-        if (ok) {
-          window.location.reload()
-        } else {
-          message.error(t('profiles.switchFailed'))
-        }
-      })
-    },
+  profilesStore.switchProfile(props.profile.name).then(ok => {
+    if (ok) {
+      window.location.reload()
+    } else {
+      message.error(t('profiles.switchFailed'))
+    }
   })
 }
 
