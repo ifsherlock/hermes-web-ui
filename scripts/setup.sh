@@ -14,7 +14,7 @@ err()   { echo -e "${RED}  ✗${NC} $1"; }
 install_node_deb() {
     echo ""
     warn "Node.js is not installed, installing via NodeSource..."
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - >/dev/null 2>&1
+    curl -fsSL https://deb.nodesource.com/setup_23.x | sudo -E bash - >/dev/null 2>&1
     sudo apt install -y nodejs >/dev/null 2>&1
     info "Node.js $(node -v) installed"
 }
@@ -30,9 +30,29 @@ install_node_mac() {
     info "Node.js $(node -v) installed"
 }
 
+MIN_NODE_MAJOR=23
+
 check_node() {
     if command -v node &>/dev/null; then
-        info "Node.js $(node -v) found ($(which node))"
+        local major
+        major=$(node -v | sed 's/^v//' | cut -d. -f1)
+        if [ "$major" -lt "$MIN_NODE_MAJOR" ] 2>/dev/null; then
+            warn "Node.js $(node -v) found but v${MIN_NODE_MAJOR}+ is required, upgrading..."
+            # Auto-upgrade based on OS
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                install_node_deb
+            elif command -v apt &>/dev/null; then
+                install_node_deb
+            elif command -v brew &>/dev/null || [[ "$OSTYPE" == "darwin"* ]]; then
+                install_node_mac
+            else
+                err "Node.js upgrade not supported on this system"
+                echo "    Install manually: https://nodejs.org/"
+                return 1
+            fi
+        else
+            info "Node.js $(node -v) found ($(which node))"
+        fi
         return 0
     fi
 

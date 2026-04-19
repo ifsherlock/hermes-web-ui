@@ -1,33 +1,33 @@
 import Router from '@koa/router'
 import { readdir, readFile, stat, writeFile, mkdir, copyFile } from 'fs/promises'
+import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import YAML from 'js-yaml'
-import { getActiveProfileDir, getActiveConfigPath, getActiveAuthPath, getActiveEnvPath } from '../../services/hermes/hermes-profile'
+import { getActiveProfileDir, getActiveConfigPath, getActiveEnvPath, getActiveAuthPath } from '../../services/hermes/hermes-profile'
 import * as hermesCli from '../../services/hermes/hermes-cli'
 
 // --- Provider env var mapping (from hermes providers.py HERMES_OVERLAYS + config.py) ---
 // Maps provider key → { api_key_envs: all env var aliases for API key, base_url_env: env var for base URL }
 const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_env: string }> = {
-  openrouter: { api_key_env: 'OPENROUTER_API_KEY', base_url_env: 'OPENROUTER_BASE_URL' },
-  zai: { api_key_env: 'ZAI_API_KEY', base_url_env: '' },
-  'kimi-coding': { api_key_env: 'KIMI_API_KEY', base_url_env: '' },
-  'kimi-coding-cn': { api_key_env: 'KIMI_API_KEY', base_url_env: '' },
-  moonshot: { api_key_env: 'MOONSHOT_API_KEY', base_url_env: 'MOONSHOT_BASE_URL' },
-  minimax: { api_key_env: 'MINIMAX_API_KEY', base_url_env: 'MINIMAX_BASE_URL' },
-  'minimax-cn': { api_key_env: 'MINIMAX_API_KEY', base_url_env: 'MINIMAX_CN_BASE_URL' },
-  deepseek: { api_key_env: 'DEEPSEEK_API_KEY', base_url_env: 'DEEPSEEK_BASE_URL' },
-  alibaba: { api_key_env: 'DASHSCOPE_API_KEY', base_url_env: 'DASHSCOPE_BASE_URL' },
+  openrouter: { api_key_env: 'OPENROUTER_API_KEY', base_url_env: '' },
+  zai: { api_key_env: 'GLM_API_KEY', base_url_env: '' },
+  'kimi-coding-cn': { api_key_env: 'KIMI_CN_API_KEY', base_url_env: '' },
+  moonshot: { api_key_env: 'MOONSHOT_API_KEY', base_url_env: '' },
+  minimax: { api_key_env: 'MINIMAX_API_KEY', base_url_env: '' },
+  'minimax-cn': { api_key_env: 'MINIMAX_CN_API_KEY', base_url_env: '' },
+  deepseek: { api_key_env: 'DEEPSEEK_API_KEY', base_url_env: '' },
+  alibaba: { api_key_env: 'DASHSCOPE_API_KEY', base_url_env: '' },
   anthropic: { api_key_env: 'ANTHROPIC_API_KEY', base_url_env: '' },
-  xai: { api_key_env: 'XAI_API_KEY', base_url_env: 'XAI_BASE_URL' },
-  xiaomi: { api_key_env: 'XIAOMI_API_KEY', base_url_env: 'XIAOMI_BASE_URL' },
+  xai: { api_key_env: 'XAI_API_KEY', base_url_env: '' },
+  xiaomi: { api_key_env: 'XIAOMI_API_KEY', base_url_env: '' },
   gemini: { api_key_env: 'GEMINI_API_KEY', base_url_env: '' },
-  kilocode: { api_key_env: 'KILO_API_KEY', base_url_env: 'KILOCODE_BASE_URL' },
+  kilocode: { api_key_env: 'KILO_API_KEY', base_url_env: '' },
   'ai-gateway': { api_key_env: 'AI_GATEWAY_API_KEY', base_url_env: '' },
-  'opencode-zen': { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_ZEN_BASE_URL' },
-  'opencode-go': { api_key_env: 'OPENCODE_API_KEY', base_url_env: 'OPENCODE_GO_BASE_URL' },
-  huggingface: { api_key_env: 'HF_TOKEN', base_url_env: 'HF_BASE_URL' },
+  'opencode-zen': { api_key_env: 'OPENCODE_API_KEY', base_url_env: '' },
+  'opencode-go': { api_key_env: 'OPENCODE_API_KEY', base_url_env: '' },
+  huggingface: { api_key_env: 'HF_TOKEN', base_url_env: '' },
   arcee: { api_key_env: 'ARCEE_API_KEY', base_url_env: '' },
-  'openai-codex': { api_key_env: '', base_url_env: 'HERMES_CODEX_BASE_URL' },
+  'openai-codex': { api_key_env: '', base_url_env: '' },
 }
 
 async function saveEnvValue(key: string, value: string): Promise<void> {
@@ -66,33 +66,6 @@ async function saveEnvValue(key: string, value: string): Promise<void> {
 
 // --- Auth / Credential Pool ---
 
-interface CredentialPoolEntry {
-  id: string
-  label: string
-  base_url: string
-  access_token: string
-  last_status?: string | null
-}
-
-interface AuthJson {
-  credential_pool?: Record<string, CredentialPoolEntry[]>
-}
-
-const authPath = () => getActiveAuthPath()
-
-async function loadAuthJson(): Promise<AuthJson | null> {
-  try {
-    const raw = await readFile(authPath(), 'utf-8')
-    return JSON.parse(raw) as AuthJson
-  } catch {
-    return null
-  }
-}
-
-async function saveAuthJson(auth: AuthJson): Promise<void> {
-  await writeFile(authPath(), JSON.stringify(auth, null, 2) + '\n', 'utf-8')
-}
-
 async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<string[]> {
   try {
     const url = baseUrl.replace(/\/+$/, '') + '/models'
@@ -101,12 +74,12 @@ async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<str
       signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) {
-      console.error(`[available-models] ${baseUrl} returned ${res.status}`)
+      console.warn(`[available-models] ${baseUrl} returned ${res.status}`)
       return []
     }
     const data = await res.json() as { data?: Array<{ id: string }> }
     if (!Array.isArray(data.data)) {
-      console.error(`[available-models] ${baseUrl} returned unexpected format`)
+      console.warn(`[available-models] ${baseUrl} returned unexpected format`)
       return []
     }
     return data.data.map(m => m.id).sort()
@@ -449,20 +422,12 @@ function buildModelGroups(config: Record<string, any>): { default: string; group
     }
   }
 
-  // 3. Add current default model (if not already in custom_providers)
-  if (defaultModel && !allModelIds.has(defaultModel)) {
-    groups.unshift({ provider: 'Current', models: [{ id: defaultModel, label: defaultModel }] })
-  }
-
   return { default: defaultModel, groups }
 }
 
-// GET /api/available-models — fetch models from all credential pool endpoints
+// GET /api/available-models — resolve models from .env authorized providers + credential pool + custom providers
 fsRoutes.get('/api/hermes/available-models', async (ctx) => {
   try {
-    const auth = await loadAuthJson()
-    const pool = auth?.credential_pool || {}
-
     const config = await readConfigYaml()
     const modelSection = config.model
     let currentDefault = ''
@@ -474,127 +439,125 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
       currentDefault = modelSection.trim()
     }
 
-    // Collect unique endpoints from credential pool
-    const endpoints: Array<{ key: string; label: string; base_url: string; token: string }> = []
-    const seenUrls = new Set<string>()
+    const groups: Array<{ provider: string; label: string; base_url: string; models: string[]; api_key: string }> = []
+    const seenProviders = new Set<string>()
 
-    for (const [providerKey, entries] of Object.entries(pool)) {
-      if (!Array.isArray(entries) || entries.length === 0) continue
-      const entry = entries.find(e => e.last_status !== 'exhausted') || entries[0]
-      if (!entry?.base_url || !entry?.access_token) continue
-      const baseUrl = entry.base_url.replace(/\/+$/, '')
-      if (seenUrls.has(baseUrl)) continue
-      seenUrls.add(baseUrl)
-      endpoints.push({
-        key: providerKey,
-        label: providerKey.replace(/^custom:/, '') || entry.label || baseUrl,
-        base_url: baseUrl,
-        token: entry.access_token,
-      })
+    // 1. Read .env to discover authorized providers via PROVIDER_ENV_MAP
+    let envContent = ''
+    try {
+      envContent = await readFile(getActiveEnvPath(), 'utf-8')
+    } catch { }
+
+    const envHasValue = (key: string): boolean => {
+      if (!key) return false
+      const match = envContent.match(new RegExp(`^${key}\\s*=\\s*(.+)`, 'm'))
+      return !!match && match[1].trim() !== '' && !match[1].trim().startsWith('#')
     }
 
-    // Resolve models: hardcoded catalog first, live probe as fallback
-    const groups: Array<{ provider: string; label: string; base_url: string; models: string[] }> = []
-    const liveEndpoints: typeof endpoints = []
+    const envGetValue = (key: string): string => {
+      if (!key) return ''
+      const match = envContent.match(new RegExp(`^${key}\\s*=\\s*(.+)`, 'm'))
+      return match?.[1]?.trim() || ''
+    }
 
-    for (const ep of endpoints) {
-      const catalogModels = PROVIDER_MODEL_CATALOG[ep.key]
-      if (catalogModels && catalogModels.length > 0) {
-        groups.push({ provider: ep.key, label: ep.label, base_url: ep.base_url, models: catalogModels })
-      } else {
-        liveEndpoints.push(ep)
+    const addGroup = (provider: string, label: string, base_url: string, models: string[], api_key: string) => {
+      if (seenProviders.has(provider)) return
+      seenProviders.add(provider)
+      groups.push({ provider, label, base_url, models: [...models], api_key })
+    }
+
+    // Import PROVIDER_PRESETS for label + base_url lookup
+    const { PROVIDER_PRESETS } = await import('../../shared/providers')
+
+    // 1. Authorized providers from .env + OAuth-based providers (no api_key_env)
+    // Check OAuth auth (e.g. openai-codex) via auth.json
+    const isOAuthAuthorized = (providerKey: string): boolean => {
+      try {
+        const authPath = getActiveAuthPath()
+        if (!existsSync(authPath)) return false
+        const auth = JSON.parse(readFileSync(authPath, 'utf-8'))
+        return !!auth.providers?.[providerKey]?.tokens?.access_token
+      } catch {
+        return false
       }
     }
 
-    if (liveEndpoints.length > 0) {
-      const results = await Promise.allSettled(
-        liveEndpoints.map(async ep => {
-          const models = await fetchProviderModels(ep.base_url, ep.token)
-          return { ...ep, models }
-        }),
-      )
+    for (const [providerKey, envMapping] of Object.entries(PROVIDER_ENV_MAP)) {
+      // Skip providers that require API key but don't have one configured
+      if (envMapping.api_key_env && !envHasValue(envMapping.api_key_env)) continue
+      // Skip OAuth providers that haven't been authenticated
+      if (!envMapping.api_key_env && !isOAuthAuthorized(providerKey)) continue
+      const preset = PROVIDER_PRESETS.find(p => p.value === providerKey)
+      const label = preset?.label || providerKey.replace(/^custom:/, '')
+      const baseUrl = preset?.base_url || ''
+      const catalogModels = PROVIDER_MODEL_CATALOG[providerKey]
+      if (catalogModels && catalogModels.length > 0) {
+        const apiKey = envMapping.api_key_env ? envGetValue(envMapping.api_key_env) : ''
+        addGroup(providerKey, label, baseUrl, catalogModels, apiKey)
+      }
+    }
 
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.models.length > 0) {
-          const { key, label, base_url, models } = result.value
-          groups.push({ provider: key, label, base_url, models: Array.from(new Set(models)) })
-        } else if (result.status === 'rejected') {
-          console.error(`[available-models] Failed: ${result.reason?.message || result.reason}`)
+    // 2. Custom providers from config.yaml — dynamically fetch models
+    const customProviders = Array.isArray(config.custom_providers)
+      ? config.custom_providers as Array<{ name: string; base_url: string; model: string; api_key?: string }>
+      : []
+
+    const customFetches = await Promise.allSettled(
+      customProviders.map(async cp => {
+        if (!cp.base_url) return null
+        const providerKey = `custom:${cp.name.trim().toLowerCase().replace(/ /g, '-')}`
+        const baseUrl = cp.base_url.replace(/\/+$/, '')
+        let models = [cp.model] // always include the statically configured model
+        if (cp.api_key) {
+          try {
+            const fetched = await fetchProviderModels(baseUrl, cp.api_key)
+            if (fetched.length > 0) models = fetched
+          } catch { }
+        }
+        return { providerKey, label: cp.name, base_url: baseUrl, models, api_key: cp.api_key || '' }
+      }),
+    )
+
+    for (const result of customFetches) {
+      if (result.status === 'fulfilled' && result.value) {
+        const { providerKey, label, base_url, models, api_key: cpApiKey } = result.value
+        const existing = groups.find(g => g.base_url.replace(/\/+$/, '') === base_url)
+        if (existing) {
+          for (const m of models) {
+            if (!existing.models.includes(m)) existing.models.push(m)
+          }
+        } else {
+          addGroup(providerKey, label, base_url, models, cpApiKey)
         }
       }
     }
 
-    // Deduplicate models within each group and merge groups with the same provider key
-    const dedupedGroups: typeof groups = []
-    const seenProviders = new Map<string, number>()
+    // Deduplicate models within each group
     for (const g of groups) {
       g.models = Array.from(new Set(g.models))
-      const existingIdx = seenProviders.get(g.provider)
-      if (existingIdx !== undefined) {
-        // Merge models into existing group
-        const existing = dedupedGroups[existingIdx]
-        const existingSet = new Set(existing.models)
-        for (const m of g.models) {
-          if (!existingSet.has(m)) existing.models.push(m)
-        }
-      } else {
-        seenProviders.set(g.provider, dedupedGroups.length)
-        dedupedGroups.push(g)
-      }
-    }
-
-    // Merge custom_providers from config.yaml (ensures manually-input model names appear)
-    const customProviders = Array.isArray(config.custom_providers)
-      ? config.custom_providers as Array<{ name: string; base_url: string; model: string }>
-      : []
-    for (const cp of customProviders) {
-      if (!cp.base_url || !cp.model) continue
-      const baseUrl = cp.base_url.replace(/\/+$/, '')
-      // Check if we already have a group for this base_url
-      const existing = dedupedGroups.find(g => g.base_url.replace(/\/+$/, '') === baseUrl)
-      if (existing) {
-        if (!existing.models.includes(cp.model)) {
-          existing.models.push(cp.model)
-        }
-      } else {
-        dedupedGroups.push({
-          provider: `custom:${cp.name.trim().toLowerCase().replace(/ /g, '-')}`,
-          label: cp.name,
-          base_url: baseUrl,
-          models: [cp.model],
-        })
-      }
-    }
-
-    // Ensure config's current default model appears in the model list
-    if (currentDefault) {
-      const currentProvider = typeof config.model === 'object' ? String(config.model.provider || '').trim() : ''
-      if (currentProvider) {
-        const targetGroup = dedupedGroups.find(g => g.provider === currentProvider)
-        if (targetGroup && !targetGroup.models.includes(currentDefault)) {
-          targetGroup.models.unshift(currentDefault)
-        }
-      } else {
-        // No provider specified — add to the first group that matches via base_url
-        // or just prepend to all groups
-        let found = false
-        for (const g of dedupedGroups) {
-          if (!found && !g.models.includes(currentDefault)) {
-            g.models.unshift(currentDefault)
-            found = true
-          }
-        }
-      }
     }
 
     // Fallback: if still no providers, fall back to config.yaml parsing
-    if (dedupedGroups.length === 0) {
+    if (groups.length === 0) {
       const fallback = buildModelGroups(config)
-      ctx.body = fallback
+      const allProviders = PROVIDER_PRESETS.map(p => ({
+        provider: p.value,
+        label: p.label,
+        base_url: p.base_url,
+        models: p.models,
+      }))
+      ctx.body = { ...fallback, allProviders }
       return
     }
 
-    ctx.body = { default: currentDefault, default_provider: currentDefaultProvider, groups: dedupedGroups }
+    const allProviders = PROVIDER_PRESETS.map(p => ({
+      provider: p.value,
+      label: p.label,
+      base_url: p.base_url,
+      models: p.models,
+    }))
+
+    ctx.body = { default: currentDefault, default_provider: currentDefaultProvider, groups, allProviders }
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
@@ -683,21 +646,6 @@ fsRoutes.post('/api/hermes/config/providers', async (ctx) => {
       await writeConfigYaml(config)
     }
 
-    // Write to auth.json credential_pool (all providers)
-    const auth = await loadAuthJson() || { credential_pool: {} }
-    if (!auth.credential_pool) auth.credential_pool = {}
-    if (!auth.credential_pool[poolKey]) {
-      auth.credential_pool[poolKey] = []
-    }
-    auth.credential_pool[poolKey].push({
-      id: `${poolKey}-${Date.now()}`,
-      label: name,
-      base_url,
-      access_token: api_key,
-      last_status: null,
-    })
-    await saveAuthJson(auth)
-
     // Write API key to .env (built-in providers only)
     const envMapping = PROVIDER_ENV_MAP[poolKey] || PROVIDER_ENV_MAP[providerKey || '']
     if (envMapping) {
@@ -730,75 +678,134 @@ fsRoutes.post('/api/hermes/config/providers', async (ctx) => {
   }
 })
 
+// PUT /api/config/providers/:poolKey — update existing provider
+fsRoutes.put('/api/hermes/config/providers/:poolKey', async (ctx) => {
+  const poolKey = decodeURIComponent(ctx.params.poolKey)
+  const { name, base_url, api_key, model } = ctx.request.body as {
+    name?: string
+    base_url?: string
+    api_key?: string
+    model?: string
+  }
+
+  try {
+    const isCustom = poolKey.startsWith('custom:')
+
+    if (isCustom) {
+      // Update custom provider in config.yaml
+      const config = await readConfigYaml()
+      if (!Array.isArray(config.custom_providers)) {
+        ctx.status = 404
+        ctx.body = { error: `Custom provider "${poolKey}" not found` }
+        return
+      }
+      const entry = (config.custom_providers as any[]).find((e: any) => {
+        const key = `custom:${e.name.trim().toLowerCase().replace(/ /g, '-')}`
+        return key === poolKey
+      })
+      if (!entry) {
+        ctx.status = 404
+        ctx.body = { error: `Custom provider "${poolKey}" not found` }
+        return
+      }
+      if (name !== undefined) entry.name = name
+      if (base_url !== undefined) entry.base_url = base_url
+      if (api_key !== undefined) entry.api_key = api_key
+      if (model !== undefined) entry.model = model
+      await writeConfigYaml(config)
+    } else {
+      // Built-in provider: update API key in .env
+      const envMapping = PROVIDER_ENV_MAP[poolKey]
+      if (!envMapping?.api_key_env) {
+        // OAuth provider — cannot update key
+        ctx.status = 400
+        ctx.body = { error: `Cannot update credentials for "${poolKey}"` }
+        return
+      }
+      if (api_key !== undefined) {
+        await saveEnvValue(envMapping.api_key_env, api_key)
+      }
+    }
+
+    // Restart gateway to pick up changes
+    try {
+      await hermesCli.restartGateway()
+    } catch (e: any) {
+      console.error('[Provider] Gateway restart failed:', e.message)
+    }
+
+    ctx.body = { success: true }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+})
+
 // DELETE /api/config/providers/:poolKey
 fsRoutes.delete('/api/hermes/config/providers/:poolKey', async (ctx) => {
   const poolKey = decodeURIComponent(ctx.params.poolKey)
 
   try {
-    const auth = await loadAuthJson()
-    if (!auth?.credential_pool) {
-      ctx.status = 404
-      ctx.body = { error: 'No credential pool found' }
-      return
-    }
+    const config = await readConfigYaml()
+    const isCustom = poolKey.startsWith('custom:')
 
-    const keys = Object.keys(auth.credential_pool)
-
-    if (keys.length <= 1) {
-      ctx.status = 400
-      ctx.body = { error: 'Cannot delete the last provider' }
-      return
-    }
-
-    // Case-insensitive key lookup: normalize poolKey to match credential_pool
-    let resolvedKey = poolKey
-    if (!(poolKey in auth.credential_pool)) {
-      const normalized = poolKey.toLowerCase()
-      const match = Object.keys(auth.credential_pool).find(k => k.toLowerCase() === normalized)
-      if (!match) {
+    if (isCustom) {
+      // Delete from config.yaml custom_providers
+      const idx = Array.isArray(config.custom_providers)
+        ? (config.custom_providers as any[]).findIndex((e: any) => {
+          const key = `custom:${e.name.trim().toLowerCase().replace(/ /g, '-')}`
+          return key === poolKey
+        })
+        : -1
+      if (idx === -1) {
         ctx.status = 404
-        ctx.body = { error: `Provider "${poolKey}" not found` }
+        ctx.body = { error: `Custom provider "${poolKey}" not found` }
         return
       }
-      resolvedKey = match
-    }
-
-    // Check if this is the current active provider
-    const config = await readConfigYaml()
-    const currentProvider = config.model?.provider
-    const isCurrent = currentProvider === poolKey || currentProvider === resolvedKey
-
-    // Save base_url before deleting
-    const deletedBaseUrl = auth.credential_pool[resolvedKey]?.[0]?.base_url
-
-    // 1. Delete from auth.json
-    delete auth.credential_pool[resolvedKey]
-    await saveAuthJson(auth)
-
-    // 2. Remove matching entry from config.yaml custom_providers
-    if (deletedBaseUrl && Array.isArray(config.custom_providers)) {
-      config.custom_providers = (config.custom_providers as any[]).filter(
-        (entry: any) => entry.base_url !== deletedBaseUrl,
-      )
+      (config.custom_providers as any[]).splice(idx, 1)
       await writeConfigYaml(config)
+    } else {
+      // Built-in provider: remove API key from .env
+      const envMapping = PROVIDER_ENV_MAP[poolKey]
+      if (envMapping?.api_key_env) {
+        await saveEnvValue(envMapping.api_key_env, '')
+      } else if (!envMapping?.api_key_env) {
+        // OAuth provider (e.g. openai-codex): clear tokens from auth.json
+        try {
+          const authPath = getActiveAuthPath()
+          if (existsSync(authPath)) {
+            const auth = JSON.parse(readFileSync(authPath, 'utf-8'))
+            if (auth.providers?.[poolKey]) {
+              delete auth.providers[poolKey]
+            }
+            if (auth.credential_pool?.[poolKey]) {
+              delete auth.credential_pool[poolKey]
+            }
+            const { writeFile: wfs } = await import('fs/promises')
+            await wfs(authPath, JSON.stringify(auth, null, 2) + '\n', 'utf-8')
+          }
+        } catch (err: any) {
+          console.error(`[Provider] Failed to clear OAuth tokens for ${poolKey}:`, err.message)
+        }
+      }
     }
 
-    // 3. If was the current provider, switch to first remaining
+    // If was the current provider, switch to first remaining
+    const currentProvider = config.model?.provider
+    const isCurrent = currentProvider === poolKey
     if (isCurrent) {
-      const remainingKeys = Object.keys(auth.credential_pool)
-      if (remainingKeys.length > 0) {
-        const fallback = remainingKeys[0]
-        const fallbackEntry = auth.credential_pool[fallback]?.[0]
-        const catalogModels = PROVIDER_MODEL_CATALOG[fallback] || []
-        const fallbackModel = catalogModels[0] || fallbackEntry?.label || fallback
-
-        const config2 = await readConfigYaml()
-        if (typeof config2.model !== 'object' || config2.model === null) {
-          config2.model = {}
+      // Find fallback from .env authorized providers or remaining custom_providers
+      const freshConfig = await readConfigYaml()
+      const remaining = Array.isArray(freshConfig.custom_providers) ? freshConfig.custom_providers as any[] : []
+      const fallbackCp = remaining[0]
+      if (fallbackCp) {
+        const fallbackKey = `custom:${fallbackCp.name.trim().toLowerCase().replace(/ /g, '-')}`
+        if (typeof freshConfig.model !== 'object' || freshConfig.model === null) {
+          freshConfig.model = {}
         }
-        config2.model.default = fallbackModel
-        config2.model.provider = fallback
-        await writeConfigYaml(config2)
+        freshConfig.model.default = fallbackCp.model
+        freshConfig.model.provider = fallbackKey
+        await writeConfigYaml(freshConfig)
       }
     }
 

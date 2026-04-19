@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { NButton, useMessage, useDialog } from 'naive-ui'
 import type { AvailableModelGroup } from '@/api/hermes/system'
 import { useModelsStore } from '@/stores/hermes/models'
@@ -14,6 +14,7 @@ const dialog = useDialog()
 
 const isCustom = computed(() => props.provider.provider.startsWith('custom:'))
 const displayName = computed(() => props.provider.label)
+const deleting = ref(false)
 
 async function handleDelete() {
   dialog.warning({
@@ -22,11 +23,14 @@ async function handleDelete() {
     positiveText: t('common.delete'),
     negativeText: t('common.cancel'),
     onPositiveClick: async () => {
+      deleting.value = true
       try {
         await modelsStore.removeProvider(props.provider.provider)
         message.success(t('models.providerDeleted'))
       } catch (e: any) {
         message.error(e.message)
+      } finally {
+        deleting.value = false
       }
     },
   })
@@ -54,7 +58,7 @@ async function handleDelete() {
     </div>
 
     <div class="card-actions">
-      <NButton size="tiny" quaternary type="error" @click="handleDelete">{{ t('common.delete') }}</NButton>
+      <NButton size="tiny" quaternary type="error" :loading="deleting" @click="handleDelete">{{ t('common.delete') }}</NButton>
     </div>
   </div>
 </template>

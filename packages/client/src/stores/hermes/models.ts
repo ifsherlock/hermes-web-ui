@@ -6,6 +6,7 @@ import { useAppStore } from './app'
 
 export const useModelsStore = defineStore('models', () => {
   const providers = ref<AvailableModelGroup[]>([])
+  const allProviders = ref<AvailableModelGroup[]>([])
   const defaultModel = ref('')
   const loading = ref(false)
 
@@ -34,6 +35,7 @@ export const useModelsStore = defineStore('models', () => {
     try {
       const res = await systemApi.fetchAvailableModels()
       providers.value = res.groups
+      allProviders.value = res.allProviders
       defaultModel.value = res.default
     } catch (err) {
       console.error('Failed to fetch providers:', err)
@@ -65,6 +67,7 @@ export const useModelsStore = defineStore('models', () => {
 
   return {
     providers,
+    allProviders,
     defaultModel,
     loading,
     customProviders,

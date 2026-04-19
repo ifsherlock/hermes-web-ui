@@ -28,23 +28,26 @@ async function waitForGatewayReady(upstream: string, timeoutMs: number = 5000): 
   return false
 }
 
+/** Resolve profile name from request */
+function resolveProfile(ctx: Context): string {
+  return ctx.get('x-hermes-profile') || (ctx.query.profile as string) || 'default'
+}
+
 /** Resolve upstream URL for a request based on profile header/query */
 function resolveUpstream(ctx: Context): string {
   const mgr = getGatewayManager()
   if (mgr) {
-    // Check X-Hermes-Profile header or ?profile= query param
-    const profile = ctx.get('x-hermes-profile') || (ctx.query.profile as string)
-    if (profile) {
+    const profile = resolveProfile(ctx)
+    if (profile && profile !== 'default') {
       return mgr.getUpstream(profile)
     }
-    // Default to active profile's upstream
     return mgr.getUpstream()
   }
-  // Fallback: static upstream from config
   return config.upstream.replace(/\/$/, '')
 }
 
 export async function proxy(ctx: Context) {
+  const profile = resolveProfile(ctx)
   const upstream = resolveUpstream(ctx)
   // Rewrite path for upstream gateway:
   //   /api/hermes/v1/* -> /v1/*  (upstream uses /v1/ prefix)
@@ -59,11 +62,20 @@ export async function proxy(ctx: Context) {
     const lower = key.toLowerCase()
     if (lower === 'host') {
       headers['host'] = new URL(upstream).host
-    } else if (lower === 'authorization' || lower === 'origin' || lower === 'referer' || lower === 'connection') {
+    } else if (lower === 'origin' || lower === 'referer' || lower === 'connection') {
       continue
     } else {
       const v = Array.isArray(value) ? value[0] : value
       if (v) headers[key] = v
+    }
+  }
+
+  // Inject Hermes gateway API key from profile's .env
+  const mgr = getGatewayManager()
+  if (mgr) {
+    const apiKey = mgr.getApiKey(profile)
+    if (apiKey) {
+      headers['authorization'] = `Bearer ${apiKey}`
     }
   }
 

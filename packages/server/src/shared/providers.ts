@@ -55,22 +55,10 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   {
     label: 'Kimi for Coding',
-    value: 'kimi-coding',
-    base_url: 'https://api.kimi.com/coding/v1',
-    models: [
-      'kimi-for-coding',
-      'kimi-k2.5',
-      'kimi-k2-thinking',
-      'kimi-k2-thinking-turbo',
-      'kimi-k2-turbo-preview',
-      'kimi-k2-0905-preview',
-    ],
-  },
-  {
-    label: 'Kimi for Coding (CN)',
     value: 'kimi-coding-cn',
     base_url: 'https://api.kimi.com/coding/v1',
     models: [
+      'kimi-for-coding',
       'kimi-k2.5',
       'kimi-k2-thinking',
       'kimi-k2-turbo-preview',

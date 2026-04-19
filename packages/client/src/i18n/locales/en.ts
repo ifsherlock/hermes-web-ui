@@ -306,6 +306,15 @@ export default {
       session: 'Session',
       privacy: 'Privacy',
       apiServer: 'API Server',
+      models: 'Models',
+    },
+    models: {
+      apiKey: 'API Key',
+      apiKeyPlaceholder: 'Enter API key',
+      save: 'Save',
+      saved: 'Saved',
+      saveFailed: 'Save failed',
+      noProviders: 'No providers configured',
     },
     display: {
       streaming: 'Stream Responses',
