@@ -7,6 +7,7 @@ const mockChatStore = vi.hoisted(() => ({
   activeSessionId: null as string | null,
   activeSession: null as Record<string, any> | null,
   isLoadingSessions: false,
+  isSessionLive: vi.fn((sessionId: string) => sessionId === 'discord-active'),
   newChat: vi.fn(),
   switchSession: vi.fn(),
   deleteSession: vi.fn(),
@@ -81,6 +82,12 @@ describe('ChatPanel session list', () => {
       createdAt: 200,
       updatedAt: 400,
     })
+    const slackSession = makeSession('slack-1', {
+      title: 'Slack Selected',
+      source: 'slack',
+      createdAt: 50,
+      updatedAt: 50,
+    })
     const apiSession = makeSession('api-1', {
       title: 'API Session',
       source: 'api_server',
@@ -88,13 +95,18 @@ describe('ChatPanel session list', () => {
       updatedAt: 300,
     })
 
-    mockChatStore.sessions = [apiSession, olderDiscord, activeDiscord]
-    mockChatStore.activeSessionId = activeDiscord.id
-    mockChatStore.activeSession = activeDiscord
+    mockChatStore.sessions = [apiSession, slackSession, olderDiscord, activeDiscord]
+    mockChatStore.activeSessionId = apiSession.id
+    mockChatStore.activeSession = apiSession
     mockChatStore.isLoadingSessions = false
+    mockChatStore.isSessionLive.mockImplementation((sessionId: string) => sessionId === activeDiscord.id)
+    mockChatStore.switchSession.mockImplementation((sessionId: string) => {
+      mockChatStore.activeSessionId = sessionId
+      mockChatStore.activeSession = mockChatStore.sessions.find(s => s.id === sessionId) ?? null
+    })
   })
 
-  it('pins the active session group to the top and renders an active indicator', () => {
+  it('pins the live session group to the top and keeps the indicator on the runtime live session', async () => {
     const wrapper = mount(ChatPanel, {
       global: {
         stubs: {
@@ -118,5 +130,15 @@ describe('ChatPanel session list', () => {
 
     const activeIndicator = wrapper.find('.session-item.active .session-item-active-indicator')
     expect(activeIndicator.exists()).toBe(true)
+
+    await wrapper.findAll('.session-item').find(node => node.text().includes('Slack Selected'))!.trigger('click')
+
+    expect(mockChatStore.switchSession).toHaveBeenCalledWith('slack-1')
+
+    const groupLabelsAfterClick = wrapper.findAll('.session-group-label').map(node => node.text())
+    expect(groupLabelsAfterClick[0]).toBe('Discord')
+
+    const activeTitlesAfterClick = wrapper.findAll('.session-item.active .session-item-title').map(node => node.text())
+    expect(activeTitlesAfterClick).toEqual(['Discord Active'])
   })
 })

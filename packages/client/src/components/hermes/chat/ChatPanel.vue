@@ -82,9 +82,9 @@ function sourceSortKey(source: string): number {
 
 function sortSessionsWithActiveFirst(items: Session[]): Session[] {
   return [...items].sort((a, b) => {
-    const aActive = a.id === chatStore.activeSessionId
-    const bActive = b.id === chatStore.activeSessionId
-    if (aActive !== bActive) return aActive ? -1 : 1
+    const aLive = chatStore.isSessionLive(a.id)
+    const bLive = chatStore.isSessionLive(b.id)
+    if (aLive !== bLive) return aLive ? -1 : 1
     if (b.createdAt !== a.createdAt) return b.createdAt - a.createdAt
     return b.updatedAt - a.updatedAt
   })
@@ -106,9 +106,9 @@ const groupedSessions = computed<SessionGroup[]>(() => {
   }
 
   const keys = [...map.keys()].sort((a, b) => {
-    const aHasActive = map.get(a)?.some(s => s.id === chatStore.activeSessionId) || false
-    const bHasActive = map.get(b)?.some(s => s.id === chatStore.activeSessionId) || false
-    if (aHasActive !== bHasActive) return aHasActive ? -1 : 1
+    const aHasLive = map.get(a)?.some(s => chatStore.isSessionLive(s.id)) || false
+    const bHasLive = map.get(b)?.some(s => chatStore.isSessionLive(s.id)) || false
+    if (aHasLive !== bHasLive) return aHasLive ? -1 : 1
     const ka = sourceSortKey(a)
     const kb = sourceSortKey(b)
     if (ka !== kb) return ka - kb
@@ -327,14 +327,14 @@ async function handleRenameConfirm() {
               v-for="s in group.sessions"
               :key="s.id"
               class="session-item"
-              :class="{ active: s.id === chatStore.activeSessionId }"
+              :class="{ active: chatStore.isSessionLive(s.id) }"
               @click="handleSessionClick(s.id)"
               @contextmenu="handleContextMenu($event, s.id)"
             >
               <div class="session-item-content">
                 <span class="session-item-title-row">
                   <span
-                    v-if="s.id === chatStore.activeSessionId"
+                    v-if="chatStore.isSessionLive(s.id)"
                     class="session-item-active-indicator"
                     aria-hidden="true"
                   >
