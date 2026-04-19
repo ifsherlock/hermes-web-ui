@@ -327,7 +327,7 @@ async function handleRenameConfirm() {
               v-for="s in group.sessions"
               :key="s.id"
               class="session-item"
-              :class="{ active: chatStore.isSessionLive(s.id) }"
+              :class="{ active: s.id === chatStore.activeSessionId, live: chatStore.isSessionLive(s.id) }"
               @click="handleSessionClick(s.id)"
               @contextmenu="handleContextMenu($event, s.id)"
             >
@@ -623,6 +623,10 @@ async function handleRenameConfirm() {
   }
 
   &.active .session-item-title {
+    color: $accent-primary;
+  }
+
+  &.live .session-item-title {
     color: $accent-primary;
   }
 }
