@@ -39,6 +39,8 @@
 - Real-time streaming via SSE with async run support
 - Multi-session management — create, rename, delete, switch between sessions
 - Session grouping by source (Telegram, Discord, Slack, etc.) with collapsible accordion
+- Active session indicator — live sessions pin to top with spinner icon
+- Sessions sorted by latest message time
 - Markdown rendering with syntax highlighting and code copy
 - Tool call detail expansion (arguments / result)
 - File upload support
@@ -83,8 +85,18 @@ Unified configuration for **8 platforms** in one page:
 
 - Auto-discover models from credential pool (`~/.hermes/auth.json`)
 - Fetch available models from each provider endpoint (`/v1/models`)
-- Add custom OpenAI-compatible providers
-- Provider-level model grouping
+- Add, update, and delete providers (preset & custom OpenAI-compatible)
+- OpenAI Codex OAuth login for Codex models
+- Provider-level model grouping with default model switching
+
+### Multi-Profile & Gateway
+
+- Create, rename, delete, and switch between Hermes profiles
+- Clone existing profile or import from archive (`.tar.gz`)
+- Export profile for backup or sharing
+- Multi-gateway management — start, stop, and monitor gateway per profile
+- Auto port conflict resolution
+- Profile-scoped configuration and cache isolation
 
 ### Skills & Memory
 
@@ -105,6 +117,7 @@ Unified configuration for **8 platforms** in one page:
 - Memory (enable/disable, char limits)
 - Session reset (idle timeout, scheduled reset)
 - Privacy (PII redaction)
+- Model settings (default model & provider)
 - API server configuration
 
 ### Web Terminal
@@ -232,6 +245,10 @@ The BFF layer handles API proxy (with path rewriting), SSE streaming, file uploa
 **Frontend:** Vue 3 + TypeScript + Vite + Naive UI + Pinia + Vue Router + vue-i18n + SCSS + markdown-it + highlight.js
 
 **Backend:** Koa 2 (BFF server) + node-pty (web terminal)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=EKKOLearnAI/hermes-web-ui&type=Date)](https://star-history.com/#EKKOLearnAI/hermes-web-ui&Date)
 
 ## License
 
