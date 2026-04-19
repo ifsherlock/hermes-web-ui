@@ -54,3 +54,14 @@ export function getActiveProfileName(): string {
     return 'default'
   }
 }
+
+/**
+ * Get profile directory by name.
+ * default → ~/.hermes/
+ * other   → ~/.hermes/profiles/{name}/
+ */
+export function getProfileDir(name: string): string {
+  if (!name || name === 'default') return HERMES_BASE
+  const dir = join(HERMES_BASE, 'profiles', name)
+  return existsSync(dir) ? dir : HERMES_BASE
+}

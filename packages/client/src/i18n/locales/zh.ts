@@ -298,6 +298,15 @@ export default {
       session: '会话',
       privacy: '隐私',
       apiServer: 'API 服务器',
+      models: '模型',
+    },
+    models: {
+      apiKey: 'API Key',
+      apiKeyPlaceholder: '输入 API Key',
+      save: '保存',
+      saved: '已保存',
+      saveFailed: '保存失败',
+      noProviders: '暂无已配置的模型',
     },
     display: {
       streaming: '流式响应',

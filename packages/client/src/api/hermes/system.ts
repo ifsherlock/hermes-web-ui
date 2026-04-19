@@ -29,12 +29,14 @@ export interface AvailableModelGroup {
   label: string      // display name (e.g. "zai", "subrouter.ai")
   base_url: string
   models: string[]
+  api_key: string
 }
 
 export interface AvailableModelsResponse {
   default: string
   default_provider: string
   groups: AvailableModelGroup[]
+  allProviders: AvailableModelGroup[]
 }
 
 export interface CustomProvider {
@@ -83,5 +85,17 @@ export async function addCustomProvider(data: CustomProvider): Promise<void> {
 export async function removeCustomProvider(name: string): Promise<void> {
   await request(`/api/hermes/config/providers/${encodeURIComponent(name)}`, {
     method: 'DELETE',
+  })
+}
+
+export async function updateProvider(poolKey: string, data: {
+  name?: string
+  base_url?: string
+  api_key?: string
+  model?: string
+}): Promise<void> {
+  await request(`/api/hermes/config/providers/${encodeURIComponent(poolKey)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
   })
 }

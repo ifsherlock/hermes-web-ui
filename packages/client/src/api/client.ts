@@ -39,6 +39,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     headers['Authorization'] = `Bearer ${apiKey}`
   }
 
+  // Inject active profile header for proxied gateway requests
+  const profileName = localStorage.getItem('hermes_active_profile_name')
+  if (profileName && profileName !== 'default') {
+    headers['X-Hermes-Profile'] = profileName
+  }
+
   const res = await fetch(url, { ...options, headers })
 
   // Global 401 handler — only redirect to login for local BFF endpoints

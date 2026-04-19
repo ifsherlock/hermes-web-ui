@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { NModal, NForm, NFormItem, NInput, NButton, NSelect, useMessage } from 'naive-ui'
 import { useModelsStore } from '@/stores/hermes/models'
-import { PROVIDER_PRESETS } from '@/shared/providers'
 import { useI18n } from 'vue-i18n'
 import CodexLoginModal from './CodexLoginModal.vue'
 
@@ -32,11 +31,13 @@ const formData = ref({
 
 const modelOptions = ref<Array<{ label: string; value: string }>>([])
 
-const PRESET_PROVIDERS = PROVIDER_PRESETS as any[]
-
 const CODEX_KEY = 'openai-codex'
 
 const isCodex = computed(() => selectedPreset.value === CODEX_KEY)
+
+const presetOptions = computed(() =>
+  modelsStore.allProviders.map(g => ({ label: g.label, value: g.provider })),
+)
 
 function autoGenerateName(url: string): string {
   const clean = url.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, '')
@@ -50,13 +51,13 @@ function autoGenerateName(url: string): string {
 watch(selectedPreset, (val) => {
   formData.value.model = ''
   if (val) {
-    const preset = PRESET_PROVIDERS.find(p => p.value === val)
-    if (preset) {
-      formData.value.name = preset.label
-      formData.value.base_url = preset.base_url
-      modelOptions.value = preset.models.map((m: string) => ({ label: m, value: m }))
-      if (preset.models.length > 0) {
-        formData.value.model = preset.models[0]
+    const group = modelsStore.allProviders.find(g => g.provider === val)
+    if (group) {
+      formData.value.name = group.label
+      formData.value.base_url = group.base_url
+      modelOptions.value = group.models.map((m: string) => ({ label: m, value: m }))
+      if (group.models.length > 0) {
+        formData.value.model = group.models[0]
       }
     }
   }
@@ -72,6 +73,12 @@ watch(providerType, () => {
   modelOptions.value = []
   formData.value = { name: '', base_url: '', api_key: '', model: '' }
   selectedPreset.value = null
+})
+
+onMounted(() => {
+  if (modelsStore.providers.length === 0) {
+    modelsStore.fetchProviders()
+  }
 })
 
 async function fetchModels() {
@@ -133,7 +140,7 @@ async function handleSave() {
   loading.value = true
   try {
     const providerKey = providerType.value === 'preset'
-      ? (PRESET_PROVIDERS.find(p => p.value === selectedPreset.value)?.value || null)
+      ? selectedPreset.value
       : null
 
     await modelsStore.addProvider({
@@ -196,7 +203,7 @@ function handleClose() {
       <NFormItem v-if="providerType === 'preset'" :label="t('models.selectProvider')" required>
         <NSelect
           v-model:value="selectedPreset"
-          :options="PRESET_PROVIDERS"
+          :options="presetOptions"
           :placeholder="t('models.chooseProvider')"
           filterable
         />

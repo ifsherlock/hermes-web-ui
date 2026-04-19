@@ -45,7 +45,12 @@ export function streamRunEvents(
 ) {
   const baseUrl = getBaseUrlValue()
   const token = getApiKey()
-  const url = `${baseUrl}/api/hermes/v1/runs/${runId}/events${token ? `?token=${encodeURIComponent(token)}` : ''}`
+  const profile = localStorage.getItem('hermes_active_profile_name')
+  const params = new URLSearchParams()
+  if (token) params.set('token', token)
+  if (profile && profile !== 'default') params.set('profile', profile)
+  const qs = params.toString()
+  const url = `${baseUrl}/api/hermes/v1/runs/${runId}/events${qs ? `?${qs}` : ''}`
 
   let closed = false
   const source = new EventSource(url)

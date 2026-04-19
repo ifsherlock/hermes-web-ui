@@ -314,6 +314,20 @@ export class GatewayManager {
     return `http://${host}:${port}`
   }
 
+  /** 读取 profile 的 API_SERVER_KEY（从 .env 文件） */
+  getApiKey(profileName?: string): string | null {
+    const name = profileName || this.activeProfile
+    try {
+      const envPath = join(this.profileDir(name), '.env')
+      if (!existsSync(envPath)) return null
+      const content = readFileSync(envPath, 'utf-8')
+      const match = content.match(/^API_SERVER_KEY\s*=\s*"?([^"\n]+)"?/m)
+      return match?.[1]?.trim() || null
+    } catch {
+      return null
+    }
+  }
+
   getActiveProfile(): string {
     return this.activeProfile
   }

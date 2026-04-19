@@ -2,7 +2,7 @@
 import { spawn, execSync } from 'child_process'
 import { resolve, dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync, chmodSync } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync, chmodSync, statSync } from 'fs'
 import { randomBytes } from 'crypto'
 import { homedir } from 'os'
 
@@ -117,6 +117,20 @@ function startDaemon(port) {
 
   ensureNativeModules()
   const token = ensureToken()
+
+  // Rotate log if over 3MB — keep last 2000 lines
+  const MAX_LOG_SIZE = 3 * 1024 * 1024
+  const MAX_LOG_LINES = 2000
+  try {
+    const stat = statSync(LOG_FILE)
+    if (stat.size > MAX_LOG_SIZE) {
+      const content = readFileSync(LOG_FILE, 'utf-8')
+      const lines = content.split('\n')
+      const kept = lines.slice(-MAX_LOG_LINES)
+      writeFileSync(LOG_FILE, kept.join('\n'), 'utf-8')
+      console.log(`  ↻ Log rotated (${(stat.size / 1024 / 1024).toFixed(1)}MB → ${kept.length} lines)`)
+    }
+  } catch { }
 
   const logStream = openSync(LOG_FILE, 'a')
   const child = spawn(process.execPath, [serverEntry], {
