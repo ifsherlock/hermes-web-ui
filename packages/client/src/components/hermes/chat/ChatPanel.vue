@@ -80,6 +80,16 @@ function sourceSortKey(source: string): number {
   return 0
 }
 
+function sortSessionsWithActiveFirst(items: Session[]): Session[] {
+  return [...items].sort((a, b) => {
+    const aActive = a.id === chatStore.activeSessionId
+    const bActive = b.id === chatStore.activeSessionId
+    if (aActive !== bActive) return aActive ? -1 : 1
+    if (b.createdAt !== a.createdAt) return b.createdAt - a.createdAt
+    return b.updatedAt - a.updatedAt
+  })
+}
+
 // Group sessions by source, with sort order
 interface SessionGroup {
   source: string
@@ -88,16 +98,17 @@ interface SessionGroup {
 }
 
 const groupedSessions = computed<SessionGroup[]>(() => {
-  const all = [...chatStore.sessions].sort((a, b) => b.createdAt - a.createdAt)
-
   const map = new Map<string, Session[]>()
-  for (const s of all) {
+  for (const s of chatStore.sessions) {
     const key = s.source || ''
     if (!map.has(key)) map.set(key, [])
     map.get(key)!.push(s)
   }
 
   const keys = [...map.keys()].sort((a, b) => {
+    const aHasActive = map.get(a)?.some(s => s.id === chatStore.activeSessionId) || false
+    const bHasActive = map.get(b)?.some(s => s.id === chatStore.activeSessionId) || false
+    if (aHasActive !== bHasActive) return aHasActive ? -1 : 1
     const ka = sourceSortKey(a)
     const kb = sourceSortKey(b)
     if (ka !== kb) return ka - kb
@@ -107,7 +118,7 @@ const groupedSessions = computed<SessionGroup[]>(() => {
   return keys.map(key => ({
     source: key,
     label: key ? getSourceLabel(key) : t('chat.other'),
-    sessions: map.get(key)!,
+    sessions: sortSessionsWithActiveFirst(map.get(key)!),
   }))
 })
 
@@ -321,7 +332,28 @@ async function handleRenameConfirm() {
               @contextmenu="handleContextMenu($event, s.id)"
             >
               <div class="session-item-content">
-                <span class="session-item-title">{{ s.title }}</span>
+                <span class="session-item-title-row">
+                  <span
+                    v-if="s.id === chatStore.activeSessionId"
+                    class="session-item-active-indicator"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      class="session-item-active-spinner"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    >
+                      <circle cx="12" cy="12" r="8" opacity="0.2" />
+                      <path d="M20 12a8 8 0 0 0-8-8" />
+                    </svg>
+                  </span>
+                  <span class="session-item-title">{{ s.title }}</span>
+                </span>
                 <span class="session-item-meta">
                   <span v-if="s.model" class="session-item-model">{{ s.model }}</span>
                   <span class="session-item-time">{{ formatTime(s.createdAt) }}</span>
@@ -589,11 +621,22 @@ async function handleRenameConfirm() {
     color: $text-primary;
     font-weight: 500;
   }
+
+  &.active .session-item-title {
+    color: $accent-primary;
+  }
 }
 
 .session-item-content {
   flex: 1;
   overflow: hidden;
+}
+
+.session-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .session-item-title {
@@ -602,6 +645,19 @@ async function handleRenameConfirm() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.session-item-active-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: $accent-primary;
+}
+
+.session-item-active-spinner {
+  animation: session-spin 1.1s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(var(--accent-primary-rgb), 0.35));
 }
 
 .session-item-time {
@@ -644,6 +700,16 @@ async function handleRenameConfirm() {
   &:hover {
     color: $error;
     background: rgba($error, 0.1);
+  }
+}
+
+@keyframes session-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
