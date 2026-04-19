@@ -31,6 +31,12 @@ const currentToolCalls = computed(() => {
   return [...tools].reverse();
 });
 
+function isNearBottom(threshold = 200): boolean {
+  const el = listRef.value;
+  if (!el) return true;
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+}
+
 function scrollToBottom() {
   nextTick(() => {
     if (listRef.value) {
@@ -39,18 +45,37 @@ function scrollToBottom() {
   });
 }
 
-watch(() => chatStore.messages.length, scrollToBottom);
+// Scroll to bottom once when messages are first loaded
 watch(
-  () => chatStore.messages[chatStore.messages.length - 1]?.content,
-  scrollToBottom,
+  () => chatStore.activeSessionId,
+  (id) => {
+    if (id) scrollToBottom();
+  },
+  { immediate: true },
 );
+
+// When a run starts (user just sent a message), always scroll to bottom once
 watch(
   () => chatStore.isRunActive,
   (v) => {
     if (v) scrollToBottom();
   },
 );
-watch(currentToolCalls, scrollToBottom);
+
+// During streaming, only auto-scroll if the user is already near the bottom
+watch(
+  () => chatStore.messages[chatStore.messages.length - 1]?.content,
+  () => {
+    if (!chatStore.isStreaming) { scrollToBottom(); return; }
+    if (!isNearBottom()) return;
+    scrollToBottom();
+  },
+);
+watch(currentToolCalls, () => {
+  if (!chatStore.isStreaming) { scrollToBottom(); return; }
+  if (!isNearBottom()) return;
+  scrollToBottom();
+});
 </script>
 
 <template>
@@ -171,7 +196,7 @@ watch(currentToolCalls, scrollToBottom);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 120px;
+  max-height: 213px;
   overflow-y: auto;
   padding-top: 4px;
   scrollbar-width: none;
@@ -190,6 +215,10 @@ watch(currentToolCalls, scrollToBottom);
   padding: 3px 8px;
   background: rgba(0, 0, 0, 0.03);
   border-radius: $radius-sm;
+
+  .dark & {
+    background: rgba(255, 255, 255, 0.06);
+  }
 
   .tool-call-icon {
     flex-shrink: 0;

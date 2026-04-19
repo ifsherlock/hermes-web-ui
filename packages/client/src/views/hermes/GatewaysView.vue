@@ -54,8 +54,7 @@ async function handleToggle(name: string, running: boolean) {
               </NTag>
               <NButton
                 size="small"
-                :type="gw.running ? 'warning' : 'default'"
-                :color="gw.running ? undefined : '#18181b'"
+                :type="gw.running ? 'warning' : 'primary'"
                 round
                 @click="handleToggle(gw.profile, gw.running)"
               >

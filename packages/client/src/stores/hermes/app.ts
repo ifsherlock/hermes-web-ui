@@ -18,6 +18,7 @@ export const useAppStore = defineStore('app', () => {
   const updating = ref(false)
   const modelGroups = ref<AvailableModelGroup[]>([])
   const selectedModel = ref('')
+  const selectedProvider = ref('')
   const healthPollTimer = ref<ReturnType<typeof setInterval>>()
 
   // Settings
@@ -56,6 +57,7 @@ export const useAppStore = defineStore('app', () => {
       const res = await fetchAvailableModels()
       modelGroups.value = res.groups
       selectedModel.value = res.default
+      selectedProvider.value = res.default_provider || ''
     } catch {
       // ignore
     }
@@ -68,6 +70,7 @@ export const useAppStore = defineStore('app', () => {
       const provider = providerOverride || group?.provider || ''
       await updateDefaultModel({ default: modelId, provider })
       selectedModel.value = modelId
+      selectedProvider.value = provider || ''
     } catch (err: any) {
       console.error('Failed to switch model:', err)
     }
@@ -117,6 +120,7 @@ export const useAppStore = defineStore('app', () => {
     doUpdate,
     modelGroups,
     selectedModel,
+    selectedProvider,
     streamEnabled,
     sessionPersistence,
     maxTokens,

@@ -466,8 +466,10 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
     const config = await readConfigYaml()
     const modelSection = config.model
     let currentDefault = ''
+    let currentDefaultProvider = ''
     if (typeof modelSection === 'object' && modelSection !== null) {
       currentDefault = String(modelSection.default || '').trim()
+      currentDefaultProvider = String(modelSection.provider || '').trim()
     } else if (typeof modelSection === 'string') {
       currentDefault = modelSection.trim()
     }
@@ -592,7 +594,7 @@ fsRoutes.get('/api/hermes/available-models', async (ctx) => {
       return
     }
 
-    ctx.body = { default: currentDefault, groups: dedupedGroups }
+    ctx.body = { default: currentDefault, default_provider: currentDefaultProvider, groups: dedupedGroups }
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
