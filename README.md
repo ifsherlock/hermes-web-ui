@@ -250,6 +250,8 @@ The BFF layer handles API proxy (with path rewriting), SSE streaming, file uploa
 
 [![Star History Chart](https://api.star-history.com/svg?repos=EKKOLearnAI/hermes-web-ui&type=Date)](https://star-history.com/#EKKOLearnAI/hermes-web-ui&Date)
 
+<!-- If the chart above doesn't load, visit https://star-history.com/#EKKOLearnAI/hermes-web-ui -->
+
 ## License
 
 [MIT](./LICENSE)
