@@ -151,7 +151,7 @@ function mapHermesSession(s: SessionSummary): Session {
     source: s.source || undefined,
     messages: [],
     createdAt: Math.round(s.started_at * 1000),
-    updatedAt: Math.round((s.ended_at || s.started_at) * 1000),
+    updatedAt: Math.round((s.last_active || s.ended_at || s.started_at) * 1000),
     model: s.model,
     provider: (s as any).billing_provider || '',
     messageCount: s.message_count,
@@ -248,6 +248,10 @@ export const useChatStore = defineStore('chat', () => {
 
   const activeSession = ref<Session | null>(null)
   const messages = computed<Message[]>(() => activeSession.value?.messages || [])
+
+  function isSessionLive(sessionId: string): boolean {
+    return streamStates.value.has(sessionId) || resumingRuns.value.has(sessionId)
+  }
 
   function persistSessionsList() {
     // Cache lightweight summaries only (messages are cached per-session).
@@ -912,6 +916,7 @@ export const useChatStore = defineStore('chat', () => {
     messages,
     isStreaming,
     isRunActive,
+    isSessionLive,
     isLoadingSessions,
     isLoadingMessages,
     newChat,

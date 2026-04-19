@@ -7,6 +7,7 @@ export interface SessionSummary {
   title: string | null
   started_at: number
   ended_at: number | null
+  last_active?: number
   message_count: number
   tool_call_count: number
   input_tokens: number
