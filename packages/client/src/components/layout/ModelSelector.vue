@@ -30,8 +30,8 @@ function isGroupCollapsed(provider: string) {
   return !!collapsedGroups.value[provider]
 }
 
-function handleSelect(model: string) {
-  appStore.switchModel(model)
+function handleSelect(model: string, provider: string) {
+  appStore.switchModel(model, provider)
   showModal.value = false
   searchQuery.value = ''
 }
@@ -85,11 +85,11 @@ function openModal() {
               v-for="model in group.models"
               :key="model"
               class="model-item"
-              :class="{ active: model === appStore.selectedModel }"
-              @click="handleSelect(model)"
+              :class="{ active: model === appStore.selectedModel && group.provider === appStore.selectedProvider }"
+              @click="handleSelect(model, group.provider)"
             >
               <span class="model-item-name">{{ model }}</span>
-              <svg v-if="model === appStore.selectedModel" class="model-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg v-if="model === appStore.selectedModel && group.provider === appStore.selectedProvider" class="model-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>

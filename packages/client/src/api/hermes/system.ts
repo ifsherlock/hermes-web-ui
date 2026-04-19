@@ -33,6 +33,7 @@ export interface AvailableModelGroup {
 
 export interface AvailableModelsResponse {
   default: string
+  default_provider: string
   groups: AvailableModelGroup[]
 }
 
