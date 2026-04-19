@@ -151,7 +151,7 @@ function mapHermesSession(s: SessionSummary): Session {
     source: s.source || undefined,
     messages: [],
     createdAt: Math.round(s.started_at * 1000),
-    updatedAt: Math.round((s.ended_at || s.started_at) * 1000),
+    updatedAt: Math.round((s.last_active || s.ended_at || s.started_at) * 1000),
     model: s.model,
     provider: (s as any).billing_provider || '',
     messageCount: s.message_count,

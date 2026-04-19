@@ -85,8 +85,7 @@ function sortSessionsWithActiveFirst(items: Session[]): Session[] {
     const aLive = chatStore.isSessionLive(a.id)
     const bLive = chatStore.isSessionLive(b.id)
     if (aLive !== bLive) return aLive ? -1 : 1
-    if (b.createdAt !== a.createdAt) return b.createdAt - a.createdAt
-    return b.updatedAt - a.updatedAt
+    return (b.updatedAt || 0) - (a.updatedAt || 0)
   })
 }
 
