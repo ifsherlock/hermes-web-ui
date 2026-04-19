@@ -249,6 +249,10 @@ export const useChatStore = defineStore('chat', () => {
   const activeSession = ref<Session | null>(null)
   const messages = computed<Message[]>(() => activeSession.value?.messages || [])
 
+  function isSessionLive(sessionId: string): boolean {
+    return streamStates.value.has(sessionId) || resumingRuns.value.has(sessionId)
+  }
+
   function persistSessionsList() {
     // Cache lightweight summaries only (messages are cached per-session).
     saveJson(
@@ -912,6 +916,7 @@ export const useChatStore = defineStore('chat', () => {
     messages,
     isStreaming,
     isRunActive,
+    isSessionLive,
     isLoadingSessions,
     isLoadingMessages,
     newChat,
