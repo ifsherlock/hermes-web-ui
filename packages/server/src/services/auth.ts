@@ -48,7 +48,7 @@ export async function authMiddleware(token: string | null) {
     }
 
     // Skip non-API paths (static files, health check, SPA)
-    const path = ctx.path
+    const path = ctx.path.toLowerCase()
     if (
       path === '/health' ||
       (!path.startsWith('/api') && !path.startsWith('/v1') && path !== '/webhook')
