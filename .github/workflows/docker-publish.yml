@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - dev
   workflow_dispatch:    # 允许在 GitHub 网页端手动点击按钮触发
 
 jobs:
