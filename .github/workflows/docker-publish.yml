@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-      - dev-custom      # 如果你新建了分支，确保你的分支名在这里
-      - my-custom       # 替换为你实际使用的分支名
   workflow_dispatch:    # 允许在 GitHub 网页端手动点击按钮触发
 
 jobs:

@@ -26,6 +26,7 @@ services:
       - "${PORT:-6060}:${PORT:-6060}"
     volumes:
       - ${HERMES_DATA_DIR:-./hermes_data}:/home/agent/.hermes
+      - ${HERMES_DATA_DIR:-./hermes_data}/hermes-web-ui-data:/app/dist/data
       - hermes-agent-src:/opt/hermes
     environment:
       - PORT=${PORT:-6060}
