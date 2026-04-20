@@ -36,6 +36,7 @@ async function checkLatestVersion(): Promise<void> {
   try {
     const res = await fetch('https://registry.npmjs.org/hermes-web-ui/latest', {
       signal: AbortSignal.timeout(5000),
+      headers: { 'Cache-Control': 'no-cache' },
     })
     if (res.ok) {
       const data = await res.json()
@@ -83,9 +84,11 @@ export async function bootstrap() {
   app.use(async (ctx, next) => {
     if (ctx.path === '/api/hermes/update' && ctx.method === 'POST') {
       const isWin = process.platform === 'win32'
+      // Run npm install directly — calling `hermes-web-ui update` would kill this
+      // process (stopDaemon) before the response can be sent to the client.
       const cmd = isWin
-        ? 'cmd /c hermes-web-ui update'
-        : 'hermes-web-ui update'
+        ? 'cmd /c npm install -g hermes-web-ui@latest'
+        : 'npm install -g hermes-web-ui@latest'
 
       try {
         const { execSync } = await import('child_process')
@@ -95,6 +98,8 @@ export async function bootstrap() {
           stdio: ['pipe', 'pipe', 'pipe'],
         })
         ctx.body = { success: true, message: output.trim() }
+        // Restart the server after response is sent
+        setTimeout(() => process.exit(0), 1000)
       } catch (err: any) {
         ctx.status = 500
         ctx.body = { success: false, message: err.stderr || err.message }
@@ -168,7 +173,7 @@ export async function bootstrap() {
 
   // Check for updates every 4 hours
   checkLatestVersion()
-  setInterval(checkLatestVersion, 4 * 60 * 60 * 1000)
+  setInterval(checkLatestVersion, 60 * 60 * 1000)
 }
 
 // ============================
