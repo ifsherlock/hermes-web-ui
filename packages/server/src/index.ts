@@ -99,7 +99,16 @@ export async function bootstrap() {
         })
         ctx.body = { success: true, message: output.trim() }
         // Restart the server after response is sent
-        setTimeout(() => process.exit(0), 1000)
+        setTimeout(() => {
+          const { spawn } = require('child_process')
+          const isWin = process.platform === 'win32'
+          spawn(isWin ? 'cmd' : 'sh', isWin ? ['/c', 'hermes-web-ui restart'] : ['-c', 'hermes-web-ui restart'], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true,
+          }).unref()
+          process.exit(0)
+        }, 2000)
       } catch (err: any) {
         ctx.status = 500
         ctx.body = { success: false, message: err.stderr || err.message }
