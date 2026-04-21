@@ -1,11 +1,7 @@
 name: Build and Push Docker Image to Docker Hub
 
-# 触发条件配置
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:    # 允许在 GitHub 网页端手动点击按钮触发
+  workflow_dispatch:    # 仅手动触发
 
 jobs:
   build-and-push:
