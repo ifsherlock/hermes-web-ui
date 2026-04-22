@@ -73,6 +73,7 @@ export default {
 
   // Chat
   chat: {
+    contextRemaining: 'remaining',
     emptyState: 'Start a conversation with Hermes Agent',
     inputPlaceholder: 'Type a message... (Enter to send, Shift+Enter for new line)',
     attachFiles: 'Attach files',

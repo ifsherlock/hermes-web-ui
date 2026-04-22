@@ -61,6 +61,7 @@ export default {
 
   // チャット
   chat: {
+    contextRemaining: '残り',
     emptyState: 'Hermes Agent と会話を開始しましょう',
     inputPlaceholder: 'メッセージを入力... (Enter で送信、Shift+Enter で改行)',
     attachFiles: 'ファイルを添付',

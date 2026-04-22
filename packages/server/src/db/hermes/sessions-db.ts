@@ -1,4 +1,4 @@
-import { getActiveProfileDir } from './hermes-profile'
+import { getActiveProfileDir } from '../../services/hermes/hermes-profile'
 
 const SQLITE_AVAILABLE = (() => {
   const [major, minor] = process.versions.node.split('.').map(Number)

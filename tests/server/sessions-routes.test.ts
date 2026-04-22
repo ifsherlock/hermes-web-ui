@@ -7,6 +7,9 @@ const searchMock = vi.fn(async (ctx: any) => { ctx.body = { results: [{ id: 'sea
 const getMock = vi.fn(async (ctx: any) => { ctx.body = { session: { id: ctx.params.id } } })
 const removeMock = vi.fn(async (ctx: any) => { ctx.body = { ok: true } })
 const renameMock = vi.fn(async (ctx: any) => { ctx.body = { ok: true } })
+const usageBatchMock = vi.fn(async (ctx: any) => { ctx.body = {} })
+const usageSingleMock = vi.fn(async (ctx: any) => { ctx.body = { input_tokens: 0, output_tokens: 0 } })
+const contextLengthMock = vi.fn(async (ctx: any) => { ctx.body = { context_length: 200000 } })
 
 vi.mock('../../packages/server/src/controllers/hermes/sessions', () => ({
   listConversations: listConversationsMock,
@@ -16,6 +19,9 @@ vi.mock('../../packages/server/src/controllers/hermes/sessions', () => ({
   get: getMock,
   remove: removeMock,
   rename: renameMock,
+  usageBatch: usageBatchMock,
+  usageSingle: usageSingleMock,
+  contextLength: contextLengthMock,
 }))
 
 describe('session routes', () => {
@@ -40,7 +46,10 @@ describe('session routes', () => {
       '/api/hermes/sessions',
       '/api/hermes/search/sessions',
       '/api/hermes/sessions/search',
+      '/api/hermes/sessions/usage',
+      '/api/hermes/sessions/context-length',
       '/api/hermes/sessions/:id',
+      '/api/hermes/sessions/:id/usage',
       '/api/hermes/sessions/:id/rename',
     ]))
   })

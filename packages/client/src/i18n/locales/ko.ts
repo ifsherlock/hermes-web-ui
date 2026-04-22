@@ -61,6 +61,7 @@ export default {
 
   // 채팅
   chat: {
+    contextRemaining: '남음',
     emptyState: 'Hermes Agent와 대화를 시작하세요',
     inputPlaceholder: '메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄바꿈)',
     attachFiles: '파일 첨부',

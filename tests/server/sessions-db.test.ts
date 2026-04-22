@@ -63,7 +63,7 @@ describe('session DB summaries', () => {
       },
     ])
 
-    const mod = await import('../../packages/server/src/services/hermes/sessions-db')
+    const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.listSessionSummaries(undefined, 50)
 
     expect(databaseSyncMock).toHaveBeenCalledWith('/tmp/hermes-profile/state.db', { open: true, readOnly: true })
@@ -124,7 +124,7 @@ describe('session DB summaries', () => {
       },
     ])
 
-    const mod = await import('../../packages/server/src/services/hermes/sessions-db')
+    const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.listSessionSummaries('telegram', 2)
 
     expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining('AND s.source = ?'))
@@ -218,7 +218,7 @@ describe('session DB summaries', () => {
       },
     ])
 
-    const mod = await import('../../packages/server/src/services/hermes/sessions-db')
+    const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('docker', undefined, 10)
 
     expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining('messages_fts MATCH'))
@@ -265,7 +265,7 @@ describe('session DB summaries', () => {
       },
     ])
 
-    const mod = await import('../../packages/server/src/services/hermes/sessions-db')
+    const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('记忆断裂', undefined, 10)
 
     expect(likeAllMock).toHaveBeenCalledWith('记忆断裂', '%记忆断裂%')

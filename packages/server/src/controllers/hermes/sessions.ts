@@ -1,6 +1,8 @@
 import * as hermesCli from '../../services/hermes/hermes-cli'
 import { getConversationDetail, listConversationSummaries } from '../../services/hermes/conversations'
-import { listSessionSummaries, searchSessionSummaries } from '../../services/hermes/sessions-db'
+import { listSessionSummaries, searchSessionSummaries } from '../../db/hermes/sessions-db'
+import { deleteUsage, getUsage, getUsageBatch } from '../../db/hermes/usage-store'
+import { getModelContextLength } from '../../services/hermes/model-context'
 import { logger } from '../../services/logger'
 
 function parseHumanOnly(value: unknown): boolean {
@@ -84,7 +86,27 @@ export async function remove(ctx: any) {
     ctx.body = { error: 'Failed to delete session' }
     return
   }
+  deleteUsage(ctx.params.id)
   ctx.body = { ok: true }
+}
+
+export async function usageBatch(ctx: any) {
+  const ids = (ctx.query.ids as string)
+  if (!ids) {
+    ctx.body = {}
+    return
+  }
+  const idList = ids.split(',').filter(Boolean)
+  ctx.body = getUsageBatch(idList)
+}
+
+export async function usageSingle(ctx: any) {
+  const result = getUsage(ctx.params.id)
+  if (!result) {
+    ctx.body = { input_tokens: 0, output_tokens: 0 }
+    return
+  }
+  ctx.body = result
 }
 
 export async function rename(ctx: any) {
@@ -101,4 +123,9 @@ export async function rename(ctx: any) {
     return
   }
   ctx.body = { ok: true }
+}
+
+export async function contextLength(ctx: any) {
+  const profile = (ctx.query.profile as string) || undefined
+  ctx.body = { context_length: getModelContextLength(profile) }
 }

@@ -94,3 +94,26 @@ export async function renameSession(id: string, title: string): Promise<boolean>
     return false
   }
 }
+
+export async function fetchSessionUsage(ids: string[]): Promise<Record<string, { input_tokens: number; output_tokens: number }>> {
+  if (ids.length === 0) return {}
+  const params = new URLSearchParams()
+  params.set('ids', ids.join(','))
+  return request(`/api/hermes/sessions/usage?${params}`)
+}
+
+export async function fetchSessionUsageSingle(id: string): Promise<{ input_tokens: number; output_tokens: number } | null> {
+  try {
+    return await request<{ input_tokens: number; output_tokens: number }>(`/api/hermes/sessions/${id}/usage`)
+  } catch {
+    return null
+  }
+}
+
+export async function fetchContextLength(profile?: string): Promise<number> {
+  const params = new URLSearchParams()
+  if (profile) params.set('profile', profile)
+  const query = params.toString()
+  const res = await request<{ context_length: number }>(`/api/hermes/sessions/context-length${query ? `?${query}` : ''}`)
+  return res.context_length
+}

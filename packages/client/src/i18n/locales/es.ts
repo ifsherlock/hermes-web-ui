@@ -61,6 +61,7 @@ export default {
 
   // Chat
   chat: {
+    contextRemaining: 'restante',
     emptyState: 'Inicia una conversacion con Hermes Agent',
     inputPlaceholder: 'Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva linea)',
     attachFiles: 'Adjuntar archivos',

@@ -169,57 +169,6 @@ const headerTitle = computed(() =>
   currentMode.value === 'live' ? t('chat.liveSessions') : activeSessionTitle.value,
 )
 
-const totalTokens = computed(() => {
-  const input = chatStore.activeSession?.inputTokens ?? 0
-  const output = chatStore.activeSession?.outputTokens ?? 0
-  return input + output
-})
-
-const MODEL_CONTEXT: Record<string, number> = {
-  'claude-opus-4': 200000,
-  'claude-sonnet-4': 200000,
-  'claude-haiku-4': 200000,
-  'claude-3.5-sonnet': 200000,
-  'claude-3.5-haiku': 200000,
-  'claude-3-opus': 200000,
-  'claude-3-sonnet': 200000,
-  'claude-3-haiku': 200000,
-  'gpt-4o': 128000,
-  'gpt-4o-mini': 128000,
-  'gpt-4-turbo': 128000,
-  'gpt-4': 8192,
-  'gpt-3.5-turbo': 16385,
-  'o1': 200000,
-  'o1-mini': 128000,
-  'o3': 200000,
-  'o3-mini': 200000,
-  'o4-mini': 200000,
-  'deepseek-chat': 65536,
-  'deepseek-reasoner': 65536,
-  'gemini-2.5-pro': 1000000,
-  'gemini-2.5-flash': 1000000,
-  'gemini-2.0-flash': 1000000,
-  'glm-4-plus': 128000,
-  'glm-4': 128000,
-  'qwen-max': 128000,
-  'qwen-plus': 128000,
-  'qwen-turbo': 128000,
-}
-
-const contextWindow = computed(() => {
-  const model = chatStore.activeSession?.model || ''
-  for (const [key, val] of Object.entries(MODEL_CONTEXT)) {
-    if (model.includes(key)) return val
-  }
-  return null
-})
-
-function formatTokens(n: number): string {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-  return String(n)
-}
-
 const activeSessionSource = computed(() =>
   currentMode.value === 'chat' ? (chatStore.activeSession?.source || '') : '',
 )
@@ -446,9 +395,6 @@ async function handleRenameConfirm() {
 
       <template v-if="currentMode === 'chat'">
         <MessageList />
-        <div v-if="contextWindow !== null" class="context-info">
-          <span>{{ formatTokens(totalTokens) }} / {{ formatTokens(contextWindow) }}</span>
-        </div>
         <ChatInput />
       </template>
       <ConversationMonitorPane v-else :human-only="sessionBrowserPrefsStore.humanOnly" />
@@ -799,20 +745,9 @@ async function handleRenameConfirm() {
   margin-right: 4px;
 }
 
-.context-info {
-  padding: 0 20px 4px;
-  font-size: 11px;
-  color: $text-muted;
-  flex-shrink: 0;
-}
-
 @media (max-width: $breakpoint-mobile) {
   .chat-header {
     padding: 16px 12px 16px 52px;
-  }
-
-  .context-info {
-    padding: 0 12px 4px;
   }
 }
 </style>

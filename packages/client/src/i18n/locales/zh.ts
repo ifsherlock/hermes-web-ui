@@ -73,6 +73,7 @@ export default {
 
   // 对话
   chat: {
+    contextRemaining: '剩余',
     emptyState: '开始与 Hermes Agent 对话',
     inputPlaceholder: '输入消息... (Enter 发送，Shift+Enter 换行)',
     attachFiles: '添加附件',
