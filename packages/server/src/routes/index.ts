@@ -5,6 +5,7 @@ import { healthRoutes } from './health'
 import { webhookRoutes } from './webhook'
 import { uploadRoutes } from './upload'
 import { updateRoutes } from './update'
+import { authPublicRoutes, authProtectedRoutes } from './auth'
 
 // Hermes route modules
 import { sessionRoutes } from './hermes/sessions'
@@ -29,11 +30,13 @@ export function registerRoutes(app: any, requireAuth: (ctx: Context, next: Next)
   // --- Public routes (no auth required) ---
   app.use(healthRoutes.routes())
   app.use(webhookRoutes.routes())
+  app.use(authPublicRoutes.routes())
 
   // --- Auth middleware: all routes below require authentication ---
   app.use(requireAuth)
 
   // --- Protected routes (auth required) ---
+  app.use(authProtectedRoutes.routes())
   app.use(uploadRoutes.routes())
   app.use(updateRoutes.routes())           // Must be before proxy (proxy catch-all matches everything)
   app.use(sessionRoutes.routes())
