@@ -1,6 +1,38 @@
 import * as hermesCli from '../../services/hermes/hermes-cli'
+import { getConversationDetail, listConversationSummaries } from '../../services/hermes/conversations'
 import { listSessionSummaries } from '../../services/hermes/sessions-db'
 import { logger } from '../../services/logger'
+
+function parseHumanOnly(value: unknown): boolean {
+  if (typeof value !== 'string') return true
+  return value !== 'false' && value !== '0'
+}
+
+function parseLimit(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+export async function listConversations(ctx: any) {
+  const source = (ctx.query.source as string) || undefined
+  const humanOnly = parseHumanOnly(ctx.query.humanOnly)
+  const limit = parseLimit(ctx.query.limit)
+  const sessions = await listConversationSummaries({ source, humanOnly, limit })
+  ctx.body = { sessions }
+}
+
+export async function getConversationMessages(ctx: any) {
+  const source = (ctx.query.source as string) || undefined
+  const humanOnly = parseHumanOnly(ctx.query.humanOnly)
+  const detail = await getConversationDetail(ctx.params.id, { source, humanOnly })
+  if (!detail) {
+    ctx.status = 404
+    ctx.body = { error: 'Conversation not found' }
+    return
+  }
+  ctx.body = detail
+}
 
 export async function list(ctx: any) {
   const source = (ctx.query.source as string) || undefined
