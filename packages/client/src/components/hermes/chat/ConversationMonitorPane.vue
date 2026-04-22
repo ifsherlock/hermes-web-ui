@@ -191,6 +191,20 @@ onUnmounted(() => {
   border-right: 1px solid $border-color;
   overflow-y: auto;
   flex-shrink: 0;
+  scrollbar-gutter: stable;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($text-muted, 0.3);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba($text-muted, 0.5);
+  }
 }
 
 .conversation-monitor__session {
@@ -204,7 +218,13 @@ onUnmounted(() => {
   cursor: pointer;
 
   &.active {
-    background: rgba($accent-primary, 0.08);
+    background: rgba(var(--accent-primary-rgb), 0.12);
+    color: $text-primary;
+    font-weight: 500;
+  }
+
+  &.active .conversation-monitor__session-title {
+    color: $accent-primary;
   }
 }
 
@@ -294,6 +314,12 @@ onUnmounted(() => {
     max-height: 220px;
     border-right: 0;
     border-bottom: 1px solid $border-color;
+    flex-shrink: 0;
+  }
+
+  .conversation-monitor__detail {
+    min-height: 0;
+    overflow: hidden;
   }
 }
 </style>

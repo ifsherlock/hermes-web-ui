@@ -29,6 +29,7 @@ const showSessions = ref(
 )
 const lastChatSessionsVisibility = ref(showSessions.value)
 let mobileQuery: MediaQueryList | null = null
+const isMobile = ref(false)
 
 function handleSessionClick(sessionId: string) {
   chatStore.switchSession(sessionId)
@@ -47,6 +48,7 @@ function handleModeChange(mode: 'chat' | 'live') {
 }
 
 function handleMobileChange(e: MediaQueryListEvent | MediaQueryList) {
+  isMobile.value = e.matches
   if (e.matches && showSessions.value) {
     showSessions.value = false
   }
@@ -432,11 +434,11 @@ async function handleRenameConfirm() {
               </template>
               {{ t('chat.copySessionId') }}
             </NTooltip>
-            <NButton size="small" @click="handleNewChat">
+            <NButton size="small" :circle="isMobile" @click="handleNewChat">
               <template #icon>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </template>
-              {{ t('chat.newChat') }}
+              <template v-if="!isMobile">{{ t('chat.newChat') }}</template>
             </NButton>
           </template>
         </div>
