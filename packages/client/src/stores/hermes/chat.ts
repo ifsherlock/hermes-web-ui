@@ -231,6 +231,7 @@ function sanitizeForCache(msgs: Message[]): Message[] {
 export const useChatStore = defineStore('chat', () => {
   const sessions = ref<Session[]>([])
   const activeSessionId = ref<string | null>(null)
+  const focusMessageId = ref<string | null>(null)
   const streamStates = ref<Map<string, AbortController>>(new Map())
   const isStreaming = computed(() => activeSessionId.value != null && streamStates.value.has(activeSessionId.value))
   const isLoadingSessions = ref(false)
@@ -474,8 +475,9 @@ export const useChatStore = defineStore('chat', () => {
     return session
   }
 
-  async function switchSession(sessionId: string) {
+  async function switchSession(sessionId: string, focusId?: string | null) {
     activeSessionId.value = sessionId
+    focusMessageId.value = focusId ?? null
     localStorage.setItem(storageKey(), sessionId)
     activeSession.value = sessions.value.find(s => s.id === sessionId) || null
 
@@ -915,6 +917,7 @@ export const useChatStore = defineStore('chat', () => {
     sessions,
     activeSessionId,
     activeSession,
+    focusMessageId,
     messages,
     isStreaming,
     isRunActive,

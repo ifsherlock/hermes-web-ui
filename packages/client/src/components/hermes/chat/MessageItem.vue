@@ -11,7 +11,7 @@ import {
 
 const TOOL_PAYLOAD_DISPLAY_LIMIT = 2000;
 
-const props = defineProps<{ message: Message }>();
+const props = defineProps<{ message: Message; highlight?: boolean }>();
 const { t } = useI18n();
 
 const isSystem = computed(() => props.message.role === "system");
@@ -126,7 +126,11 @@ const renderedToolResult = computed(() => {
 </script>
 
 <template>
-  <div class="message" :class="[message.role]">
+  <div
+    class="message"
+    :class="[message.role, { highlight }]"
+    :id="`message-${message.id}`"
+  >
     <template v-if="message.role === 'tool'">
       <div
         class="tool-line"
@@ -304,6 +308,12 @@ const renderedToolResult = computed(() => {
       border-radius: $radius-sm;
       max-width: 80%;
       background-color: rgba(var(--warning-rgb), 0.06);
+    }
+  }
+
+  &.highlight {
+    .message-bubble {
+      box-shadow: 0 0 0 1px rgba(var(--accent-primary-rgb), 0.45);
     }
   }
 }

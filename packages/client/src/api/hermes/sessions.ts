@@ -5,6 +5,7 @@ export interface SessionSummary {
   source: string
   model: string
   title: string | null
+  preview?: string
   started_at: number
   ended_at: number | null
   last_active?: number
@@ -23,6 +24,12 @@ export interface SessionSummary {
 
 export interface SessionDetail extends SessionSummary {
   messages: HermesMessage[]
+}
+
+export interface SessionSearchResult extends SessionSummary {
+  matched_message_id: number | null
+  snippet: string
+  rank: number
 }
 
 export interface HermesMessage {
@@ -46,6 +53,16 @@ export async function fetchSessions(source?: string, limit?: number): Promise<Se
   const query = params.toString()
   const res = await request<{ sessions: SessionSummary[] }>(`/api/hermes/sessions${query ? `?${query}` : ''}`)
   return res.sessions
+}
+
+export async function searchSessions(q: string, source?: string, limit?: number): Promise<SessionSearchResult[]> {
+  const params = new URLSearchParams()
+  params.set('q', q)
+  if (source) params.set('source', source)
+  if (limit) params.set('limit', String(limit))
+  const query = params.toString()
+  const res = await request<{ results: SessionSearchResult[] }>(`/api/hermes/search/sessions?${query}`)
+  return res.results
 }
 
 export async function fetchSession(id: string): Promise<SessionDetail | null> {

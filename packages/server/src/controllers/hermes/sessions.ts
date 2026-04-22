@@ -1,6 +1,6 @@
 import * as hermesCli from '../../services/hermes/hermes-cli'
 import { getConversationDetail, listConversationSummaries } from '../../services/hermes/conversations'
-import { listSessionSummaries } from '../../services/hermes/sessions-db'
+import { listSessionSummaries, searchSessionSummaries } from '../../services/hermes/sessions-db'
 import { logger } from '../../services/logger'
 
 function parseHumanOnly(value: unknown): boolean {
@@ -48,6 +48,23 @@ export async function list(ctx: any) {
 
   const sessions = await hermesCli.listSessions(source, limit)
   ctx.body = { sessions }
+}
+
+export async function search(ctx: any) {
+  const q = typeof ctx.query.q === 'string' ? ctx.query.q : ''
+  const source = typeof ctx.query.source === 'string' && ctx.query.source.trim()
+    ? ctx.query.source.trim()
+    : undefined
+  const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
+
+  try {
+    const results = await searchSessionSummaries(q, source, limit && limit > 0 ? limit : 20)
+    ctx.body = { results }
+  } catch (err) {
+    logger.error(err, 'Hermes Session DB: search failed')
+    ctx.status = 500
+    ctx.body = { error: 'Failed to search sessions' }
+  }
 }
 
 export async function get(ctx: any) {

@@ -29,6 +29,12 @@ export interface HermesSessionRow {
   last_active: number
 }
 
+export interface HermesSessionSearchRow extends HermesSessionRow {
+  matched_message_id: number | null
+  snippet: string
+  rank: number
+}
+
 function sessionDbPath(): string {
   return `${getActiveProfileDir()}/state.db`
 }
@@ -81,42 +87,121 @@ function mapRow(row: Record<string, unknown>): HermesSessionRow {
   }
 }
 
-const BASE_SELECT = `
-  SELECT
-    s.id,
-    s.source,
-    COALESCE(s.user_id, '') AS user_id,
-    COALESCE(s.model, '') AS model,
-    COALESCE(s.title, '') AS title,
-    COALESCE(s.started_at, 0) AS started_at,
-    s.ended_at AS ended_at,
-    COALESCE(s.end_reason, '') AS end_reason,
-    COALESCE(s.message_count, 0) AS message_count,
-    COALESCE(s.tool_call_count, 0) AS tool_call_count,
-    COALESCE(s.input_tokens, 0) AS input_tokens,
-    COALESCE(s.output_tokens, 0) AS output_tokens,
-    COALESCE(s.cache_read_tokens, 0) AS cache_read_tokens,
-    COALESCE(s.cache_write_tokens, 0) AS cache_write_tokens,
-    COALESCE(s.reasoning_tokens, 0) AS reasoning_tokens,
-    COALESCE(s.billing_provider, '') AS billing_provider,
-    COALESCE(s.estimated_cost_usd, 0) AS estimated_cost_usd,
-    s.actual_cost_usd AS actual_cost_usd,
-    COALESCE(s.cost_status, '') AS cost_status,
-    COALESCE(
-      (
-        SELECT SUBSTR(REPLACE(REPLACE(m.content, CHAR(10), ' '), CHAR(13), ' '), 1, 63)
-        FROM messages m
-        WHERE m.session_id = s.id AND m.role = 'user' AND m.content IS NOT NULL
-        ORDER BY m.timestamp, m.id
-        LIMIT 1
-      ),
-      ''
-    ) AS preview,
-    COALESCE((SELECT MAX(m2.timestamp) FROM messages m2 WHERE m2.session_id = s.id), s.started_at) AS last_active
+const SESSION_SELECT = `
+  s.id,
+  s.source,
+  COALESCE(s.user_id, '') AS user_id,
+  COALESCE(s.model, '') AS model,
+  COALESCE(s.title, '') AS title,
+  COALESCE(s.started_at, 0) AS started_at,
+  s.ended_at AS ended_at,
+  COALESCE(s.end_reason, '') AS end_reason,
+  COALESCE(s.message_count, 0) AS message_count,
+  COALESCE(s.tool_call_count, 0) AS tool_call_count,
+  COALESCE(s.input_tokens, 0) AS input_tokens,
+  COALESCE(s.output_tokens, 0) AS output_tokens,
+  COALESCE(s.cache_read_tokens, 0) AS cache_read_tokens,
+  COALESCE(s.cache_write_tokens, 0) AS cache_write_tokens,
+  COALESCE(s.reasoning_tokens, 0) AS reasoning_tokens,
+  COALESCE(s.billing_provider, '') AS billing_provider,
+  COALESCE(s.estimated_cost_usd, 0) AS estimated_cost_usd,
+  s.actual_cost_usd AS actual_cost_usd,
+  COALESCE(s.cost_status, '') AS cost_status,
+  COALESCE(
+    (
+      SELECT SUBSTR(REPLACE(REPLACE(m.content, CHAR(10), ' '), CHAR(13), ' '), 1, 63)
+      FROM messages m
+      WHERE m.session_id = s.id AND m.role = 'user' AND m.content IS NOT NULL
+      ORDER BY m.timestamp, m.id
+      LIMIT 1
+    ),
+    ''
+  ) AS preview,
+  COALESCE((SELECT MAX(m2.timestamp) FROM messages m2 WHERE m2.session_id = s.id), s.started_at) AS last_active
+`
+
+const SESSION_FROM = `
   FROM sessions s
   WHERE s.parent_session_id IS NULL
     AND s.source != 'tool'
 `
+
+function buildBaseSessionSql(source?: string): { sql: string, params: any[] } {
+  const sql = source
+    ? `SELECT ${SESSION_SELECT}${SESSION_FROM}\n    AND s.source = ?`
+    : `SELECT ${SESSION_SELECT}${SESSION_FROM}`
+  return { sql, params: source ? [source] : [] }
+}
+
+function buildListSessionSql(source?: string, limit = 2000): { sql: string, params: any[] } {
+  const base = buildBaseSessionSql(source)
+  return {
+    sql: `${base.sql}\n  ORDER BY s.started_at DESC\n  LIMIT ?`,
+    params: [...base.params, limit],
+  }
+}
+
+function containsCjk(text: string): boolean {
+  for (const ch of text) {
+    const cp = ch.codePointAt(0) ?? 0
+    if (
+      (cp >= 0x4E00 && cp <= 0x9FFF) ||
+      (cp >= 0x3400 && cp <= 0x4DBF) ||
+      (cp >= 0x20000 && cp <= 0x2A6DF) ||
+      (cp >= 0x3000 && cp <= 0x303F) ||
+      (cp >= 0x3040 && cp <= 0x309F) ||
+      (cp >= 0x30A0 && cp <= 0x30FF) ||
+      (cp >= 0xAC00 && cp <= 0xD7AF)
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
+function sanitizeFtsQuery(query: string): string {
+  const quotedParts: string[] = []
+
+  const preserved = query.replace(/"[^"]*"/g, (match) => {
+    quotedParts.push(match)
+    return `\u0000Q${quotedParts.length - 1}\u0000`
+  })
+
+  let sanitized = preserved.replace(/[+{}()"^]/g, ' ')
+  sanitized = sanitized.replace(/\*+/g, '*')
+  sanitized = sanitized.replace(/(^|\s)\*/g, '$1')
+  sanitized = sanitized.trim().replace(/^(AND|OR|NOT)\b\s*/i, '')
+  sanitized = sanitized.trim().replace(/\s+(AND|OR|NOT)\s*$/i, '')
+  sanitized = sanitized.replace(/\b(\w+(?:[.-]\w+)+)\b/g, '"$1"')
+
+  for (let i = 0; i < quotedParts.length; i += 1) {
+    sanitized = sanitized.replace(`\u0000Q${i}\u0000`, quotedParts[i])
+  }
+
+  return sanitized.trim()
+}
+
+function toPrefixQuery(query: string): string {
+  const tokens = query.match(/"[^"]*"|\S+/g)
+  if (!tokens) return ''
+  return tokens
+    .map((token) => {
+      if (token === 'AND' || token === 'OR' || token === 'NOT') return token
+      if (token.startsWith('"') && token.endsWith('"')) return token
+      if (token.endsWith('*')) return token
+      return `${token}*`
+    })
+    .join(' ')
+}
+
+function mapSearchRow(row: Record<string, unknown>): HermesSessionSearchRow {
+  return {
+    ...mapRow(row),
+    matched_message_id: normalizeNullableNumber(row.matched_message_id),
+    snippet: String(row.snippet || row.preview || ''),
+    rank: Number.isFinite(Number(row.rank)) ? Number(row.rank) : 0,
+  }
+}
 
 export async function listSessionSummaries(source?: string, limit = 2000): Promise<HermesSessionRow[]> {
   if (!SQLITE_AVAILABLE) {
@@ -127,16 +212,140 @@ export async function listSessionSummaries(source?: string, limit = 2000): Promi
   const db = new DatabaseSync(sessionDbPath(), { open: true, readOnly: true })
 
   try {
-    const sql = source
-      ? `${BASE_SELECT}\n    AND s.source = ?\n  ORDER BY s.started_at DESC\n  LIMIT ?`
-      : `${BASE_SELECT}\n  ORDER BY s.started_at DESC\n  LIMIT ?`
-
+    const { sql, params } = buildListSessionSql(source, limit)
     const statement = db.prepare(sql)
-    const rows = source
-      ? statement.all(source, limit) as Record<string, unknown>[]
-      : statement.all(limit) as Record<string, unknown>[]
+    const rows = statement.all(...params) as Record<string, unknown>[]
 
     return rows.map(mapRow)
+  } finally {
+    db.close()
+  }
+}
+
+export async function searchSessionSummaries(
+  query: string,
+  source?: string,
+  limit = 20,
+): Promise<HermesSessionSearchRow[]> {
+  if (!SQLITE_AVAILABLE) {
+    throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
+  }
+
+  const trimmed = query.trim()
+  if (!trimmed) {
+    const recent = await listSessionSummaries(source, limit)
+    return recent.map(row => ({
+      ...row,
+      matched_message_id: null,
+      snippet: row.preview,
+      rank: 0,
+    }))
+  }
+
+  const { DatabaseSync } = await import('node:sqlite')
+  const db = new DatabaseSync(sessionDbPath(), { open: true, readOnly: true })
+  const normalized = sanitizeFtsQuery(trimmed)
+  const prefixQuery = toPrefixQuery(normalized)
+
+  try {
+    const titleBase = buildBaseSessionSql(source)
+    const contentBase = buildBaseSessionSql(source)
+
+    const titleSql = `
+      WITH base AS (
+        ${titleBase.sql}
+      )
+      SELECT
+        base.*,
+        NULL AS matched_message_id,
+        CASE
+          WHEN base.title IS NOT NULL AND base.title != '' THEN base.title
+          ELSE base.preview
+        END AS snippet,
+        0 AS rank
+      FROM base
+      WHERE LOWER(COALESCE(base.title, '')) LIKE ?
+      ORDER BY base.last_active DESC
+      LIMIT ?
+    `
+
+    const titleStatement = db.prepare(titleSql)
+    const titleRows = titleStatement.all(...titleBase.params, `%${trimmed.toLowerCase()}%`, limit) as Record<string, unknown>[]
+
+    const contentSql = `
+      WITH base AS (
+        ${contentBase.sql}
+      )
+      SELECT
+        base.*,
+        m.id AS matched_message_id,
+        snippet(messages_fts, 0, '>>>', '<<<', '...', 40) AS snippet,
+        bm25(messages_fts) AS rank
+      FROM messages_fts
+      JOIN messages m ON m.id = messages_fts.rowid
+      JOIN base ON base.id = m.session_id
+      WHERE messages_fts MATCH ?
+      ORDER BY rank, base.last_active DESC
+      LIMIT ?
+    `
+
+    const contentRows = prefixQuery
+      ? (db.prepare(contentSql).all(...contentBase.params, prefixQuery, limit * 4) as Record<string, unknown>[])
+      : []
+
+    const merged = new Map<string, HermesSessionSearchRow>()
+    for (const row of titleRows) {
+      const mapped = mapSearchRow(row)
+      merged.set(mapped.id, mapped)
+    }
+    for (const row of contentRows) {
+      const mapped = mapSearchRow(row)
+      if (!merged.has(mapped.id)) {
+        merged.set(mapped.id, mapped)
+      }
+    }
+
+    const items = [...merged.values()]
+    items.sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank
+      return b.last_active - a.last_active
+    })
+    return items.slice(0, limit)
+  } catch (err) {
+    if (containsCjk(normalized)) {
+      const likeBase = buildBaseSessionSql(source)
+      const likeSql = `
+        WITH base AS (
+          ${likeBase.sql}
+        )
+        SELECT
+          base.*,
+          m.id AS matched_message_id,
+          substr(
+            m.content,
+            max(1, instr(m.content, ?) - 40),
+            120
+          ) AS snippet,
+          0 AS rank
+        FROM base
+        JOIN messages m ON m.session_id = base.id
+        WHERE m.content LIKE ?
+        ORDER BY base.last_active DESC, m.timestamp DESC
+      `
+      const likeStatement = db.prepare(likeSql)
+      const likeRows = likeStatement.all(...likeBase.params, trimmed, `%${trimmed}%`) as Record<string, unknown>[]
+      const merged = new Map<string, HermesSessionSearchRow>()
+      for (const row of likeRows) {
+        const mapped = mapSearchRow(row)
+        if (!merged.has(mapped.id)) {
+          merged.set(mapped.id, mapped)
+        }
+      }
+      return [...merged.values()].slice(0, limit)
+    }
+
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to search sessions: ${message}`)
   } finally {
     db.close()
   }
