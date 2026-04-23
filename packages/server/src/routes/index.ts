@@ -17,6 +17,7 @@ import { providerRoutes } from './hermes/providers'
 import { configRoutes } from './hermes/config'
 import { logRoutes } from './hermes/logs'
 import { codexAuthRoutes } from './hermes/codex-auth'
+import { nousAuthRoutes } from './hermes/nous-auth'
 import { gatewayRoutes } from './hermes/gateways'
 import { weixinRoutes } from './hermes/weixin'
 import { proxyRoutes, proxyMiddleware } from './hermes/proxy'
@@ -48,6 +49,7 @@ export function registerRoutes(app: any, requireAuth: (ctx: Context, next: Next)
   app.use(configRoutes.routes())
   app.use(logRoutes.routes())
   app.use(codexAuthRoutes.routes())
+  app.use(nousAuthRoutes.routes())
   app.use(gatewayRoutes.routes())
   app.use(weixinRoutes.routes())
   app.use(proxyRoutes.routes())
