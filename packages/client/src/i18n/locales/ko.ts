@@ -259,6 +259,8 @@ export default {
     builtIn: '내장',
     customType: '사용자 지정',
     provider: 'Provider',
+    contextLength: '컨텍스트 길이',
+    contextLengthPlaceholder: '예: 200000 (선택사항)',
     local: '로컬 ({host})',
     selectProviderRequired: 'Provider를 선택해 주세요',
     baseUrlRequired: 'Base URL을 입력해 주세요',

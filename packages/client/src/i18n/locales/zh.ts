@@ -284,6 +284,8 @@ export default {
     builtIn: '内置',
     customType: '自定义',
     provider: 'Provider',
+    contextLength: '上下文长度',
+    contextLengthPlaceholder: '例如 200000（可选）',
     local: '本地 ({host})',
     selectProviderRequired: '请选择 Provider',
     baseUrlRequired: 'Base URL 为必填项',

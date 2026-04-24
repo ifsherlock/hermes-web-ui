@@ -259,6 +259,8 @@ export default {
     builtIn: 'Integre',
     customType: 'Personnalise',
     provider: 'Fournisseur',
+    contextLength: 'Longueur du contexte',
+    contextLengthPlaceholder: 'ex. 200000 (facultatif)',
     local: 'Local ({host})',
     selectProviderRequired: 'Veuillez selectionner un fournisseur',
     baseUrlRequired: 'L\'URL de base est requise',

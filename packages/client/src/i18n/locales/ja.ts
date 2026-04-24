@@ -259,6 +259,8 @@ export default {
     builtIn: '組み込み',
     customType: 'カスタム',
     provider: 'プロバイダー',
+    contextLength: 'コンテキスト長',
+    contextLengthPlaceholder: '例: 200000（任意）',
     local: 'ローカル ({host})',
     selectProviderRequired: 'プロバイダーを選択してください',
     baseUrlRequired: 'ベース URL は必須です',

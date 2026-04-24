@@ -284,6 +284,8 @@ export default {
     builtIn: 'Built-in',
     customType: 'Custom',
     provider: 'Provider',
+    contextLength: 'Context Length',
+    contextLengthPlaceholder: 'e.g. 200000 (optional)',
     local: 'Local ({host})',
     selectProviderRequired: 'Please select a provider',
     baseUrlRequired: 'Base URL is required',
