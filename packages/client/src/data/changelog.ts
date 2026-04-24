@@ -17,7 +17,7 @@ export const changelog: ChangelogEntry[] = [
   },
   {
     version: '0.4.2',
-    date: '2026-03-20',
+    date: '2026-04-22',
     changes: ['changelog.new_0_4_2_1', 'changelog.new_0_4_2_2', 'changelog.new_0_4_2_3', 'changelog.new_0_4_2_4', 'changelog.new_0_4_2_5'],
   },
   {

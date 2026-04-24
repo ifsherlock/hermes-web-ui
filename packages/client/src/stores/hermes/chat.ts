@@ -492,7 +492,16 @@ export const useChatStore = defineStore('chat', () => {
       // that was just created and whose first run is still in-flight. Without
       // this, refreshing mid-run would wipe the session and fall back to
       // sessions[0], which is exactly what the user reported.
-      const localOnly = sessions.value.filter(s => !freshIds.has(s.id))
+      // Sessions without an active in-flight run are considered deleted and
+      // cleaned up along with their cached messages.
+      const localOnly = sessions.value.filter(s => {
+        if (freshIds.has(s.id)) return false
+        if (readInFlight(s.id)) return true
+        // Session no longer exists on server and no active run — clean up cache
+        removeItemWithLegacy(msgsCacheKey(s.id), legacyMsgsCacheKey(s.id))
+        removeItemWithLegacy(inFlightKey(s.id), legacyInFlightKey(s.id))
+        return false
+      })
       sessions.value = [...localOnly, ...fresh]
       persistSessionsList()
 

@@ -94,6 +94,8 @@ describe('Chat Store', () => {
     window.localStorage.setItem(ACTIVE_SESSION_KEY, 'local-1')
     window.localStorage.setItem(SESSIONS_CACHE_KEY, JSON.stringify([cachedSession]))
     window.localStorage.setItem(sessionMessagesKey('local-1'), JSON.stringify(cachedMessages))
+    // Mark local-1 as in-flight so loadSessions preserves it
+    window.localStorage.setItem(inFlightKey('local-1'), JSON.stringify({ runId: 'run-1', startedAt: Date.now() }))
 
     mockSessionsApi.fetchSessions.mockResolvedValue([makeSummary('remote-1', 'Remote Session')])
     mockSessionsApi.fetchSession.mockResolvedValue(null)
