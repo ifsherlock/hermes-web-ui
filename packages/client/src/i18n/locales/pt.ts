@@ -520,6 +520,14 @@ export default {
 
   // Registro de alteracoes
   changelog: {
+    new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
+    new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
+    new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
+    new_0_4_5_4: 'Replace jobs proxy with local controller and optimize model loading',
+    new_0_4_5_5: 'Add i18n support for custom model feature in ModelSelector',
+    new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
+    new_0_4_5_7: 'Clear all localStorage on logout',
+    new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
     new_0_4_3_1: 'Adicionar login por usuario/senha junto com autenticacao por token',
     new_0_4_3_2: 'Adicionar configuracoes de conta para gerenciar credenciais',
     new_0_4_3_3: 'Adicionar botao de sair na barra lateral',
