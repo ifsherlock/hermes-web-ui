@@ -45,11 +45,11 @@ const mentionNames = computed(() => props.agents.map(a => a.name).filter(Boolean
             <div class="msg-header">
                 <span class="sender-name">{{ message.senderName }}</span>
                 <span v-if="isAgent && agentInfo?.description" class="agent-desc">{{ agentInfo.description }}</span>
-                <span class="msg-time">{{ timeStr }}</span>
             </div>
             <div class="msg-content" :class="{ 'agent-content': isAgent }">
                 <MarkdownRenderer :content="message.content" :mention-names="mentionNames" />
             </div>
+            <span class="msg-time">{{ timeStr }}</span>
         </div>
     </div>
 </template>
@@ -102,7 +102,7 @@ const mentionNames = computed(() => props.agents.map(a => a.name).filter(Boolean
     display: flex;
     flex-direction: column;
     min-width: 0;
-    max-width: 70%;
+    max-width: 85%;
 }
 
 .msg-header {
@@ -126,7 +126,7 @@ const mentionNames = computed(() => props.agents.map(a => a.name).filter(Boolean
     .msg-time {
         font-size: 11px;
         color: $text-muted;
-        margin-left: auto;
+        margin-top: 2px;
     }
 }
 

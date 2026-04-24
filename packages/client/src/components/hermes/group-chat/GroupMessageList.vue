@@ -60,6 +60,7 @@ defineExpose({ scrollToBottom })
     display: flex;
     flex-direction: column;
     gap: 12px;
+    background-color: $bg-card;
 }
 
 .empty-state {
