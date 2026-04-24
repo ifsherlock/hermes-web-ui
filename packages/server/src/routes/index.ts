@@ -22,6 +22,7 @@ import { gatewayRoutes } from './hermes/gateways'
 import { weixinRoutes } from './hermes/weixin'
 import { fileRoutes } from './hermes/files'
 import { downloadRoutes } from './hermes/download'
+import { jobRoutes } from './hermes/jobs'
 import { proxyRoutes, proxyMiddleware } from './hermes/proxy'
 
 /**
@@ -56,6 +57,7 @@ export function registerRoutes(app: any, requireAuth: (ctx: Context, next: Next)
   app.use(weixinRoutes.routes())
   app.use(fileRoutes.routes())              // Must be before proxy (proxy catch-all matches everything)
   app.use(downloadRoutes.routes())          // Must be before proxy
+  app.use(jobRoutes.routes())               // Must be before proxy
   app.use(proxyRoutes.routes())
 
   // Proxy catch-all middleware (must be last)
