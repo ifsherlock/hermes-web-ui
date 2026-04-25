@@ -139,6 +139,8 @@ export async function setConfigModel(ctx: any) {
     const config = await readConfigYaml()
     if (typeof config.model !== 'object' || config.model === null) { config.model = {} }
     config.model.default = defaultModel
+    delete config.model.base_url
+    delete config.model.api_key
     if (reqProvider) { config.model.provider = reqProvider }
     await writeConfigYaml(config)
     ctx.body = { success: true }

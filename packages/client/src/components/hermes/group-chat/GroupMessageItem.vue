@@ -122,12 +122,13 @@ const mentionNames = computed(() => props.agents.map(a => a.name).filter(Boolean
         color: $text-muted;
         font-style: italic;
     }
+}
 
-    .msg-time {
-        font-size: 11px;
-        color: $text-muted;
-        margin-top: 2px;
-    }
+.msg-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-top: 2px;
 }
 
 .msg-content {

@@ -90,10 +90,7 @@ function updateMentionState() {
     document.body.removeChild(mirror)
 
     dropdownX.value = rect.left + mirrorRect.width - el.scrollLeft
-    // Estimate Y based on newlines before @ and line height
-    const linesBeforeAt = text.slice(0, atPos + 1).split('\n').length - 1
-    const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2
-    dropdownY.value = rect.top + linesBeforeAt * lineHeight - el.scrollTop + lineHeight + 4
+    dropdownY.value = rect.top - el.scrollTop - 8
 
     mentionActive.value = filteredAgents.value.length > 0
 }
