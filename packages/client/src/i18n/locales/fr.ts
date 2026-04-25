@@ -529,6 +529,17 @@ export default {
 
   // Journal des modifications
   changelog: {
+    new_0_4_7_1: 'Affichage en streaming en temps reel des blocs de reflexion/raisonnement',
+    new_0_4_7_2: 'Ignorer le script de preparation lors du build Docker',
+    new_0_4_7_3: 'Ameliorations UX mobile du chat de groupe et polissage de l\'interface',
+    new_0_4_7_4: 'Limiter les jetons restants du contexte a 0 au lieu de negatif',
+    new_0_4_7_5: 'Ajouter le fournisseur integre Alibaba Coding Plan avec remplacement base_url dans .env',
+    new_0_4_7_6: 'Ignorer les profils distants au demarrage pour eviter le blocage',
+    new_0_4_7_7: 'Detecter et afficher les erreurs d\'execution silencieusement ignorees',
+    new_0_4_7_8: 'Recherche de longueur de contexte sensible au fournisseur',
+    new_0_4_7_9: 'Reinitialiser config.model lors du changement et resoudre le fournisseur personnalise CLI',
+    new_0_4_7_10: 'Supprimer base_url_env du .env lors de la suppression du fournisseur integre',
+    new_0_4_7_11: 'Aligner le fond de la barre laterale du chat de groupe avec la liste des sessions',
     new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
@@ -537,16 +548,11 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: 'Ajouter la connexion par nom d\'utilisateur/mot de passe en plus du token',
-    new_0_4_3_2: 'Ajouter les parametres de compte pour gerer les identifiants',
-    new_0_4_3_3: 'Ajouter le bouton de deconnexion dans la barre laterale',
-    new_0_4_3_4: 'Ajouter un popup de journal des modifications en cliquant sur le numero de version',
     new_0_4_2_1: 'Ajouter le suivi de l\'utilisation des tokens et la longueur de contexte dynamique',
     new_0_4_2_2: 'Ajouter la modal de recherche de sessions',
     new_0_4_2_3: 'Restaurer le systeme de chat de groupe avec Socket.IO et SQLite',
     new_0_4_2_4: 'Ajouter les sessions epinglees et le moniteur en direct',
     new_0_4_2_5: 'Corriger la detection des fournisseurs integres et l\'appariement des modeles',
-    new_0_4_1_1: 'Corriger le contournement d\'authentification et le service de fichiers SPA',
   },
 
   // Fichiers

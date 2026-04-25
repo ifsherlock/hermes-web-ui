@@ -529,6 +529,17 @@ export default {
 
   // 변경 이력
   changelog: {
+    new_0_4_7_1: '생각/추론 블록의 실시간 스트리밍 표시',
+    new_0_4_7_2: 'Docker 빌드 중 prepare 스크립트 건너뛰기',
+    new_0_4_7_3: '그룹 채팅 모바일 UX 개선 및 UI 다듬기',
+    new_0_4_7_4: '컨텍스트 남은 토큰을 음수 대신 0으로 제한',
+    new_0_4_7_5: '.env base_url 재정의를 지원하는 Alibaba Coding Plan 내장 프로바이더 추가',
+    new_0_4_7_6: '시작 시 원격 프로필 건너뛰어 중지 방지',
+    new_0_4_7_7: '조용히 삼켜진 실행 오류 감지 및 표시',
+    new_0_4_7_8: '프로바이더 인식 컨텍스트 길이 조회',
+    new_0_4_7_9: '전환 시 config.model 재설정 및 CLI 커스텀 프로바이더 해결',
+    new_0_4_7_10: '내장 프로바이더 삭제 시 .env에서 base_url_env 정리',
+    new_0_4_7_11: '그룹 채팅 방 사이드바 배경을 세션 목록과 맞추기',
     new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
@@ -537,16 +548,11 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: '토큰 인증과 함께 사용자 이름/비밀번호 로그인 추가',
-    new_0_4_3_2: '자격 증명 관리를 위한 계정 설정 추가',
-    new_0_4_3_3: '사이드바에 로그아웃 버튼 추가',
-    new_0_4_3_4: '버전 번호 클릭으로 변경 이력 팝업 추가',
     new_0_4_2_1: '토큰 사용량 추적 및 동적 컨텍스트 길이 추가',
     new_0_4_2_2: '세션 검색 모달 추가',
     new_0_4_2_3: 'Socket.IO 및 SQLite로 그룹 채팅 시스템 복원',
     new_0_4_2_4: '채팅 페이지에 고정 세션 및 라이브 모니터 추가',
     new_0_4_2_5: '내장 프로바이더 감지 및 모델 매칭 수정',
-    new_0_4_1_1: '인증 우회 및 SPA 파일 서비스 수정',
   },
 
   // 파일

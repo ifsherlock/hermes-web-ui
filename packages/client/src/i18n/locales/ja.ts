@@ -529,6 +529,17 @@ export default {
 
   // 更新履歴
   changelog: {
+    new_0_4_7_1: '思考/推論ブロックのリアルタイムストリーミング表示',
+    new_0_4_7_2: 'Dockerビルド時にprepareスクリプトをスキップ',
+    new_0_4_7_3: 'グループチャットのモバイルUX改善とUIのブラッシュアップ',
+    new_0_4_7_4: 'コンテキスト残りトークン数をマイナスではなく0に制限',
+    new_0_4_7_5: 'Alibaba Coding Planビルトインプロバイダーを追加（.env base_urlオーバーライド対応）',
+    new_0_4_7_6: '起動時にリモートプロファイルをスキップしてハングを防止',
+    new_0_4_7_7: '黙って飲み込まれた実行エラーを検出して表示',
+    new_0_4_7_8: 'プロバイダー対応のコンテキスト長さルックアップ',
+    new_0_4_7_9: '切り替え時にconfig.modelをリセットしCLIカスタムプロバイダーを解決',
+    new_0_4_7_10: 'ビルトインプロバイダー削除時に.envからbase_url_envをクリア',
+    new_0_4_7_11: 'グループチャットルームのサイドバー背景をセッションリストに合わせる',
     new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
@@ -537,16 +548,11 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: 'トークン認証に加えてユーザー名/パスワードログインを追加',
-    new_0_4_3_2: '資格情報管理のためのアカウント設定を追加',
-    new_0_4_3_3: 'サイドバーにログアウトボタンを追加',
-    new_0_4_3_4: 'バージョン番号クリックで更新履歴ポップアップを追加',
     new_0_4_2_1: 'トークン使用量追跡と動的コンテキスト長を追加',
     new_0_4_2_2: 'セッション検索モーダルを追加',
     new_0_4_2_3: 'Socket.IOとSQLiteによるグループチャットシステムを復元',
     new_0_4_2_4: 'チャットページにピン留めセッションとライブモニターを追加',
     new_0_4_2_5: '組み込みプロバイダー検出とモデルマッチングを修正',
-    new_0_4_1_1: '認証バイパスとSPAファイル配信を修正',
   },
 
   // ファイル

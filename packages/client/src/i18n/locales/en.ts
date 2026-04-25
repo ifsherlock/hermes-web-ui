@@ -680,6 +680,17 @@ export default {
 
   // Changelog
   changelog: {
+    new_0_4_7_1: 'Real-time streaming display of thinking/reasoning blocks',
+    new_0_4_7_2: 'Skip prepare script during Docker build',
+    new_0_4_7_3: 'Group chat mobile UX improvements and UI polish',
+    new_0_4_7_4: 'Clamp context remaining tokens to 0 instead of negative',
+    new_0_4_7_5: 'Add Alibaba Coding Plan builtin provider with .env base_url override',
+    new_0_4_7_6: 'Skip remote profiles on startup to prevent hang',
+    new_0_4_7_7: 'Detect and surface silently swallowed run errors',
+    new_0_4_7_8: 'Provider-aware context length lookup',
+    new_0_4_7_9: 'Reset config.model on switch and resolve CLI custom provider',
+    new_0_4_7_10: 'Clear base_url_env from .env when deleting builtin provider',
+    new_0_4_7_11: 'Align group chat room sidebar background with session list',
     new_0_4_4_1: 'Add file browser with multi-backend support (local/Docker/SSH/Singularity)',
     new_0_4_4_2: 'Add file download from chat message attachments',
     new_0_4_4_3: 'Add live badge on active chat sessions',
@@ -693,15 +704,10 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: 'Add username/password login alongside token authentication',
-    new_0_4_3_2: 'Add account settings for managing credentials (setup, change password, change username)',
-    new_0_4_3_3: 'Add logout button to sidebar',
-    new_0_4_3_4: 'Add version changelog popup (click version number)',
     new_0_4_2_1: 'Add token usage tracking, context display, and dynamic context length',
     new_0_4_2_2: 'Add session search modal',
     new_0_4_2_3: 'Restore group chat system with Socket.IO and SQLite persistence',
     new_0_4_2_4: 'Add pinned sessions and live monitor in Chat page',
     new_0_4_2_5: 'Fix builtin provider detection and model matching',
-    new_0_4_1_1: 'Fix auth bypass, SPA serving, and provider improvements',
   },
 }

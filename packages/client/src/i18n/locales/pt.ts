@@ -529,6 +529,17 @@ export default {
 
   // Registro de alteracoes
   changelog: {
+    new_0_4_7_1: 'Exibicao em streaming em tempo real de blocos de pensamento/razoamento',
+    new_0_4_7_2: 'Ignorar script de preparacao durante o build Docker',
+    new_0_4_7_3: 'Melhorias na UX mobile do chat em grupo e polimento da UI',
+    new_0_4_7_4: 'Limitar os tokens restantes do contexto a 0 em vez de negativo',
+    new_0_4_7_5: 'Adicionar provedor integrado Alibaba Coding Plan com substituicao de base_url no .env',
+    new_0_4_7_6: 'Ignorar perfis remotos na inicializacao para evitar travamento',
+    new_0_4_7_7: 'Detectar e exibir erros de execucao silenciosamente engolidos',
+    new_0_4_7_8: 'Consulta de comprimento de contexto consciente do provedor',
+    new_0_4_7_9: 'Redefinir config.model ao trocar e resolver provedor personalizado CLI',
+    new_0_4_7_10: 'Limpar base_url_env do .env ao excluir provedor integrado',
+    new_0_4_7_11: 'Alinhar o fundo da barra lateral da sala de chat em grupo com a lista de sessoes',
     new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
@@ -537,16 +548,11 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: 'Adicionar login por usuario/senha junto com autenticacao por token',
-    new_0_4_3_2: 'Adicionar configuracoes de conta para gerenciar credenciais',
-    new_0_4_3_3: 'Adicionar botao de sair na barra lateral',
-    new_0_4_3_4: 'Adicionar popup de registro de alteracoes ao clicar no numero da versao',
     new_0_4_2_1: 'Adicionar rastreamento de uso de tokens e comprimento de contexto dinamico',
     new_0_4_2_2: 'Adicionar modal de busca de sessoes',
     new_0_4_2_3: 'Restaurar sistema de chat em grupo com Socket.IO e SQLite',
     new_0_4_2_4: 'Adicionar sessoes fixas e monitor ao vivo na pagina de chat',
     new_0_4_2_5: 'Corrigir deteccao de provedores integrados e combinacao de modelos',
-    new_0_4_1_1: 'Corrigir bypass de autenticacao e servico de arquivos SPA',
   },
 
   // Arquivos

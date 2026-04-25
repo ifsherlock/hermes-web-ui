@@ -529,6 +529,17 @@ export default {
 
   // Anderungsprotokoll
   changelog: {
+    new_0_4_7_1: 'Echtzeit-Streaming-Anzeige von Denk-/Argumentationsblocken',
+    new_0_4_7_2: 'Prepare-Skript wahrend Docker-Build uberspringen',
+    new_0_4_7_3: 'Gruppenchat-Mobile-UX-Verbesserungen und UI-Aufpolierung',
+    new_0_4_7_4: 'Verbleibende Kontext-Token auf 0 statt auf negativ begrenzen',
+    new_0_4_7_5: 'Alibaba Coding Plan integrierter Provider mit .env base_url-Uberschreibung hinzugefugt',
+    new_0_4_7_6: 'Remote-Profile beim Start uberspringen, um Hanger zu vermeiden',
+    new_0_4_7_7: 'Stillschweigend verschluckte Laufzeitfehler erkennen und anzeigen',
+    new_0_4_7_8: 'Provider-bewusste Kontextlangen-Abfrage',
+    new_0_4_7_9: 'config.model beim Wechsel zurucksetzen und CLI-Custom-Provider auflosen',
+    new_0_4_7_10: 'base_url_env aus .env beim Loschen des integrierten Providers entfernen',
+    new_0_4_7_11: 'Gruppenchat-Raum-Seitenleistenhintergrund an die Sitzungsliste anpassen',
     new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
@@ -537,16 +548,11 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: 'Benutzername/Passwort-Login neben Token-Authentifizierung hinzugefugt',
-    new_0_4_3_2: 'Kontoeinstellungen fur Anmeldeinformationen hinzugefugt',
-    new_0_4_3_3: 'Abmelden-Schaltflache in der Seitenleiste hinzugefugt',
-    new_0_4_3_4: 'Anderungsprotokoll-Popup durch Klick auf Versionsnummer hinzugefugt',
     new_0_4_2_1: 'Token-Nutzungsverfolgung und dynamische Kontextlange hinzugefugt',
     new_0_4_2_2: 'Sitzungssuche-Modal hinzugefugt',
     new_0_4_2_3: 'Gruppenchat-System mit Socket.IO und SQLite wiederhergestellt',
     new_0_4_2_4: 'Angeheftete Sitzungen und Live-Monitor hinzugefugt',
     new_0_4_2_5: 'Eingebaute Provider-Erkennung und Modellabgleich behoben',
-    new_0_4_1_1: 'Authentifizierungsumgehung und SPA-Bereitstellung behoben',
   },
 
   // Dateien

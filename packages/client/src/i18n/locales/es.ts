@@ -529,6 +529,17 @@ export default {
 
   // Registro de cambios
   changelog: {
+    new_0_4_7_1: 'Visualizacion en streaming en tiempo real de bloques de pensamiento/razonamiento',
+    new_0_4_7_2: 'Omitir script de preparacion durante la construccion Docker',
+    new_0_4_7_3: 'Mejoras en la experiencia movil del chat grupal y pulido de UI',
+    new_0_4_7_4: 'Limitar los tokens restantes del contexto a 0 en lugar de negativos',
+    new_0_4_7_5: 'Agregar proveedor integrado Alibaba Coding Plan con anulacion de base_url en .env',
+    new_0_4_7_6: 'Omitir perfiles remotos al inicio para evitar bloqueos',
+    new_0_4_7_7: 'Detectar y mostrar errores de ejecucion silenciosamente tragados',
+    new_0_4_7_8: 'Consulta de longitud de contexto consciente del proveedor',
+    new_0_4_7_9: 'Restablecer config.model al cambiar y resolver proveedor personalizado CLI',
+    new_0_4_7_10: 'Limpiar base_url_env de .env al eliminar proveedor integrado',
+    new_0_4_7_11: 'Alinear el fondo de la barra lateral del chat grupal con la lista de sesiones',
     new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
@@ -537,16 +548,11 @@ export default {
     new_0_4_5_6: 'Fix sidebar i18n missing key warnings',
     new_0_4_5_7: 'Clear all localStorage on logout',
     new_0_4_5_8: 'Add periodic log rotation to prevent unbounded log growth',
-    new_0_4_3_1: 'Agregar inicio de sesion con usuario/contrasena junto a autenticacion por token',
-    new_0_4_3_2: 'Agregar configuracion de cuenta para gestionar credenciales',
-    new_0_4_3_3: 'Agregar boton de cerrar sesion en la barra lateral',
-    new_0_4_3_4: 'Agregar popup de registro de cambios al hacer clic en el numero de version',
     new_0_4_2_1: 'Agregar seguimiento de uso de tokens y longitud de contexto dinamico',
     new_0_4_2_2: 'Agregar modal de busqueda de sesiones',
     new_0_4_2_3: 'Restaurar sistema de chat grupal con Socket.IO y SQLite',
     new_0_4_2_4: 'Agregar sesiones fijas y monitor en vivo en la pagina de chat',
     new_0_4_2_5: 'Corregir deteccion de proveedores integrados y coincidencia de modelos',
-    new_0_4_1_1: 'Corregir bypass de autenticacion y servicio de archivos SPA',
   },
 
   // Archivos
