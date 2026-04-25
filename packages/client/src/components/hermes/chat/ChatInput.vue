@@ -44,7 +44,7 @@ const totalTokens = computed(() => {
   return input + output
 })
 
-const remainingTokens = computed(() => contextLength.value - totalTokens.value)
+const remainingTokens = computed(() => Math.max(0, contextLength.value - totalTokens.value))
 
 const usagePercent = computed(() =>
   Math.min((totalTokens.value / contextLength.value) * 100, 100),
