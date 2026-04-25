@@ -834,6 +834,15 @@ export const useChatStore = defineStore('chat', () => {
       // the partial reply. 800ms keeps quota pressure low while guaranteeing
       // at most ~1s of unsaved delta on reload.
       let persistTimer: ReturnType<typeof setTimeout> | null = null
+      // Per-run flags used to detect silently-swallowed errors at run.completed.
+      // hermes-agent occasionally emits run.completed with empty output and no
+      // usage when the agent layer caught an upstream error (e.g. invalid API
+      // key). We need to distinguish: (a) run with assistant text produced,
+      // (b) run with only tool activity, (c) run with truly nothing visible.
+      // Reset per send() call — closures captured by SSE callbacks are scoped
+      // to this run, so there is no cross-run contamination.
+      let runProducedAssistantText = false
+      let runHadToolActivity = false
       const schedulePersist = () => {
         if (sid !== activeSessionId.value || persistTimer) return
         persistTimer = setTimeout(() => {
@@ -855,6 +864,7 @@ export const useChatStore = defineStore('chat', () => {
             case 'thinking.delta': {
               const text = evt.text || evt.delta || ''
               if (!text) break
+              runProducedAssistantText = true
               const msgs = getSessionMsgs(sid)
               const last = msgs[msgs.length - 1]
               if (last?.role === 'assistant' && last.isStreaming) {
@@ -894,6 +904,7 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'message.delta': {
+              if (evt.delta) runProducedAssistantText = true
               const msgs = getSessionMsgs(sid)
               const last = msgs[msgs.length - 1]
               if (last?.role === 'assistant' && last.isStreaming) {
@@ -920,6 +931,7 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'tool.started': {
+              runHadToolActivity = true
               const msgs = getSessionMsgs(sid)
               const last = msgs[msgs.length - 1]
               if (last?.isStreaming) {
@@ -939,6 +951,7 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'tool.completed': {
+              runHadToolActivity = true
               const msgs = getSessionMsgs(sid)
               const toolMsgs = msgs.filter(
                 m => m.role === 'tool' && m.toolStatus === 'running',
@@ -963,6 +976,44 @@ export const useChatStore = defineStore('chat', () => {
                   target.inputTokens = evt.usage.input_tokens
                   target.outputTokens = evt.usage.output_tokens
                 }
+              }
+              // Belt-and-suspenders: some providers may deliver the final
+              // assistant text only via run.completed.output (no message.delta
+              // stream). If we never produced assistant text but the gateway
+              // reports a non-empty output, fall back to rendering it as a
+              // single assistant message so the user actually sees the reply.
+              const finalOutput =
+                typeof evt.output === 'string' ? evt.output : ''
+              const finalOutputTrimmed = finalOutput.trim()
+              if (!runProducedAssistantText && finalOutputTrimmed !== '') {
+                addMessage(sid, {
+                  id: uid(),
+                  role: 'assistant',
+                  content: finalOutput,
+                  timestamp: Date.now(),
+                })
+                runProducedAssistantText = true
+              }
+              // Workaround for upstream hermes-agent bug: when the agent
+              // layer silently swallows an error (e.g. invalid API key,
+              // unsupported model), the gateway still emits run.completed
+              // with an empty output. Without surfacing it here the chat UI
+              // looks frozen / "succeeded with no reply". Detect by the
+              // combination of: no assistant text AND no tool activity AND
+              // empty final output. Usage being zero is a *supporting*
+              // signal but not required, since some providers/local models
+              // legitimately omit usage.
+              const swallowedError =
+                !runProducedAssistantText &&
+                !runHadToolActivity &&
+                finalOutputTrimmed === ''
+              if (swallowedError) {
+                addMessage(sid, {
+                  id: uid(),
+                  role: 'system',
+                  content: 'Error: Agent returned no output. The model call may have failed (e.g. invalid API key, model not supported by provider, or context exceeded). Check the hermes-agent logs for details.',
+                  timestamp: Date.now(),
+                })
               }
               cleanup()
               updateSessionTitle(sid)
