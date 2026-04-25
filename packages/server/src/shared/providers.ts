@@ -129,6 +129,27 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ],
   },
   {
+    label: 'Alibaba Cloud (Coding Plan)',
+    value: 'alibaba-coding-plan',
+    builtin: true,
+    // NOTE: This is the international (intl) DashScope endpoint, matching upstream
+    // hermes-agent (auth.py:255). Mainland China DashScope accounts (sk-sp-* keys
+    // issued by dashscope.aliyun.com) must override via ALIBABA_CODING_PLAN_BASE_URL=
+    // https://coding.dashscope.aliyuncs.com/v1 (no -intl), since the -intl endpoint
+    // returns HTTP 401 for those keys.
+    base_url: 'https://coding-intl.dashscope.aliyuncs.com/v1',
+    models: [
+      'qwen3.5-plus',
+      'qwen3-max-2026-01-23',
+      'qwen3-coder-next',
+      'qwen3-coder-plus',
+      'glm-5',
+      'glm-4.7',
+      'kimi-k2.5',
+      'MiniMax-M2.5',
+    ],
+  },
+  {
     label: 'Hugging Face',
     value: 'huggingface',
     builtin: true,
