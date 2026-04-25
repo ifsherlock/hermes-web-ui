@@ -131,6 +131,12 @@ export default {
     arguments: 'Argumente',
     result: 'Ergebnis',
     truncated: '... (abgeschnitten)',
+    thinkingLabel: 'Denkprozess',
+    thinkingInProgress: 'Denkt…',
+    thinkingShow: 'Denkprozess anzeigen',
+    thinkingHide: 'Denkprozess ausblenden',
+    thinkingDuration: 'Beobachtet {duration}',
+    thinkingChars: '{count} Zeichen',
   },
 
   // Jobs

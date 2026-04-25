@@ -131,6 +131,12 @@ export default {
     arguments: 'Argumentos',
     result: 'Resultado',
     truncated: '... (truncado)',
+    thinkingLabel: 'Pensamiento',
+    thinkingInProgress: 'Pensando…',
+    thinkingShow: 'Mostrar pensamiento',
+    thinkingHide: 'Ocultar pensamiento',
+    thinkingDuration: 'Observado {duration}',
+    thinkingChars: '{count} caracteres',
   },
 
   // Jobs

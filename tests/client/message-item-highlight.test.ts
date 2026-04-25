@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -22,6 +23,7 @@ import type { Message } from '@/stores/hermes/chat'
 
 describe('MessageItem tool details', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {

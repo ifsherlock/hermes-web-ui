@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAppStore } from './app'
 import { useProfilesStore } from './profiles'
+import { detectThinkingBoundary } from '@/utils/thinking-parser'
 
 export interface Attachment {
   id: string
@@ -26,6 +27,11 @@ export interface Message {
   toolStatus?: 'running' | 'done' | 'error'
   isStreaming?: boolean
   attachments?: Attachment[]
+  // 思考/推理文本。两条来源：
+  //   1) 历史消息：来自 HermesMessage.reasoning 字段
+  //   2) 流式：由 reasoning.delta / thinking.delta / reasoning.available 事件累加
+  // 不含 <think> 包裹标签；内容自身可以为多段纯文本。
+  reasoning?: string
 }
 
 export interface Session {
@@ -141,6 +147,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
       role: msg.role,
       content: msg.content || '',
       timestamp: Math.round(msg.timestamp * 1000),
+      reasoning: msg.reasoning ? msg.reasoning : undefined,
     })
   }
   return result
@@ -302,6 +309,26 @@ function sanitizeForCache(msgs: Message[]): Message[] {
       ...m,
       attachments: m.attachments.map(a => ({ id: a.id, name: a.name, type: a.type, size: a.size, url: a.url })),
     }
+  })
+}
+
+// Heals assistant messages whose `reasoning` field was polluted by the
+// old bug where `reasoning.available` clobbered it with the assistant
+// content. Detection heuristic: reasoning is a prefix of content (the
+// bug always derived `reasoning` from `content[:500]` with tags stripped).
+// Legitimate reasoning is almost never a prefix of the final answer.
+function scrubBuggyReasoningInCache(msgs: Message[] | null | undefined): Message[] {
+  if (!msgs) return []
+  return msgs.map(m => {
+    if (m.role !== 'assistant' || !m.reasoning || !m.content) return m
+    const r = m.reasoning.trim()
+    const c = m.content.trim()
+    if (!r || !c) return m
+    if (c === r || c.startsWith(r)) {
+      const { reasoning: _drop, ...rest } = m
+      return rest as Message
+    }
+    return m
   })
 }
 
@@ -471,7 +498,7 @@ export const useChatStore = defineStore('chat', () => {
           const cachedActive = cachedSessions.find(s => s.id === savedId) || null
           if (cachedActive) {
             const cachedMsgs = loadJsonWithFallback<Message[]>(msgsCacheKey(savedId), legacyMsgsCacheKey(savedId))
-            if (cachedMsgs) cachedActive.messages = cachedMsgs
+            if (cachedMsgs) cachedActive.messages = scrubBuggyReasoningInCache(cachedMsgs)
             activeSession.value = cachedActive
             activeSessionId.value = savedId
           }
@@ -561,6 +588,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function switchSession(sessionId: string, focusId?: string | null) {
+    clearThinkingObservationFor(sessionId)
     activeSessionId.value = sessionId
     focusMessageId.value = focusId ?? null
     setItemBestEffort(storageKey(), sessionId)
@@ -577,7 +605,7 @@ export const useChatStore = defineStore('chat', () => {
     if (!hasLocalMessages) {
       const cachedMsgs = loadJsonWithFallback<Message[]>(msgsCacheKey(sessionId), legacyMsgsCacheKey(sessionId))
       if (cachedMsgs?.length) {
-        activeSession.value.messages = cachedMsgs
+        activeSession.value.messages = scrubBuggyReasoningInCache(cachedMsgs)
       }
     }
 
@@ -823,16 +851,66 @@ export const useChatStore = defineStore('chat', () => {
             case 'run.started':
               break
 
+            case 'reasoning.delta':
+            case 'thinking.delta': {
+              const text = evt.text || evt.delta || ''
+              if (!text) break
+              const msgs = getSessionMsgs(sid)
+              const last = msgs[msgs.length - 1]
+              if (last?.role === 'assistant' && last.isStreaming) {
+                last.reasoning = (last.reasoning || '') + text
+                noteReasoningStart(last.id)
+              } else {
+                const newId = uid()
+                addMessage(sid, {
+                  id: newId,
+                  role: 'assistant',
+                  content: '',
+                  timestamp: Date.now(),
+                  isStreaming: true,
+                  reasoning: text,
+                })
+                noteReasoningStart(newId)
+              }
+              schedulePersist()
+              break
+            }
+
+            case 'reasoning.available': {
+              // Upstream run_agent.py fires reasoning.available with
+              // `assistant_message.content[:500]` as the preview — i.e.,
+              // the main answer, not real reasoning. Ignore the payload
+              // and only use this event as a "thinking ended" signal so
+              // the duration counter stops.
+              const msgs = getSessionMsgs(sid)
+              const last = msgs[msgs.length - 1]
+              if (last?.role === 'assistant' && last.isStreaming) {
+                // 只有当 reasoning.delta 事件曾经启动过计时，才标记结束；
+                // 否则（上游未转发 delta，只发这一次 available）不显示时长。
+                noteReasoningEnd(last.id)
+              }
+              schedulePersist()
+              break
+            }
+
             case 'message.delta': {
               const msgs = getSessionMsgs(sid)
               const last = msgs[msgs.length - 1]
               if (last?.role === 'assistant' && last.isStreaming) {
-                last.content += evt.delta || ''
+                const prev = last.content
+                const next = prev + (evt.delta || '')
+                noteThinkingDelta(last.id, prev, next)
+                // 若之前有 reasoning 累积，则 content 到达即视为推理结束。
+                if (last.reasoning) noteReasoningEnd(last.id)
+                last.content = next
               } else {
+                const newId = uid()
+                const nextContent = evt.delta || ''
+                noteThinkingDelta(newId, '', nextContent)
                 addMessage(sid, {
-                  id: uid(),
+                  id: newId,
                   role: 'assistant',
-                  content: evt.delta || '',
+                  content: nextContent,
                   timestamp: Date.now(),
                   isStreaming: true,
                 })
@@ -1013,6 +1091,52 @@ export const useChatStore = defineStore('chat', () => {
     })
   }
 
+  // Transient observation of <think> boundaries during active streaming.
+  // Not persisted; cleared on session switch. See spec §5.3.
+  const thinkingObservation = new Map<string, { startedAt?: number; endedAt?: number }>()
+
+  function getThinkingObservation(messageId: string) {
+    return thinkingObservation.get(messageId)
+  }
+
+  function noteThinkingDelta(messageId: string, prevContent: string, nextContent: string) {
+    const { startedAtBoundary, endedAtBoundary } = detectThinkingBoundary(prevContent, nextContent)
+    if (!startedAtBoundary && !endedAtBoundary) return
+    const existing = thinkingObservation.get(messageId) || {}
+    if (startedAtBoundary && existing.startedAt === undefined) {
+      existing.startedAt = Date.now()
+    }
+    if (endedAtBoundary && existing.endedAt === undefined) {
+      existing.endedAt = Date.now()
+    }
+    thinkingObservation.set(messageId, existing)
+  }
+
+  /** 第一次见到某条消息的 reasoning 文本时，标记 startedAt。 */
+  function noteReasoningStart(messageId: string) {
+    const existing = thinkingObservation.get(messageId) || {}
+    if (existing.startedAt === undefined) {
+      existing.startedAt = Date.now()
+      thinkingObservation.set(messageId, existing)
+    }
+  }
+
+  /** 内容首次到达（视为推理结束）或显式收到 reasoning.available 时，标记 endedAt。 */
+  function noteReasoningEnd(messageId: string) {
+    const existing = thinkingObservation.get(messageId)
+    if (!existing || existing.startedAt === undefined) return
+    if (existing.endedAt === undefined) {
+      existing.endedAt = Date.now()
+      thinkingObservation.set(messageId, existing)
+    }
+  }
+
+  function clearThinkingObservationFor(_sessionId: string) {
+    // messageId 与 sessionId 的关联未单独持有；方案是切会话时一律清空。
+    // 这符合 spec 定义：observation 是"当前会话范围内"的 transient 状态。
+    thinkingObservation.clear()
+  }
+
   return {
     sessions,
     activeSessionId,
@@ -1034,5 +1158,10 @@ export const useChatStore = defineStore('chat', () => {
     stopStreaming,
     loadSessions,
     refreshActiveSession,
+    getThinkingObservation,
+    noteThinkingDelta,
+    noteReasoningStart,
+    noteReasoningEnd,
+    clearThinkingObservationFor,
   }
 })

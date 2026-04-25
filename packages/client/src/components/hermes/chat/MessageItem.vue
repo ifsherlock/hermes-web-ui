@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { Message } from "@/stores/hermes/chat";
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import { useMessage } from "naive-ui";
 import { downloadFile } from "@/api/hermes/download";
 import MarkdownRenderer from "./MarkdownRenderer.vue";
+import { parseThinking, countThinkingChars } from "@/utils/thinking-parser";
+import { useChatStore } from "@/stores/hermes/chat";
+import { useSettingsStore } from "@/stores/hermes/settings";
 import {
   copyTextToClipboard,
   handleCodeBlockCopyClick,
@@ -19,6 +22,94 @@ const toast = useMessage();
 
 const isSystem = computed(() => props.message.role === "system");
 const toolExpanded = ref(false);
+
+const chatStore = useChatStore();
+const settingsStore = useSettingsStore();
+
+const parsedThinking = computed(() =>
+  parseThinking(props.message.content || "", { streaming: !!props.message.isStreaming }),
+);
+
+// 优先使用来自 reasoning 字段/事件的思考文本；否则回退到从 content 解析的 <think> 标签。
+// 若两者共存，则拼接展示（罕见，但保持信息不丢）。
+const hasReasoningField = computed(() => !!(props.message.reasoning && props.message.reasoning.length > 0));
+
+const hasThinking = computed(() => hasReasoningField.value || parsedThinking.value.hasThinking);
+
+const thinkingFullText = computed(() => {
+  const parts: string[] = [];
+  if (props.message.reasoning) parts.push(props.message.reasoning);
+  parts.push(...parsedThinking.value.segments);
+  if (parsedThinking.value.pending) parts.push(parsedThinking.value.pending);
+  return parts.join("\n\n");
+});
+
+const thinkingCharCount = computed(() => {
+  let count = countThinkingChars(parsedThinking.value);
+  if (props.message.reasoning) count += props.message.reasoning.length;
+  return count;
+});
+
+// 流式思考态：仍有未闭合 <think> 标签，或 reasoning 有内容但正文尚未开始。
+const thinkingStreamingNow = computed(() => {
+  if (!props.message.isStreaming) return false;
+  if (parsedThinking.value.pending !== null) return true;
+  if (hasReasoningField.value && !props.message.content) return true;
+  return false;
+});
+
+const thinkingOverride = ref<boolean | null>(null);
+
+const thinkingExpanded = computed(() => {
+  if (thinkingStreamingNow.value) return true;
+  if (thinkingOverride.value !== null) return thinkingOverride.value;
+  return !!settingsStore.display.show_reasoning;
+});
+
+function toggleThinking() {
+  thinkingOverride.value = !thinkingExpanded.value;
+}
+
+const nowTick = ref(Date.now());
+let tickTimer: number | null = null;
+
+function ensureTick() {
+  const ob = chatStore.getThinkingObservation(props.message.id);
+  const shouldTick = !!(
+    props.message.isStreaming &&
+    ob?.startedAt !== undefined &&
+    ob.endedAt === undefined
+  );
+  if (shouldTick && tickTimer === null) {
+    tickTimer = window.setInterval(() => {
+      nowTick.value = Date.now();
+    }, 1000);
+  } else if (!shouldTick && tickTimer !== null) {
+    window.clearInterval(tickTimer);
+    tickTimer = null;
+  }
+}
+
+watchEffect(ensureTick);
+
+onBeforeUnmount(() => {
+  if (tickTimer !== null) window.clearInterval(tickTimer);
+});
+
+const thinkingDurationMs = computed<number | null>(() => {
+  const ob = chatStore.getThinkingObservation(props.message.id);
+  if (!ob?.startedAt) return null;
+  const end = ob.endedAt ?? (props.message.isStreaming ? nowTick.value : ob.startedAt);
+  return Math.max(0, end - ob.startedAt);
+});
+
+function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r === 0 ? `${m}m` : `${m}m ${r}s`;
+}
 
 const timeStr = computed(() => {
   const d = new Date(props.message.timestamp);
@@ -275,9 +366,46 @@ const renderedToolResult = computed(() => {
                 </template>
               </div>
             </div>
+            <div
+              v-if="hasThinking"
+              class="thinking-block"
+              :class="{ expanded: thinkingExpanded }"
+            >
+              <div class="thinking-header" @click="toggleThinking">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="thinking-chevron"
+                  :class="{ rotated: thinkingExpanded }"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                <span class="thinking-icon">💭</span>
+                <span class="thinking-label">
+                  {{
+                    thinkingStreamingNow
+                      ? t('chat.thinkingInProgress')
+                      : t('chat.thinkingLabel')
+                  }}
+                </span>
+                <span v-if="thinkingDurationMs !== null && thinkingDurationMs > 0" class="thinking-meta">
+                  · {{ t('chat.thinkingDuration', { duration: formatDuration(thinkingDurationMs) }) }}
+                </span>
+                <span class="thinking-meta">
+                  · {{ t('chat.thinkingChars', { count: thinkingCharCount }) }}
+                </span>
+              </div>
+              <div v-if="thinkingExpanded" class="thinking-body">
+                <MarkdownRenderer :content="thinkingFullText" />
+              </div>
+            </div>
             <MarkdownRenderer
-              v-if="message.content"
-              :content="message.content"
+              v-if="parsedThinking.body"
+              :content="parsedThinking.body"
             />
 
             <span v-if="message.isStreaming && !message.content" class="streaming-dots">
@@ -424,6 +552,63 @@ const renderedToolResult = computed(() => {
     color: $text-muted;
     font-size: 11px;
     flex-shrink: 0;
+  }
+}
+
+.thinking-block {
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed $border-light;
+
+  .thinking-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: $text-muted;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: $radius-sm;
+    user-select: none;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+  }
+
+  .thinking-chevron {
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+
+    &.rotated {
+      transform: rotate(90deg);
+    }
+  }
+
+  .thinking-icon {
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .thinking-label {
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .thinking-meta {
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thinking-body {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-left: 2px solid $border-light;
+    font-size: 13px;
+    opacity: 0.85;
+    font-style: italic;
+
+    :deep(p) { margin: 0.3em 0; }
   }
 }
 
