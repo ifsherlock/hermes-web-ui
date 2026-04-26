@@ -67,8 +67,8 @@ describe('session DB summaries', () => {
     const rows = await mod.listSessionSummaries(undefined, 50)
 
     expect(databaseSyncMock).toHaveBeenCalledWith('/tmp/hermes-profile/state.db', { open: true, readOnly: true })
-    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining("AND s.source != 'tool'"))
-    expect(allMock).toHaveBeenCalledWith(50)
+    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining("s.source != 'tool'"))
+    expect(allMock).toHaveBeenCalledWith(200)
     expect(closeMock).toHaveBeenCalled()
     expect(rows).toEqual([
       {
@@ -127,8 +127,8 @@ describe('session DB summaries', () => {
     const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.listSessionSummaries('telegram', 2)
 
-    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining('AND s.source = ?'))
-    expect(allMock).toHaveBeenCalledWith('telegram', 2)
+    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining("s.source != 'tool'"))
+    expect(allMock).toHaveBeenCalledWith('telegram', 8)
     expect(rows[0].last_active).toBe(1710000100)
     expect(rows[0].source).toBe('telegram')
     expect(rows[0].title).toBe('preview text')
@@ -375,8 +375,8 @@ describe('session DB summaries', () => {
     const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('node.js*', undefined, 10)
 
-    expect(titleAllMock).toHaveBeenCalledWith('%node.js%', 10)
-    expect(contentAllMock).toHaveBeenCalledWith('"node.js"*', 40)
+    expect(titleAllMock).toHaveBeenCalledWith('%node.js%', 200)
+    expect(contentAllMock).toHaveBeenCalledWith('"node.js"*', 200)
     expect(likeAllMock).not.toHaveBeenCalled()
     expect(rows).toHaveLength(2)
     expect(rows[0].id).toBe('node-wildcard-title-1')
@@ -444,8 +444,8 @@ describe('session DB summaries', () => {
     const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('"node.js"*', undefined, 10)
 
-    expect(titleAllMock).toHaveBeenCalledWith('%node.js%', 10)
-    expect(contentAllMock).toHaveBeenCalledWith('"node.js"*', 40)
+    expect(titleAllMock).toHaveBeenCalledWith('%node.js%', 200)
+    expect(contentAllMock).toHaveBeenCalledWith('"node.js"*', 200)
     expect(likeAllMock).not.toHaveBeenCalled()
     expect(rows).toHaveLength(2)
     expect(rows[0].id).toBe('node-quoted-title-1')
@@ -486,7 +486,7 @@ describe('session DB summaries', () => {
     const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('naïve.js', undefined, 10)
 
-    expect(contentAllMock).toHaveBeenCalledWith('"naïve.js"', 40)
+    expect(contentAllMock).toHaveBeenCalledWith('"naïve.js"', 200)
     expect(likeAllMock).not.toHaveBeenCalled()
     expect(rows).toHaveLength(1)
     expect(rows[0].id).toBe('unicode-dot-1')
@@ -526,7 +526,7 @@ describe('session DB summaries', () => {
     const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('100%', undefined, 10)
 
-    expect(titleAllMock).toHaveBeenCalledWith('%100\\%%', 10)
+    expect(titleAllMock).toHaveBeenCalledWith('%100\\%%', 200)
     expect(rows).toHaveLength(1)
     expect(rows[0].id).toBe('percent-1')
   })
@@ -567,7 +567,7 @@ describe('session DB summaries', () => {
     const rows = await mod.searchSessionSummaries('记忆断裂', undefined, 10)
 
     expect(contentAllMock).not.toHaveBeenCalled()
-    expect(likeAllMock).toHaveBeenCalledWith('记忆断裂', '%记忆断裂%', 40)
+    expect(likeAllMock).toHaveBeenCalledWith('记忆断裂', '%记忆断裂%', 200)
     expect(rows).toHaveLength(1)
     expect(rows[0].id).toBe('cjk-literal-1')
   })
@@ -636,7 +636,7 @@ describe('session DB summaries', () => {
     const mod = await import('../../packages/server/src/db/hermes/sessions-db')
     const rows = await mod.searchSessionSummaries('记忆断裂', undefined, 10)
 
-    expect(likeAllMock).toHaveBeenCalledWith('记忆断裂', '%记忆断裂%', 40)
+    expect(likeAllMock).toHaveBeenCalledWith('记忆断裂', '%记忆断裂%', 200)
     expect(rows).toHaveLength(2)
     expect(rows[0].id).toBe('cjk-1')
     expect(rows[1].id).toBe('cjk-title-1')

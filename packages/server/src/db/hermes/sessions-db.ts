@@ -5,7 +5,9 @@ const SQLITE_AVAILABLE = (() => {
   return major > 22 || (major === 22 && minor >= 5)
 })()
 
-const LINEAGE_TOLERANCE_SECONDS = 3
+const COMPRESSION_END_REASONS = new Set(['compression', 'compressed'])
+const SEARCH_CANDIDATE_MULTIPLIER = 20
+const SEARCH_CANDIDATE_MIN = 100
 
 export interface HermesSessionRow {
   id: string
@@ -148,27 +150,6 @@ const SESSION_SELECT = `
   COALESCE((SELECT MAX(m2.timestamp) FROM messages m2 WHERE m2.session_id = s.id), s.started_at) AS last_active
 `
 
-const SESSION_FROM = `
-  FROM sessions s
-  WHERE s.parent_session_id IS NULL
-    AND s.source != 'tool'
-`
-
-function buildBaseSessionSql(source?: string): { sql: string, params: any[] } {
-  const sql = source
-    ? `SELECT ${SESSION_SELECT}${SESSION_FROM}\n    AND s.source = ?`
-    : `SELECT ${SESSION_SELECT}${SESSION_FROM}`
-  return { sql, params: source ? [source] : [] }
-}
-
-function buildListSessionSql(source?: string, limit = 2000): { sql: string, params: any[] } {
-  const base = buildBaseSessionSql(source)
-  return {
-    sql: `${base.sql}\n  ORDER BY s.started_at DESC\n  LIMIT ?`,
-    params: [...base.params, limit],
-  }
-}
-
 function containsCjk(text: string): boolean {
   for (const ch of text) {
     const cp = ch.codePointAt(0) ?? 0
@@ -251,12 +232,18 @@ function runLiteralContentSearch(
   query: string,
   limit: number,
 ): Record<string, unknown>[] {
-  const likeBase = buildBaseSessionSql(source)
   const loweredQuery = query.toLowerCase()
   const likePattern = buildLikePattern(loweredQuery)
+  const sourceClause = source ? 'AND s.source = ?' : ''
+  const sourceParams = source ? [source] : []
   const likeSql = `
     WITH base AS (
-      ${likeBase.sql}
+      SELECT
+        ${SESSION_SELECT},
+        s.parent_session_id AS parent_session_id
+      FROM sessions s
+      WHERE s.source != 'tool'
+        ${sourceClause}
     )
     SELECT
       base.*,
@@ -273,7 +260,7 @@ function runLiteralContentSearch(
     ORDER BY base.last_active DESC, m.timestamp DESC
     LIMIT ?
   `
-  return db.prepare(likeSql).all(...likeBase.params, loweredQuery, likePattern, limit * 4) as Record<string, unknown>[]
+  return db.prepare(likeSql).all(...sourceParams, loweredQuery, likePattern, limit) as Record<string, unknown>[]
 }
 
 function sanitizeFtsQuery(query: string): string {
@@ -367,83 +354,185 @@ function mapMessageRow(row: Record<string, unknown>): HermesMessageRow {
   }
 }
 
-function timingMatchesParent(parent: HermesSessionInternalRow | undefined, child: HermesSessionInternalRow | undefined): boolean {
-  if (!parent || !child || parent.ended_at == null) return false
-  return Math.abs(Number(child.started_at || 0) - Number(parent.ended_at || 0)) <= LINEAGE_TOLERANCE_SECONDS
+function isCompressionEnded(session: HermesSessionInternalRow | undefined): boolean {
+  return !!session && COMPRESSION_END_REASONS.has(String(session.end_reason || ''))
 }
 
-function continuationCandidates(
-  parent: HermesSessionInternalRow,
-  byId: Map<string, HermesSessionInternalRow>,
-  childrenByParent: Map<string | null, string[]>,
-): HermesSessionInternalRow[] {
-  return (childrenByParent.get(parent.id) || [])
-    .map(childId => byId.get(childId))
-    .filter((child): child is HermesSessionInternalRow => !!child)
-    .filter(child => child.source !== 'tool')
-    .filter(child => child.source === parent.source)
-    .filter(child => timingMatchesParent(parent, child))
-    .sort((a, b) => {
-      const aDelta = Math.abs(Number(a.started_at || 0) - Number(parent.ended_at || 0))
-      const bDelta = Math.abs(Number(b.started_at || 0) - Number(parent.ended_at || 0))
-      if (aDelta !== bDelta) return aDelta - bDelta
-      return a.id.localeCompare(b.id)
-    })
+function isCompressionContinuation(parent: HermesSessionInternalRow | undefined, child: HermesSessionInternalRow | undefined): boolean {
+  if (!parent || !child || !isCompressionEnded(parent) || parent.ended_at == null) return false
+  return child.source !== 'tool' && Number(child.started_at || 0) >= Number(parent.ended_at || 0)
 }
 
-function normalizeComparableText(value: unknown): string {
-  return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
+function latestSessionInChain(chain: HermesSessionInternalRow[]): HermesSessionInternalRow {
+  return chain.reduce((latest, session) => {
+    const latestStarted = Number(latest.started_at || 0)
+    const sessionStarted = Number(session.started_at || 0)
+    if (sessionStarted !== latestStarted) return sessionStarted > latestStarted ? session : latest
+    return session.id.localeCompare(latest.id) > 0 ? session : latest
+  }, chain[0])
 }
 
-function nextContinuationChild(
-  parent: HermesSessionInternalRow,
-  byId: Map<string, HermesSessionInternalRow>,
-  childrenByParent: Map<string | null, string[]>,
-): HermesSessionInternalRow | null {
-  if (parent.end_reason !== 'compression') return null
-  const candidates = continuationCandidates(parent, byId, childrenByParent)
-  if (candidates.length === 1) return candidates[0]
-
-  const exactPreviewMatches = candidates.filter(child => {
-    const childPreview = normalizeComparableText(child.preview)
-    const parentPreview = normalizeComparableText(parent.preview)
-    return !!childPreview && childPreview === parentPreview
-  })
-  return exactPreviewMatches.length === 1 ? exactPreviewMatches[0] : null
-}
-
-function collectSessionChain(
-  rootId: string,
-  byId: Map<string, HermesSessionInternalRow>,
-  childrenByParent: Map<string | null, string[]>,
-): HermesSessionInternalRow[] {
-  const chain: HermesSessionInternalRow[] = []
-  const seen = new Set<string>()
-  let current = byId.get(rootId) || null
-  while (current && !seen.has(current.id)) {
-    chain.push(current)
-    seen.add(current.id)
-    current = nextContinuationChild(current, byId, childrenByParent)
+function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSessionInternalRow[]): HermesSessionRow {
+  const latest = latestSessionInChain(chain)
+  const { parent_session_id: _parentSessionId, ...rootRow } = root
+  return {
+    ...rootRow,
+    id: latest.id,
+    model: latest.model || root.model,
+    title: latest.title || root.title,
+    ended_at: latest.ended_at,
+    end_reason: latest.end_reason,
+    message_count: latest.message_count,
+    tool_call_count: latest.tool_call_count,
+    input_tokens: latest.input_tokens,
+    output_tokens: latest.output_tokens,
+    cache_read_tokens: latest.cache_read_tokens,
+    cache_write_tokens: latest.cache_write_tokens,
+    reasoning_tokens: latest.reasoning_tokens,
+    billing_provider: latest.billing_provider ?? root.billing_provider,
+    estimated_cost_usd: latest.estimated_cost_usd,
+    actual_cost_usd: latest.actual_cost_usd,
+    cost_status: latest.cost_status,
+    preview: latest.preview || root.preview,
+    last_active: latest.last_active || root.last_active,
   }
-  return chain
 }
 
-function aggregateSessionDetail(chain: HermesSessionInternalRow[], messages: HermesMessageRow[]): HermesSessionDetailRow {
+type SessionDbLike = {
+  prepare: (sql: string) => { all: (...params: any[]) => Record<string, unknown>[] }
+}
+
+function searchCandidateLimit(limit: number): number {
+  return Math.max(limit * SEARCH_CANDIDATE_MULTIPLIER, SEARCH_CANDIDATE_MIN)
+}
+
+function selectSessionById(db: SessionDbLike, sessionId: string): HermesSessionInternalRow | null {
+  const rows = db.prepare(`
+    SELECT
+      ${SESSION_SELECT},
+      s.parent_session_id AS parent_session_id
+    FROM sessions s
+    WHERE s.id = ? AND s.source != 'tool'
+    LIMIT 1
+  `).all(sessionId)
+  return rows[0] ? mapInternalSessionRow(rows[0]) : null
+}
+
+function selectLatestContinuationChildFromDb(db: SessionDbLike, parent: HermesSessionInternalRow): HermesSessionInternalRow | null {
+  if (!isCompressionEnded(parent) || parent.ended_at == null) return null
+
+  const rows = db.prepare(`
+    SELECT
+      ${SESSION_SELECT},
+      s.parent_session_id AS parent_session_id
+    FROM sessions s
+    WHERE s.parent_session_id = ?
+      AND s.source != 'tool'
+      AND s.started_at >= ?
+    ORDER BY s.started_at DESC, s.id DESC
+    LIMIT 1
+  `).all(parent.id, parent.ended_at)
+  return rows[0] ? mapInternalSessionRow(rows[0]) : null
+}
+
+function collectCompressionPathToSessionFromDb(
+  db: SessionDbLike,
+  session: HermesSessionInternalRow,
+): HermesSessionInternalRow[] {
+  const reversed: HermesSessionInternalRow[] = [session]
+  const seen = new Set<string>()
+  let current: HermesSessionInternalRow | null = session
+
+  for (let depth = 0; current && current.parent_session_id && depth < 100 && !seen.has(current.id); depth += 1) {
+    seen.add(current.id)
+    const parent = selectSessionById(db, current.parent_session_id)
+    if (!parent || !isCompressionContinuation(parent, current)) break
+    reversed.push(parent)
+    current = parent
+  }
+
+  return reversed.reverse()
+}
+
+function extendCompressionChainFromDb(
+  db: SessionDbLike,
+  chain: HermesSessionInternalRow[],
+): HermesSessionInternalRow[] {
+  const result = [...chain]
+  const seen = new Set(result.map(session => session.id))
+  let current: HermesSessionInternalRow | null = result[result.length - 1] || null
+
+  for (let depth = 0; current && depth < 100; depth += 1) {
+    const next = selectLatestContinuationChildFromDb(db, current)
+    if (!next || seen.has(next.id)) break
+    result.push(next)
+    seen.add(next.id)
+    current = next
+  }
+
+  return result
+}
+
+function collectSessionChainFromDb(
+  db: SessionDbLike,
+  root: HermesSessionInternalRow,
+): HermesSessionInternalRow[] {
+  return extendCompressionChainFromDb(db, [root])
+}
+
+function collectSessionChainForMatchedSessionFromDb(
+  db: SessionDbLike,
+  session: HermesSessionInternalRow,
+): HermesSessionInternalRow[] {
+  return extendCompressionChainFromDb(db, collectCompressionPathToSessionFromDb(db, session))
+}
+
+function projectSearchRowFromDb(
+  db: SessionDbLike,
+  row: Record<string, unknown>,
+  source?: string,
+): HermesSessionSearchRow | null {
+  const matchedSession = mapInternalSessionRow(row)
+  if (!matchedSession.id) return null
+
+  const chain = collectSessionChainForMatchedSessionFromDb(db, matchedSession)
   const root = chain[0]
-  const last = chain[chain.length - 1] || root
+  if (!root) return null
+  if (source && matchedSession.source !== source) return null
+
+  const projected = projectSessionSummary(root, chain)
+  return {
+    ...projected,
+    matched_message_id: normalizeNullableNumber(row.matched_message_id),
+    snippet: String(row.snippet || row.preview || ''),
+    rank: Number.isFinite(Number(row.rank)) ? Number(row.rank) : 0,
+  }
+}
+
+function aggregateSessionDetail(
+  chain: HermesSessionInternalRow[],
+  messages: HermesMessageRow[],
+  requestedSessionId: string,
+): HermesSessionDetailRow {
+  const root = chain[0]
+  const latest = latestSessionInChain(chain)
   const costStatuses = Array.from(new Set(chain.map(session => String(session.cost_status || '')).filter(Boolean)))
   const actualCosts = chain
     .map(session => session.actual_cost_usd)
     .filter((value): value is number => value != null)
   const firstPreview = chain.map(session => session.preview).find(Boolean) || root.preview
 
+  const { parent_session_id: _parentSessionId, ...rootRow } = root
+
   return {
-    ...root,
-    title: root.title || (firstPreview ? (firstPreview.length > 40 ? `${firstPreview.slice(0, 40)}...` : firstPreview) : null),
-    preview: root.preview || firstPreview || '',
-    model: last.model || root.model,
-    ended_at: last.ended_at,
-    end_reason: last.end_reason,
+    ...rootRow,
+    id: requestedSessionId,
+    source: latest.source || root.source,
+    title: latest.title || root.title || (firstPreview ? (firstPreview.length > 40 ? `${firstPreview.slice(0, 40)}...` : firstPreview) : null),
+    preview: latest.preview || root.preview || firstPreview || '',
+    model: latest.model || root.model,
+    ended_at: latest.ended_at,
+    end_reason: latest.end_reason,
     last_active: Math.max(...chain.map(session => session.last_active || session.started_at || 0)),
     message_count: chain.reduce((sum, session) => sum + Number(session.message_count || 0), 0),
     tool_call_count: chain.reduce((sum, session) => sum + Number(session.tool_call_count || 0), 0),
@@ -452,7 +541,7 @@ function aggregateSessionDetail(chain: HermesSessionInternalRow[], messages: Her
     cache_read_tokens: chain.reduce((sum, session) => sum + Number(session.cache_read_tokens || 0), 0),
     cache_write_tokens: chain.reduce((sum, session) => sum + Number(session.cache_write_tokens || 0), 0),
     reasoning_tokens: chain.reduce((sum, session) => sum + Number(session.reasoning_tokens || 0), 0),
-    billing_provider: last.billing_provider ?? root.billing_provider,
+    billing_provider: latest.billing_provider ?? root.billing_provider,
     estimated_cost_usd: chain.reduce((sum, session) => sum + Number(session.estimated_cost_usd || 0), 0),
     actual_cost_usd: actualCosts.length ? actualCosts.reduce((sum, value) => sum + Number(value || 0), 0) : null,
     cost_status: costStatuses.length === 1 ? costStatuses[0] : (costStatuses.length > 1 ? 'mixed' : ''),
@@ -472,28 +561,10 @@ async function openSessionDb() {
 export async function getSessionDetailFromDb(sessionId: string): Promise<HermesSessionDetailRow | null> {
   const db = await openSessionDb()
   try {
-    const rows = db.prepare(`
-      SELECT
-        ${SESSION_SELECT},
-        s.parent_session_id AS parent_session_id
-      FROM sessions s
-      WHERE s.source != 'tool'
-    `).all() as Record<string, unknown>[]
+    const requested = selectSessionById(db, sessionId)
+    if (!requested) return null
 
-    const sessions = rows.map(mapInternalSessionRow)
-    const byId = new Map(sessions.map(session => [session.id, session]))
-    const root = byId.get(sessionId)
-    if (!root) return null
-
-    const childrenByParent = new Map<string | null, string[]>()
-    for (const session of sessions) {
-      const key = session.parent_session_id ?? null
-      const siblings = childrenByParent.get(key) || []
-      siblings.push(session.id)
-      childrenByParent.set(key, siblings)
-    }
-
-    const chain = collectSessionChain(sessionId, byId, childrenByParent)
+    const chain = collectSessionChainForMatchedSessionFromDb(db, requested)
     if (!chain.length) return null
 
     const ids = chain.map(session => session.id)
@@ -520,7 +591,7 @@ export async function getSessionDetailFromDb(sessionId: string): Promise<HermesS
     `).all(...ids) as Record<string, unknown>[]
 
     const messages = messageRows.map(mapMessageRow)
-    return aggregateSessionDetail(chain, messages)
+    return aggregateSessionDetail(chain, messages, sessionId)
   } finally {
     db.close()
   }
@@ -535,11 +606,29 @@ export async function listSessionSummaries(source?: string, limit = 2000): Promi
   const db = new DatabaseSync(sessionDbPath(), { open: true, readOnly: true })
 
   try {
-    const { sql, params } = buildListSessionSql(source, limit)
-    const statement = db.prepare(sql)
-    const rows = statement.all(...params) as Record<string, unknown>[]
+    const clauses = ["s.parent_session_id IS NULL", "s.source != 'tool'"]
+    const params: any[] = []
+    if (source) {
+      clauses.push('s.source = ?')
+      params.push(source)
+    }
+    params.push(Math.max(limit * 4, limit))
 
-    return rows.map(mapRow)
+    const rawRows = db.prepare(`
+      SELECT
+        ${SESSION_SELECT},
+        s.parent_session_id AS parent_session_id
+      FROM sessions s
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY s.started_at DESC
+      LIMIT ?
+    `).all(...params) as Record<string, unknown>[] | undefined
+    const roots = (Array.isArray(rawRows) ? rawRows : []).map(mapInternalSessionRow)
+
+    return roots
+      .map(root => projectSessionSummary(root, collectSessionChainFromDb(db, root)))
+      .sort((a, b) => Number(b.last_active || b.started_at || 0) - Number(a.last_active || a.started_at || 0))
+      .slice(0, limit)
   } finally {
     db.close()
   }
@@ -571,15 +660,24 @@ export async function searchSessionSummaries(
   const prefixQuery = toPrefixQuery(normalized)
   const titlePattern = buildLikePattern(normalizeTitleLikeQuery(trimmed).toLowerCase())
   const useLiteralContentSearch = containsCjk(trimmed) || shouldUseLiteralContentSearch(trimmed)
+  const candidateLimit = searchCandidateLimit(limit)
   let titleRows: Record<string, unknown>[] = []
 
   try {
-    const titleBase = buildBaseSessionSql(source)
-    const contentBase = buildBaseSessionSql(source)
+    const sourceClause = source ? 'AND s.source = ?' : ''
+    const sourceParams = source ? [source] : []
+    const allSessionsBaseSql = `
+      SELECT
+        ${SESSION_SELECT},
+        s.parent_session_id AS parent_session_id
+      FROM sessions s
+      WHERE s.source != 'tool'
+        ${sourceClause}
+    `
 
     const titleSql = `
       WITH base AS (
-        ${titleBase.sql}
+        ${allSessionsBaseSql}
       )
       SELECT
         base.*,
@@ -596,11 +694,11 @@ export async function searchSessionSummaries(
     `
 
     const titleStatement = db.prepare(titleSql)
-    titleRows = titleStatement.all(...titleBase.params, titlePattern, limit) as Record<string, unknown>[]
+    titleRows = titleStatement.all(...sourceParams, titlePattern, candidateLimit) as Record<string, unknown>[]
 
     const contentSql = `
       WITH base AS (
-        ${contentBase.sql}
+        ${allSessionsBaseSql}
       )
       SELECT
         base.*,
@@ -616,19 +714,19 @@ export async function searchSessionSummaries(
     `
 
     const contentRows = useLiteralContentSearch
-      ? runLiteralContentSearch(db, source, trimmed, limit)
+      ? runLiteralContentSearch(db, source, trimmed, candidateLimit)
       : prefixQuery
-        ? (db.prepare(contentSql).all(...contentBase.params, prefixQuery, limit * 4) as Record<string, unknown>[])
+        ? (db.prepare(contentSql).all(...sourceParams, prefixQuery, candidateLimit) as Record<string, unknown>[])
         : []
 
     const merged = new Map<string, HermesSessionSearchRow>()
     for (const row of titleRows) {
-      const mapped = mapSearchRow(row)
-      merged.set(mapped.id, mapped)
+      const mapped = projectSearchRowFromDb(db, row, source)
+      if (mapped) merged.set(mapped.id, mapped)
     }
     for (const row of contentRows) {
-      const mapped = mapSearchRow(row)
-      if (!merged.has(mapped.id)) {
+      const mapped = projectSearchRowFromDb(db, row, source)
+      if (mapped && !merged.has(mapped.id)) {
         merged.set(mapped.id, mapped)
       }
     }
@@ -642,15 +740,15 @@ export async function searchSessionSummaries(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (containsCjk(normalized)) {
-      const likeRows = runLiteralContentSearch(db, source, trimmed, limit)
+      const likeRows = runLiteralContentSearch(db, source, trimmed, candidateLimit)
       const merged = new Map<string, HermesSessionSearchRow>()
       for (const row of titleRows) {
-        const mapped = mapSearchRow(row)
-        merged.set(mapped.id, mapped)
+        const mapped = projectSearchRowFromDb(db, row, source)
+        if (mapped) merged.set(mapped.id, mapped)
       }
       for (const row of likeRows) {
-        const mapped = mapSearchRow(row)
-        if (!merged.has(mapped.id)) {
+        const mapped = projectSearchRowFromDb(db, row, source)
+        if (mapped && !merged.has(mapped.id)) {
           merged.set(mapped.id, mapped)
         }
       }
