@@ -86,6 +86,155 @@ describe('MarkdownRenderer', () => {
     expect(wrapper.find('code.hljs').text()).toContain('INFO Starting server')
   })
 
+  it('renders outer markdown draft fences as markdown while preserving nested fenced examples', () => {
+    const wrapper = mount(MarkdownRenderer, {
+      props: {
+        content: [
+          '下面是可直接手动编辑的 PR draft。',
+          '',
+          '```md',
+          '标题: fix(chat): 保留附件在同一聊天后续轮次的上下文',
+          '',
+          '## Summary',
+          '',
+          '附件上传后，首轮 `startRun()` 的 `input` 已包含上传文件引用:',
+          '',
+          '```md',
+          '[File: screenshot.png](/uploaded/path)',
+          '```',
+          '',
+          '但本地保存的用户消息只保留 UI 可见文本。',
+          '',
+          '## Fix',
+          '- Preserve context.',
+          '```',
+        ].join('\n'),
+      },
+    })
+
+    expect(wrapper.findAll('.hljs-code-block')).toHaveLength(1)
+    expect(wrapper.find('.code-lang').text()).toBe('md')
+    expect(wrapper.find('code.hljs').text()).toContain('[File: screenshot.png](/uploaded/path)')
+    expect(wrapper.find('.markdown-body').findAll('h2')).toHaveLength(2)
+    expect(wrapper.find('.markdown-body').find('h2').text()).toBe('Summary')
+    expect(wrapper.find('.markdown-body').text()).toContain('但本地保存的用户消息只保留 UI 可见文本。')
+    expect(wrapper.find('.markdown-body').text()).toContain('Preserve context.')
+  })
+
+  it('keeps markdown examples with their own nested fences intact after unwrapping a draft fence', () => {
+    const wrapper = mount(MarkdownRenderer, {
+      props: {
+        content: [
+          '```md',
+          '## Regression Coverage',
+          '',
+          '```md',
+          '下面是一个 PR draft。',
+          '',
+          '```md',
+          '[File: Screenshot.png](/tmp/example.png)',
+          '```',
+          '',
+          '## Fix',
+          '',
+          '- 后续 heading 不应被截断。',
+          '```',
+          '',
+          '## Local Verification',
+          '',
+          '- localhost renders after the example.',
+          '```',
+        ].join('\n'),
+      },
+    })
+
+    const headings = wrapper.find('.markdown-body').findAll('h2').map(heading => heading.text())
+    expect(headings).toEqual(['Regression Coverage', 'Local Verification'])
+    expect(wrapper.findAll('.hljs-code-block')).toHaveLength(1)
+
+    const codeText = wrapper.find('code.hljs').text()
+    expect(codeText).toContain('下面是一个 PR draft。')
+    expect(codeText).toContain('```md\n[File: Screenshot.png](/tmp/example.png)\n```')
+    expect(codeText).toContain('## Fix')
+    expect(codeText).toContain('- 后续 heading 不应被截断。')
+    expect(wrapper.find('.markdown-body').text()).toContain('localhost renders after the example.')
+  })
+
+  it('keeps markdown examples with unlabeled nested fences intact', () => {
+    const wrapper = mount(MarkdownRenderer, {
+      props: {
+        content: [
+          '```md',
+          '## Unlabeled Fence Example',
+          '',
+          '```md',
+          '```',
+          'plain nested block',
+          '```',
+          '```',
+          '',
+          'Done outside.',
+          '```',
+        ].join('\n'),
+      },
+    })
+
+    expect(wrapper.find('.markdown-body').find('h2').text()).toBe('Unlabeled Fence Example')
+    expect(wrapper.findAll('.hljs-code-block')).toHaveLength(1)
+    expect(wrapper.find('code.hljs').text()).toContain('```\nplain nested block\n```')
+    expect(wrapper.find('.markdown-body').text()).toContain('Done outside.')
+  })
+
+  it('keeps tilde-fenced markdown examples with nested tilde fences intact', () => {
+    const wrapper = mount(MarkdownRenderer, {
+      props: {
+        content: [
+          '```md',
+          '## Tilde Example',
+          '',
+          '~~~md',
+          '~~~yaml',
+          'ok: true',
+          '~~~',
+          '~~~',
+          '',
+          'Done outside.',
+          '```',
+        ].join('\n'),
+      },
+    })
+
+    expect(wrapper.find('.markdown-body').find('h2').text()).toBe('Tilde Example')
+    expect(wrapper.findAll('.hljs-code-block')).toHaveLength(1)
+    expect(wrapper.find('code.hljs').text()).toContain('~~~yaml\nok: true\n~~~')
+    expect(wrapper.find('.markdown-body').text()).toContain('Done outside.')
+  })
+
+  it('keeps already-valid longer markdown example fences valid', () => {
+    const wrapper = mount(MarkdownRenderer, {
+      props: {
+        content: [
+          '```md',
+          '## Longer Fence Example',
+          '',
+          '````md',
+          '```ts',
+          'const answer = 42',
+          '```',
+          '````',
+          '',
+          'Done outside.',
+          '```',
+        ].join('\n'),
+      },
+    })
+
+    expect(wrapper.find('.markdown-body').find('h2').text()).toBe('Longer Fence Example')
+    expect(wrapper.findAll('.hljs-code-block')).toHaveLength(1)
+    expect(wrapper.find('code.hljs').text()).toContain('```ts\nconst answer = 42\n```')
+    expect(wrapper.find('.markdown-body').text()).toContain('Done outside.')
+  })
+
   it('copies code through the delegated click handler', async () => {
     const writeText = vi.mocked(navigator.clipboard.writeText)
     const wrapper = mount(MarkdownRenderer, {
