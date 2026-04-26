@@ -398,46 +398,54 @@ function projectSessionSummary(root: HermesSessionInternalRow, chain: HermesSess
   }
 }
 
-type SessionDbLike = {
-  prepare: (sql: string) => { all: (...params: any[]) => Record<string, unknown>[] }
+// --- In-memory session index for chain traversal ---
+
+interface SessionIndex {
+  byId: Map<string, HermesSessionInternalRow>
+  childrenByParent: Map<string, string[]>
 }
 
-function searchCandidateLimit(limit: number): number {
-  return Math.max(limit * SEARCH_CANDIDATE_MULTIPLIER, SEARCH_CANDIDATE_MIN)
-}
-
-function selectSessionById(db: SessionDbLike, sessionId: string): HermesSessionInternalRow | null {
+function loadAllSessions(db: { prepare: (sql: string) => { all: (...params: any[]) => Record<string, unknown>[] } }): SessionIndex {
   const rows = db.prepare(`
     SELECT
       ${SESSION_SELECT},
       s.parent_session_id AS parent_session_id
     FROM sessions s
-    WHERE s.id = ? AND s.source != 'tool'
-    LIMIT 1
-  `).all(sessionId)
-  return rows[0] ? mapInternalSessionRow(rows[0]) : null
+    WHERE s.source != 'tool'
+  `).all() as Record<string, unknown>[]
+  const sessions = rows.map(mapInternalSessionRow)
+  const byId = new Map(sessions.map(s => [s.id, s]))
+  const childrenByParent = new Map<string, string[]>()
+  for (const s of sessions) {
+    const key = s.parent_session_id ?? ''
+    const list = childrenByParent.get(key) || []
+    list.push(s.id)
+    childrenByParent.set(key, list)
+  }
+  return { byId, childrenByParent }
 }
 
-function selectLatestContinuationChildFromDb(db: SessionDbLike, parent: HermesSessionInternalRow): HermesSessionInternalRow | null {
+function getLatestContinuationChild(
+  parent: HermesSessionInternalRow,
+  idx: SessionIndex,
+): HermesSessionInternalRow | null {
   if (!isCompressionEnded(parent) || parent.ended_at == null) return null
-
-  const rows = db.prepare(`
-    SELECT
-      ${SESSION_SELECT},
-      s.parent_session_id AS parent_session_id
-    FROM sessions s
-    WHERE s.parent_session_id = ?
-      AND s.source != 'tool'
-      AND s.started_at >= ?
-    ORDER BY s.started_at DESC, s.id DESC
-    LIMIT 1
-  `).all(parent.id, parent.ended_at)
-  return rows[0] ? mapInternalSessionRow(rows[0]) : null
+  const candidates = (idx.childrenByParent.get(parent.id) || [])
+    .map(id => idx.byId.get(id))
+    .filter((c): c is HermesSessionInternalRow => !!c)
+    .filter(c => Number(c.started_at || 0) >= Number(parent.ended_at || 0))
+    .sort((a, b) => {
+      const aDelta = Number(a.started_at || 0) - Number(parent.ended_at || 0)
+      const bDelta = Number(b.started_at || 0) - Number(parent.ended_at || 0)
+      if (aDelta !== bDelta) return aDelta - bDelta
+      return b.id.localeCompare(a.id)
+    })
+  return candidates[0] || null
 }
 
-function collectCompressionPathToSessionFromDb(
-  db: SessionDbLike,
+function collectCompressionPath(
   session: HermesSessionInternalRow,
+  idx: SessionIndex,
 ): HermesSessionInternalRow[] {
   const reversed: HermesSessionInternalRow[] = [session]
   const seen = new Set<string>()
@@ -445,7 +453,7 @@ function collectCompressionPathToSessionFromDb(
 
   for (let depth = 0; current && current.parent_session_id && depth < 100 && !seen.has(current.id); depth += 1) {
     seen.add(current.id)
-    const parent = selectSessionById(db, current.parent_session_id)
+    const parent = idx.byId.get(current.parent_session_id)
     if (!parent || !isCompressionContinuation(parent, current)) break
     reversed.push(parent)
     current = parent
@@ -454,16 +462,16 @@ function collectCompressionPathToSessionFromDb(
   return reversed.reverse()
 }
 
-function extendCompressionChainFromDb(
-  db: SessionDbLike,
+function extendCompressionChain(
   chain: HermesSessionInternalRow[],
+  idx: SessionIndex,
 ): HermesSessionInternalRow[] {
   const result = [...chain]
-  const seen = new Set(result.map(session => session.id))
+  const seen = new Set(result.map(s => s.id))
   let current: HermesSessionInternalRow | null = result[result.length - 1] || null
 
   for (let depth = 0; current && depth < 100; depth += 1) {
-    const next = selectLatestContinuationChildFromDb(db, current)
+    const next = getLatestContinuationChild(current, idx)
     if (!next || seen.has(next.id)) break
     result.push(next)
     seen.add(next.id)
@@ -473,29 +481,37 @@ function extendCompressionChainFromDb(
   return result
 }
 
-function collectSessionChainFromDb(
-  db: SessionDbLike,
+function collectSessionChain(
   root: HermesSessionInternalRow,
+  idx: SessionIndex,
 ): HermesSessionInternalRow[] {
-  return extendCompressionChainFromDb(db, [root])
+  return extendCompressionChain([root], idx)
 }
 
-function collectSessionChainForMatchedSessionFromDb(
-  db: SessionDbLike,
+function collectSessionChainForMatchedSession(
   session: HermesSessionInternalRow,
+  idx: SessionIndex,
 ): HermesSessionInternalRow[] {
-  return extendCompressionChainFromDb(db, collectCompressionPathToSessionFromDb(db, session))
+  return extendCompressionChain(collectCompressionPath(session, idx), idx)
 }
 
-function projectSearchRowFromDb(
-  db: SessionDbLike,
+type SessionDbLike = {
+  prepare: (sql: string) => { all: (...params: any[]) => Record<string, unknown>[] }
+}
+
+function searchCandidateLimit(limit: number): number {
+  return Math.max(limit * SEARCH_CANDIDATE_MULTIPLIER, SEARCH_CANDIDATE_MIN)
+}
+
+function projectSearchRow(
   row: Record<string, unknown>,
+  idx: SessionIndex,
   source?: string,
 ): HermesSessionSearchRow | null {
   const matchedSession = mapInternalSessionRow(row)
   if (!matchedSession.id) return null
 
-  const chain = collectSessionChainForMatchedSessionFromDb(db, matchedSession)
+  const chain = collectSessionChainForMatchedSession(matchedSession, idx)
   const root = chain[0]
   if (!root) return null
   if (source && matchedSession.source !== source) return null
@@ -561,10 +577,11 @@ async function openSessionDb() {
 export async function getSessionDetailFromDb(sessionId: string): Promise<HermesSessionDetailRow | null> {
   const db = await openSessionDb()
   try {
-    const requested = selectSessionById(db, sessionId)
+    const idx = loadAllSessions(db)
+    const requested = idx.byId.get(sessionId) || null
     if (!requested) return null
 
-    const chain = collectSessionChainForMatchedSessionFromDb(db, requested)
+    const chain = collectSessionChainForMatchedSession(requested, idx)
     if (!chain.length) return null
 
     const ids = chain.map(session => session.id)
@@ -625,8 +642,9 @@ export async function listSessionSummaries(source?: string, limit = 2000): Promi
     `).all(...params) as Record<string, unknown>[] | undefined
     const roots = (Array.isArray(rawRows) ? rawRows : []).map(mapInternalSessionRow)
 
+    const idx = loadAllSessions(db)
     return roots
-      .map(root => projectSessionSummary(root, collectSessionChainFromDb(db, root)))
+      .map(root => projectSessionSummary(root, collectSessionChain(root, idx)))
       .sort((a, b) => Number(b.last_active || b.started_at || 0) - Number(a.last_active || a.started_at || 0))
       .slice(0, limit)
   } finally {
@@ -719,13 +737,14 @@ export async function searchSessionSummaries(
         ? (db.prepare(contentSql).all(...sourceParams, prefixQuery, candidateLimit) as Record<string, unknown>[])
         : []
 
+    const idx = loadAllSessions(db)
     const merged = new Map<string, HermesSessionSearchRow>()
     for (const row of titleRows) {
-      const mapped = projectSearchRowFromDb(db, row, source)
+      const mapped = projectSearchRow(row, idx, source)
       if (mapped) merged.set(mapped.id, mapped)
     }
     for (const row of contentRows) {
-      const mapped = projectSearchRowFromDb(db, row, source)
+      const mapped = projectSearchRow(row, idx, source)
       if (mapped && !merged.has(mapped.id)) {
         merged.set(mapped.id, mapped)
       }
@@ -737,30 +756,30 @@ export async function searchSessionSummaries(
       return b.last_active - a.last_active
     })
     return items.slice(0, limit)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (containsCjk(normalized)) {
-      const likeRows = runLiteralContentSearch(db, source, trimmed, candidateLimit)
-      const merged = new Map<string, HermesSessionSearchRow>()
-      for (const row of titleRows) {
-        const mapped = projectSearchRowFromDb(db, row, source)
-        if (mapped) merged.set(mapped.id, mapped)
-      }
-      for (const row of likeRows) {
-        const mapped = projectSearchRowFromDb(db, row, source)
-        if (mapped && !merged.has(mapped.id)) {
-          merged.set(mapped.id, mapped)
-        }
-      }
-      const items = [...merged.values()]
-      items.sort((a, b) => {
-        if (a.rank !== b.rank) return a.rank - b.rank
-        return b.last_active - a.last_active
-      })
-      return items.slice(0, limit)
+  } catch (_err) {
+    // FTS queries can fail for various inputs (pure numbers, special syntax, etc.)
+    // Fall back to title-only LIKE results + literal content search for CJK
+    const likeRows = containsCjk(normalized)
+      ? runLiteralContentSearch(db, source, trimmed, candidateLimit)
+      : []
+    const idx2 = loadAllSessions(db)
+    const merged = new Map<string, HermesSessionSearchRow>()
+    for (const row of titleRows) {
+      const mapped = projectSearchRow(row, idx2, source)
+      if (mapped) merged.set(mapped.id, mapped)
     }
-
-    throw new Error(`Failed to search sessions: ${message}`)
+    for (const row of likeRows) {
+      const mapped = projectSearchRow(row, idx2, source)
+      if (mapped && !merged.has(mapped.id)) {
+        merged.set(mapped.id, mapped)
+      }
+    }
+    const items = [...merged.values()]
+    items.sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank
+      return b.last_active - a.last_active
+    })
+    return items.slice(0, limit)
   } finally {
     db.close()
   }
