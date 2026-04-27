@@ -777,6 +777,14 @@ export const useChatStore = defineStore('chat', () => {
       timestamp: Date.now(),
       attachments: attachments && attachments.length > 0 ? attachments : undefined,
     }
+    // Build conversation history BEFORE adding the new message, so the
+    // user's current message appears only in `input` — not duplicated in
+    // `conversation_history` as well.
+    const sessionMsgs = getSessionMsgs(sid)
+    const history: ChatMessage[] = sessionMsgs
+      .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content.trim())
+      .map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }))
+
     addMessage(sid, userMsg)
     updateSessionTitle(sid)
     // Persist immediately so a refresh before the first SSE event (e.g. the
@@ -788,11 +796,6 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     try {
-      // Build conversation history from past messages
-      const sessionMsgs = getSessionMsgs(sid)
-      const history: ChatMessage[] = sessionMsgs
-        .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content.trim())
-        .map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }))
 
       // Upload attachments and build input with file paths
       let inputText = content.trim()
