@@ -215,6 +215,10 @@ function syncProfileSessions(profile: string): {
           }
 
           // Update session with Hermes data
+          const estimatedCost = typeof hermesSession.estimated_cost_usd === 'number'
+            ? hermesSession.estimated_cost_usd
+            : 0
+
           updateSession(newSessionId, {
             started_at: hermesSession.started_at,
             ended_at: hermesSession.ended_at,
@@ -224,7 +228,7 @@ function syncProfileSessions(profile: string): {
             cache_read_tokens: hermesSession.cache_read_tokens,
             cache_write_tokens: hermesSession.cache_write_tokens,
             reasoning_tokens: hermesSession.reasoning_tokens,
-            estimated_cost_usd: hermesSession.estimated_cost_usd || 0,
+            estimated_cost_usd: estimatedCost,
             last_active: hermesSession.started_at, // Use started_at as fallback since last_active doesn't exist in Hermes state.db
             preview,
           })
