@@ -313,6 +313,9 @@ export default {
     customModelPlaceholder: 'Custom model name',
     customModelHint: 'Enter to load',
     noProviders: 'No providers found. Add a custom provider to get started.',
+    models: 'Models',
+    count: 'models',
+    more: 'more',
     builtIn: 'Built-in',
     customType: 'Custom',
     provider: 'Provider',
@@ -554,6 +557,16 @@ export default {
     qrFetching: 'Fetching QR code...',
     qrScanHint: 'Scan with WeChat to login',
     qrScanedHint: 'Scaned, please confirm on phone...',
+    // QQ
+    qqAppId: 'App ID',
+    qqAppIdHint: 'QQ Open Platform Bot App ID',
+    qqAppSecret: 'App Secret',
+    qqAppSecretHint: 'QQ Open Platform Bot App Secret',
+    qqMarkdown: 'Markdown Support',
+    qqMarkdownHint: 'Enable Markdown formatted messages (some clients may not support)',
+    qqSandbox: 'Sandbox Mode',
+    qqSandboxHint: 'Enable sandbox environment (for testing)',
+    qqQrScanHint: 'Scan the QR code with QQ, or open the link on your phone to complete binding',
   },
 
   // Language

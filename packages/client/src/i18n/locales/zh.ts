@@ -313,6 +313,9 @@ export default {
     customModelPlaceholder: '自定义模型名称',
     customModelHint: '按回车加载',
     noProviders: '暂无 Provider，添加一个开始吧。',
+    models: '模型列表',
+    count: '个模型',
+    more: '个更多',
     builtIn: '内置',
     customType: '自定义',
     provider: 'Provider',
@@ -546,6 +549,16 @@ export default {
     qrFetching: '正在获取二维码...',
     qrScanHint: '使用微信扫描二维码登录',
     qrScanedHint: '已扫描，请在手机上确认...',
+    // QQ
+    qqAppId: 'App ID',
+    qqAppIdHint: 'QQ 开放平台机器人 App ID',
+    qqAppSecret: 'App Secret',
+    qqAppSecretHint: 'QQ 开放平台机器人 App Secret',
+    qqMarkdown: 'Markdown 支持',
+    qqMarkdownHint: '启用 Markdown 格式消息（部分客户端可能不支持）',
+    qqSandbox: '沙箱模式',
+    qqSandboxHint: '启用沙箱环境（测试用）',
+    qqQrScanHint: '使用 QQ 扫描上方二维码，或在手机上打开链接完成绑定',
   },
 
   // 网关
