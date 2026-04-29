@@ -721,6 +721,15 @@ export default {
 
   // 更新日志
   changelog: {
+    new_0_5_1_1: '首次启动时自动同步 Hermes 历史会话',
+    new_0_5_1_2: '修复旧版本 Hermes 会话同步失败问题（向后兼容）',
+    new_0_5_1_3: 'Profile 克隆时智能清理独占平台凭据（Telegram、Discord、Slack 等）',
+    new_0_5_1_4: 'Profile 名称输入自动转小写，避免后端验证失败',
+    new_0_5_1_5: '修复 tool 消息缺少 tool_call_id 导致的 OpenAI API 兼容性问题',
+    new_0_5_1_6: '统一 SQLite 数据库表结构管理和初始化',
+    new_0_5_1_7: '优化 Provider 卡片中模型列表布局（固定高度、标签对齐）',
+    new_0_5_1_8: '修复用户消息中长代码块单行超长的显示问题',
+    new_0_5_1_9: '修复 Web 终端在 Docker 部署后的展示报错',
     new_0_5_0_1: '自建聊天数据库和上下文压缩',
     new_0_5_0_2: '会话使用websocket形式，增强断点续传',
     new_0_4_8_1: '安全渲染 Mermaid 图表，支持异步渲染和超时降级',

@@ -555,6 +555,15 @@ export default {
 
   // 변경 이력
   changelog: {
+    new_0_5_1_1: 'Auto-sync Hermes history sessions on first startup',
+    new_0_5_1_2: 'Fix session sync failure with old Hermes versions (backward compatible)',
+    new_0_5_1_3: 'Smart cleanup of exclusive platform credentials on profile clone (Telegram, Discord, Slack, etc.)',
+    new_0_5_1_4: 'Auto-normalize profile names to lowercase to avoid backend validation errors',
+    new_0_5_1_5: 'Fix tool_call_id missing in tool messages for OpenAI API compatibility',
+    new_0_5_1_6: 'Unify SQLite table schema management and initialization',
+    new_0_5_1_7: 'Optimize model list layout in Provider cards (fixed height, tag alignment)',
+    new_0_5_1_8: 'Fix display issue with single-line long code blocks in user messages',
+    new_0_5_1_9: 'Fix web terminal rendering errors in Docker deployment',
     new_0_5_0_1: 'Self-built chat database and context compression: empty chat history on first entry is expected',
     new_0_5_0_2: 'Sessions use WebSocket form, enhanced resume capability',
     new_0_4_8_1: 'Safe Mermaid diagram rendering with async render and timeout fallback',
