@@ -563,6 +563,17 @@ export class ChatRunSocket {
       if (model) body.model = model
       if (instructions) body.instructions = instructions
 
+      // Inject workspace context if set for this session
+      if (session_id) {
+        const sessionRow = getSession(session_id)
+        if (sessionRow?.workspace) {
+          const workspaceCtx = `[Current working directory: ${sessionRow.workspace}]`
+          body.instructions = body.instructions
+            ? `${workspaceCtx}\n${body.instructions}`
+            : workspaceCtx
+        }
+      }
+
       // Build conversation_history from DB if session_id is provided
       if (session_id) {
         try {

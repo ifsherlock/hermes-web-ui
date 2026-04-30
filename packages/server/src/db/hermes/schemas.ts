@@ -51,6 +51,7 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
   cost_status: 'TEXT NOT NULL DEFAULT \'\'',
   preview: 'TEXT NOT NULL DEFAULT \'\'',
   last_active: 'INTEGER NOT NULL',
+  workspace: 'TEXT',
 }
 
 export const MESSAGES_TABLE = 'messages'

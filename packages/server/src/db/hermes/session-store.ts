@@ -29,6 +29,7 @@ export interface HermesSessionRow {
   cost_status: string
   preview: string
   last_active: number
+  workspace: string | null
 }
 
 export interface HermesMessageRow {
@@ -102,6 +103,7 @@ function mapSessionRow(row: Record<string, unknown>): HermesSessionRow {
     cost_status: String(row.cost_status || ''),
     preview: String(row.preview || ''),
     last_active: Number(row.last_active || 0),
+    workspace: row.workspace != null ? String(row.workspace) : null,
   }
 }
 
@@ -131,6 +133,7 @@ export function createSession(data: {
   profile?: string
   model?: string
   title?: string
+  workspace?: string
 }): HermesSessionRow {
   const now = Math.floor(Date.now() / 1000)
   if (!isSqliteAvailable()) {
@@ -141,14 +144,14 @@ export function createSession(data: {
       message_count: 0, tool_call_count: 0,
       input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, reasoning_tokens: 0,
       billing_provider: null, estimated_cost_usd: 0, actual_cost_usd: null,
-      cost_status: '', preview: '', last_active: now,
+      cost_status: '', preview: '', last_active: now, workspace: data.workspace || null,
     }
   }
   const db = getDb()!
   db.prepare(
-    `INSERT INTO ${SESSIONS_TABLE} (id, profile, source, model, title, started_at, last_active)
-     VALUES (?, ?, 'api_server', ?, ?, ?, ?)`,
-  ).run(data.id, data.profile || 'default', data.model || '', data.title || null, now, now)
+    `INSERT INTO ${SESSIONS_TABLE} (id, profile, source, model, title, started_at, last_active, workspace)
+     VALUES (?, ?, 'api_server', ?, ?, ?, ?, ?)`,
+  ).run(data.id, data.profile || 'default', data.model || '', data.title || null, now, now, data.workspace || null)
   return getSession(data.id)!
 }
 

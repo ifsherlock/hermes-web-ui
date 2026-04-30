@@ -60,6 +60,7 @@ export async function listConversations(ctx: any) {
       actual_cost_usd: s.actual_cost_usd,
       cost_status: s.cost_status,
       preview: s.preview,
+      workspace: s.workspace || null,
       is_active: s.ended_at == null && (Date.now() / 1000 - s.last_active) <= 300,
       thread_session_count: 1,
     }))
@@ -283,6 +284,29 @@ export async function rename(ctx: any) {
   ctx.body = { ok: true }
 }
 
+export async function setWorkspace(ctx: any) {
+  const { workspace } = ctx.request.body as { workspace?: string }
+  if (workspace !== undefined && workspace !== null && typeof workspace !== 'string') {
+    ctx.status = 400
+    ctx.body = { error: 'workspace must be a string or null' }
+    return
+  }
+  if (useLocalSessionStore()) {
+    const { updateSession, getSession, createSession } = await import('../../db/hermes/session-store')
+    const { getActiveProfileName } = await import('../../services/hermes/hermes-profile')
+    const id = ctx.params.id
+    // Create session if it doesn't exist yet (user may set workspace before sending first message)
+    if (!getSession(id)) {
+      createSession({ id, profile: getActiveProfileName(), title: '' })
+    }
+    updateSession(id, { workspace: workspace || null } as any)
+    ctx.body = { ok: true }
+    return
+  }
+  ctx.status = 501
+  ctx.body = { error: 'Workspace setting only supported in local session store mode' }
+}
+
 export async function contextLength(ctx: any) {
   const profile = (ctx.query.profile as string) || undefined
   ctx.body = { context_length: getModelContextLength(profile) }
@@ -368,6 +392,51 @@ export async function usageStats(ctx: any) {
     period_days: days,
     model_usage: [...modelMap.values()].sort((a, b) => (b.input_tokens + b.output_tokens) - (a.input_tokens + a.output_tokens)),
     daily_usage: [...dayMap.values()],
+  }
+}
+
+/**
+ * List folders under workspace base path for folder picker.
+ * GET /api/hermes/workspace/folders?path=<relative_path>
+ * Base: /opt/data/workspace (overridable via WORKSPACE_BASE env)
+ */
+export async function listWorkspaceFolders(ctx: any) {
+  const { resolve, join } = await import('path')
+  const { readdir } = await import('fs/promises')
+  const { existsSync } = await import('fs')
+
+  const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/opt/data/workspace'
+  const subPath = (ctx.query.path as string) || ''
+
+  // Security: prevent path traversal
+  const fullPath = resolve(join(WORKSPACE_BASE, subPath))
+  if (!fullPath.startsWith(resolve(WORKSPACE_BASE))) {
+    ctx.status = 403
+    ctx.body = { error: 'Access denied' }
+    return
+  }
+
+  if (!existsSync(fullPath)) {
+    ctx.status = 404
+    ctx.body = { error: 'Path not found', folders: [] }
+    return
+  }
+
+  try {
+    const entries = await readdir(fullPath, { withFileTypes: true })
+    const folders = entries
+      .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+      .map(e => ({
+        name: e.name,
+        path: subPath ? `${subPath}/${e.name}` : e.name,
+        fullPath: join(fullPath, e.name),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    ctx.body = { base: WORKSPACE_BASE, current: subPath, folders }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
   }
 }
 

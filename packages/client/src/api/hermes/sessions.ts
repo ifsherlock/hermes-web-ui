@@ -20,6 +20,7 @@ export interface SessionSummary {
   estimated_cost_usd: number
   actual_cost_usd: number | null
   cost_status: string
+  workspace?: string | null
 }
 
 export interface SessionDetail extends SessionSummary {
@@ -88,6 +89,18 @@ export async function renameSession(id: string, title: string): Promise<boolean>
     await request(`/api/hermes/sessions/${id}/rename`, {
       method: 'POST',
       body: JSON.stringify({ title }),
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function setSessionWorkspace(id: string, workspace: string | null): Promise<boolean> {
+  try {
+    await request(`/api/hermes/sessions/${id}/workspace`, {
+      method: 'POST',
+      body: JSON.stringify({ workspace: workspace || '' }),
     })
     return true
   } catch {
