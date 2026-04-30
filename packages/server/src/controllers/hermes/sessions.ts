@@ -402,3 +402,43 @@ export async function usageStats(ctx: any) {
     daily_usage: [...dayMap.values()],
   }
 }
+
+export async function getConversationMessagesPaginated(ctx: any) {
+  const offset = ctx.query.offset ? parseInt(ctx.query.offset as string, 10) : 0
+  const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : 50
+
+  if (useLocalSessionStore()) {
+    const { getSessionDetailPaginated } = await import('../../db/hermes/session-store')
+    const result = getSessionDetailPaginated(ctx.params.id, offset, limit)
+
+    if (!result) {
+      ctx.status = 404
+      ctx.body = { error: 'Conversation not found' }
+      return
+    }
+
+    ctx.body = {
+      session: {
+        id: result.session.id,
+        source: result.session.source,
+        model: result.session.model,
+        title: result.session.title,
+        started_at: result.session.started_at,
+        ended_at: result.session.ended_at,
+        last_active: result.session.last_active,
+        message_count: result.session.message_count,
+        input_tokens: result.session.input_tokens,
+        output_tokens: result.session.output_tokens,
+      },
+      messages: result.messages,
+      total: result.total,
+      offset: result.offset,
+      limit: result.limit,
+      hasMore: result.hasMore,
+    }
+    return
+  }
+
+  ctx.status = 404
+  ctx.body = { error: 'Conversation not found' }
+}

@@ -119,8 +119,9 @@ onBeforeUnmount(() => {
 const thinkingDurationMs = computed<number | null>(() => {
   const ob = chatStore.getThinkingObservation(props.message.id);
   if (!ob?.startedAt) return null;
-  const end = ob.endedAt ?? (props.message.isStreaming ? nowTick.value : ob.startedAt);
-  return Math.max(0, end - ob.startedAt);
+  const startedAt = ob.startedAt!; // Non-null assertion after check
+  const end = ob?.endedAt ?? (props.message.isStreaming ? nowTick.value : startedAt);
+  return Math.max(0, end - startedAt);
 });
 
 function formatDuration(ms: number): string {
@@ -762,6 +763,7 @@ const renderedToolResult = computed(() => {
   padding: 0 4px;
   border-radius: 3px;
   line-height: 14px;
+  margin-left: 4px;
 }
 
 .tool-details {

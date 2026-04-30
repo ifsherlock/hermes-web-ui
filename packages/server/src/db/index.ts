@@ -33,10 +33,14 @@ export function getDb(): DatabaseSync | null {
     mkdirSync(DB_DIR, { recursive: true })
     _db = new DatabaseSync(DB_PATH)
     // Use WAL mode for better concurrency and WSL compatibility
-    _db.exec('PRAGMA journal_mode=WAL')
-    _db.exec('PRAGMA synchronous=NORMAL')
-    _db.exec('PRAGMA busy_timeout=5000')
-    _db.exec('PRAGMA foreign_keys=ON')
+    if (isDev) {
+      _db.exec('PRAGMA journal_mode=DELETE')
+    } else {
+      _db.exec('PRAGMA journal_mode=WAL')
+      _db.exec('PRAGMA synchronous=NORMAL')
+      _db.exec('PRAGMA busy_timeout=5000')
+      _db.exec('PRAGMA foreign_keys=ON')
+    }
   }
   return _db
 }

@@ -154,6 +154,7 @@ export default {
     arguments: '参数',
     result: '结果',
     truncated: '... (已截断)',
+    executionDuration: '执行时长',
     thinkingLabel: '思考过程',
     thinkingInProgress: '思考中…',
     thinkingShow: '展开思考过程',
@@ -729,6 +730,17 @@ export default {
 
   // 更新日志
   changelog: {
+    new_0_5_3_1: '改进思考过程显示，支持页面刷新后持久化',
+    new_0_5_3_2: '优化字符串化数组格式解析，自动提取思考/文本/工具调用',
+    new_0_5_3_3: '改进日志显示，移除省略号完整展示日志内容',
+    new_0_5_3_4: '添加详细的格式转换和解析日志记录',
+    new_0_5_3_5: '优化 token 计算，准确包含 tool 结果',
+    new_0_5_2_1: '将对话历史转换为 Anthropic 格式后发送给 Gateway',
+    new_0_5_2_2: '添加内存和数据库之间的双向思考过程同步',
+    new_0_5_2_3: '添加消息分页功能（DESC 查询 + 数组反转，性能优化）',
+    new_0_5_2_4: '清理调试代码和未使用的导入',
+    new_0_5_2_5: '移除自动 resumed 事件触发，避免时序问题',
+    new_0_5_2_6: '统一使用 reasoning 字段',
     new_0_5_1_1: '首次启动时自动同步 Hermes 历史会话',
     new_0_5_1_2: '修复旧版本 Hermes 会话同步失败问题（向后兼容）',
     new_0_5_1_3: 'Profile 克隆时智能清理独占平台凭据（Telegram、Discord、Slack 等）',

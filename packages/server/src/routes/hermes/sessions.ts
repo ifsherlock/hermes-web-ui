@@ -5,6 +5,7 @@ export const sessionRoutes = new Router()
 
 sessionRoutes.get('/api/hermes/sessions/conversations', ctrl.listConversations)
 sessionRoutes.get('/api/hermes/sessions/conversations/:id/messages', ctrl.getConversationMessages)
+sessionRoutes.get('/api/hermes/sessions/conversations/:id/messages/paginated', ctrl.getConversationMessagesPaginated)
 sessionRoutes.get('/api/hermes/sessions', ctrl.list)
 sessionRoutes.get('/api/hermes/search/sessions', ctrl.search)
 sessionRoutes.get('/api/hermes/sessions/search', ctrl.search)

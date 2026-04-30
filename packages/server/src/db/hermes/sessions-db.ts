@@ -696,13 +696,14 @@ export async function getSessionDetailFromDbWithProfile(sessionId: string, profi
   }
 }
 
-export async function listSessionSummaries(source?: string, limit = 2000): Promise<HermesSessionRow[]> {
+export async function listSessionSummaries(source?: string, limit = 2000, profile?: string): Promise<HermesSessionRow[]> {
   if (!SQLITE_AVAILABLE) {
     throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
   }
 
   const { DatabaseSync } = await import('node:sqlite')
-  const db = new DatabaseSync(sessionDbPath(), { open: true, readOnly: true })
+  const dbPath = profile ? `${getProfileDir(profile)}/state.db` : sessionDbPath()
+  const db = new DatabaseSync(dbPath, { open: true, readOnly: true })
 
   try {
     const clauses = ["s.parent_session_id IS NULL", "s.source != 'tool'", "s.id NOT LIKE 'compress_%'"]

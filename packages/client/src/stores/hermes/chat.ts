@@ -26,6 +26,7 @@ export interface Message {
   toolArgs?: string
   toolResult?: string
   toolStatus?: 'running' | 'done' | 'error'
+  toolDuration?: number  // 工具执行时长（秒）
   isStreaming?: boolean
   attachments?: Attachment[]
   // 思考/推理文本。两条来源：
@@ -615,8 +616,10 @@ export const useChatStore = defineStore('chat', () => {
 
       // Helper to clean up this session's stream state
       const cleanup = () => {
+        console.log('[sendMessage] cleanup called, deleting stream state for sid:', sid)
         streamStates.value.delete(sid)
         serverWorking.value.delete(sid)
+        console.log('[sendMessage] cleanup done, isStreaming now:', isStreaming.value)
       }
 
       // Per-run flags used to detect silently-swallowed errors at run.completed.
@@ -765,7 +768,13 @@ export const useChatStore = defineStore('chat', () => {
               )
               if (toolMsgs.length > 0) {
                 const last = toolMsgs[toolMsgs.length - 1]
-                updateMessage(sid, last.id, { toolStatus: 'done' })
+                // Check if tool errored
+                const hasError = (evt as any).error === true
+                const duration = (evt as any).duration
+                updateMessage(sid, last.id, {
+                  toolStatus: hasError ? 'error' : 'done',
+                  toolDuration: duration,
+                })
               }
 
               break
@@ -790,17 +799,38 @@ export const useChatStore = defineStore('chat', () => {
               // stream). If we never produced assistant text but the gateway
               // reports a non-empty output, fall back to rendering it as a
               // single assistant message so the user actually sees the reply.
-              const finalOutput =
-                typeof evt.output === 'string' ? evt.output : ''
-              const finalOutputTrimmed = finalOutput.trim()
-              if (!runProducedAssistantText && finalOutputTrimmed !== '') {
-                addMessage(sid, {
-                  id: uid(),
-                  role: 'assistant',
-                  content: finalOutput,
-                  timestamp: Date.now(),
-                })
-                runProducedAssistantText = true
+
+              // Check if backend provided parsed content (from stringified array format)
+              let finalOutputTrimmed = ''
+              if ((evt as any).parsed_content !== undefined) {
+                // Backend has parsed stringified array format, update last assistant message
+                const msgs = getSessionMsgs(sid)
+                const lastAssistant = [...msgs].reverse().find(m => m.role === 'assistant')
+                if (lastAssistant) {
+                  updateMessage(sid, lastAssistant.id, {
+                    content: (evt as any).parsed_content || '',
+                  })
+                  if ((evt as any).parsed_reasoning) {
+                    updateMessage(sid, lastAssistant.id, {
+                      reasoning: (evt as any).parsed_reasoning,
+                    })
+                  }
+                  finalOutputTrimmed = ((evt as any).parsed_content || '').trim()
+                }
+              } else {
+                // Fallback to output field (legacy behavior)
+                const finalOutput =
+                  typeof evt.output === 'string' ? evt.output : ''
+                finalOutputTrimmed = finalOutput.trim()
+                if (!runProducedAssistantText && finalOutputTrimmed !== '') {
+                  addMessage(sid, {
+                    id: uid(),
+                    role: 'assistant',
+                    content: finalOutput,
+                    timestamp: Date.now(),
+                  })
+                  runProducedAssistantText = true
+                }
               }
               // Workaround for upstream hermes-agent bug: when the agent
               // layer silently swallows an error (e.g. invalid API key,
@@ -875,6 +905,7 @@ export const useChatStore = defineStore('chat', () => {
         },
         // onDone
         () => {
+          console.log('[sendMessage] onDone callback called, cleaning up stream state')
           const msgs = getSessionMsgs(sid)
           const last = msgs[msgs.length - 1]
           if (last?.isStreaming) {
@@ -1076,7 +1107,11 @@ export const useChatStore = defineStore('chat', () => {
           const msgs = getSessionMsgs(sid)
           const toolMsgs = msgs.filter(m => m.role === 'tool' && m.toolStatus === 'running')
           if (toolMsgs.length > 0) {
-            updateMessage(sid, toolMsgs[toolMsgs.length - 1].id, { toolStatus: 'done' })
+            const hasError = (evt as any).error === true
+            updateMessage(sid, toolMsgs[toolMsgs.length - 1].id, {
+              toolStatus: hasError ? 'error' : 'done',
+              toolDuration: (evt as any).duration,
+            })
           }
 
           break
@@ -1096,15 +1131,35 @@ export const useChatStore = defineStore('chat', () => {
               target.outputTokens = (evt as any).outputTokens
             }
           }
-          const finalOutput = typeof evt.output === 'string' ? evt.output : ''
-          const finalOutputTrimmed = finalOutput.trim()
-          if (!runProducedAssistantText && finalOutputTrimmed !== '') {
-            addMessage(sid, {
-              id: uid(),
-              role: 'assistant',
-              content: finalOutput,
-              timestamp: Date.now(),
-            })
+          // Check if backend provided parsed content (from stringified array format)
+          let finalOutputTrimmed = ''
+          if ((evt as any).parsed_content !== undefined) {
+            // Backend has parsed stringified array format, update last assistant message
+            const msgs = getSessionMsgs(sid)
+            const lastAssistant = [...msgs].reverse().find(m => m.role === 'assistant')
+            if (lastAssistant) {
+              updateMessage(sid, lastAssistant.id, {
+                content: (evt as any).parsed_content || '',
+              })
+              if ((evt as any).parsed_reasoning) {
+                updateMessage(sid, lastAssistant.id, {
+                  reasoning: (evt as any).parsed_reasoning,
+                })
+              }
+              finalOutputTrimmed = ((evt as any).parsed_content || '').trim()
+            }
+          } else {
+            // Fallback to output field (legacy behavior)
+            const finalOutput = typeof evt.output === 'string' ? evt.output : ''
+            finalOutputTrimmed = finalOutput.trim()
+            if (!runProducedAssistantText && finalOutputTrimmed !== '') {
+              addMessage(sid, {
+                id: uid(),
+                role: 'assistant',
+                content: finalOutput,
+                timestamp: Date.now(),
+              })
+            }
           }
           const swallowedError = !runProducedAssistantText && !runHadToolActivity && finalOutputTrimmed === ''
           if (swallowedError) {

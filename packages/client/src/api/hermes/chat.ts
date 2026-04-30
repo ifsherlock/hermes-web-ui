@@ -134,10 +134,14 @@ export function startRunViaSocket(
   // All event handlers share the same cleanup logic
   const handleEvent = (event: RunEvent) => {
     if (closed) return
-    onEvent(event)
-    if (event.event === 'run.completed' || event.event === 'run.failed') {
-      cleanup()
-      onDone()
+    try {
+      onEvent(event)
+    } finally {
+      if (event.event === 'run.completed' || event.event === 'run.failed') {
+        console.log('[startRunViaSocket] Run completed/failed, calling cleanup and onDone', event.event)
+        cleanup()
+        onDone()
+      }
     }
   }
 

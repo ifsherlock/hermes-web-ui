@@ -49,7 +49,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     value: 'deepseek',
     builtin: true,
     base_url: 'https://api.deepseek.com',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   },
   {
     label: 'Z.AI / GLM',

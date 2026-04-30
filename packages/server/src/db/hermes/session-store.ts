@@ -300,6 +300,15 @@ export function searchSessions(profile: string, query: string, limit = 20): Herm
   })
 }
 
+export interface PaginatedSessionDetailResult {
+  session: HermesSessionRow
+  messages: HermesMessageRow[]
+  total: number
+  offset: number
+  limit: number
+  hasMore: boolean
+}
+
 export function getSessionDetail(id: string): HermesSessionDetailRow | null {
   if (!isSqliteAvailable()) return null
   const db = getDb()!
@@ -409,6 +418,45 @@ export function updateSessionStats(id: string): void {
          last_active = COALESCE((SELECT MAX(timestamp) FROM ${MESSAGES_TABLE} WHERE session_id = ?), started_at)
      WHERE id = ?`,
   ).run(id, id, id)
+}
+
+export function getSessionDetailPaginated(
+  id: string,
+  offset = 0,
+  limit = 500,
+): PaginatedSessionDetailResult | null {
+  if (!isSqliteAvailable()) {
+    return null
+  }
+
+  const db = getDb()!
+
+  // Get session info
+  const sessionRow = db.prepare(`SELECT * FROM ${SESSIONS_TABLE} WHERE id = ?`).get(id) as Record<string, unknown> | undefined
+  if (!sessionRow) return null
+
+  // Get total message count
+  const countResult = db.prepare(
+    `SELECT COUNT(*) as total FROM ${MESSAGES_TABLE} WHERE session_id = ?`,
+  ).get(id) as { total: number } | undefined
+  const total = countResult?.total || 0
+
+  // Get paginated messages (newest first from DB, then reverse)
+  const msgRows = db.prepare(
+    `SELECT * FROM ${MESSAGES_TABLE} WHERE session_id = ? ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?`,
+  ).all(id, limit, offset) as Record<string, unknown>[]
+
+  const session = mapSessionRow(sessionRow)
+  const messages = msgRows.map(mapMessageRow).reverse()  // Reverse to show oldest first
+
+  return {
+    session,
+    messages,
+    total,
+    offset,
+    limit,
+    hasMore: offset + messages.length < total,
+  }
 }
 
 // --- Session store mode ---

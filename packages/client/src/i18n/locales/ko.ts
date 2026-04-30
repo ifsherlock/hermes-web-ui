@@ -131,7 +131,7 @@ export default {
     arguments: '인수',
     result: '결과',
     truncated: '... (잘림)',
-    thinkingLabel: '사고 과정',
+    executionDuration: 'Execution time',    thinkingLabel: '사고 과정',
     thinkingInProgress: '사고 중…',
     thinkingShow: '사고 과정 펼치기',
     thinkingHide: '사고 과정 접기',
@@ -563,6 +563,17 @@ export default {
 
   // 변경 이력
   changelog: {
+    new_0_5_3_1: 'Improve reasoning process display with persistence across page refreshes',
+    new_0_5_3_2: 'Optimize stringified array format parsing to extract thinking/text/tool_calls',
+    new_0_5_3_3: 'Improve log display by removing ellipsis and showing full content',
+    new_0_5_3_4: 'Add detailed logging for format conversion and parsing',
+    new_0_5_3_5: 'Optimize token calculation to accurately include tool results',
+    new_0_5_2_1: 'Convert conversation history to Anthropic format before sending to Gateway',
+    new_0_5_2_2: 'Add bidirectional reasoning sync between memory and database',
+    new_0_5_2_3: 'Add message pagination with DESC query + array reverse for performance',
+    new_0_5_2_4: 'Clean up debug code and unused imports',
+    new_0_5_2_5: 'Remove auto-resumed event trigger to avoid timing issues',
+    new_0_5_2_6: 'Use reasoning field consistently across codebase',
     new_0_5_1_1: 'Auto-sync Hermes history sessions on first startup',
     new_0_5_1_2: 'Fix session sync failure with old Hermes versions (backward compatible)',
     new_0_5_1_3: 'Smart cleanup of exclusive platform credentials on profile clone (Telegram, Discord, Slack, etc.)',
