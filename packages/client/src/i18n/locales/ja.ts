@@ -475,6 +475,8 @@ export default {
       liveMonitorHumanOnly: 'ライブモニター: 人間のセッションのみ表示',
       liveMonitorHumanOnlyHint: 'ライブモニターでサブエージェントやセッション監視ノイズを既定で隠します',
       atHourHint: '毎日指定時刻にセッションをリセット',
+      requireAuth: 'セッション認証',
+      requireAuthHint: 'セッション操作に認証を必要とする',
     },
     privacy: {
       redactPii: '個人情報のマスキング',

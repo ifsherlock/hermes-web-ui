@@ -475,6 +475,8 @@ jobTriggered: 'Job ejecutado',
       liveMonitorHumanOnly: 'Monitor en vivo: mostrar solo sesiones humanas',
       liveMonitorHumanOnlyHint: 'Oculta por defecto el ruido de subagentes y del monitor de sesiones en el monitor en vivo',
       atHourHint: 'Reiniciar sesion a esta hora todos los dias',
+      requireAuth: 'Autorización de sesión',
+      requireAuthHint: 'Requiere autorización para operaciones de sesión',
     },
     privacy: {
       redactPii: 'Ocultar informacion personal',

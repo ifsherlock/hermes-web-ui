@@ -475,6 +475,8 @@ jobTriggered: 'Job declenche',
       liveMonitorHumanOnly: 'Moniteur live : n’afficher que les sessions humaines',
       liveMonitorHumanOnlyHint: 'Masquer par défaut le bruit des sous-agents et du moniteur de session dans le moniteur live',
       atHourHint: 'Reinitialiser la session a cette heure chaque jour',
+      requireAuth: 'Autorisation de session',
+      requireAuthHint: 'Requiere l\'autorisation pour les operations de session',
     },
     privacy: {
       redactPii: 'Masquer les DPI',

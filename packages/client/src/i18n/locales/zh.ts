@@ -518,6 +518,8 @@ export default {
       liveMonitorHumanOnly: '实时监看：仅显示人类会话',
       liveMonitorHumanOnlyHint: '在实时监看中默认隐藏子代理和会话监看噪音',
       atHourHint: '每天在指定小时重置会话',
+      requireAuth: '会话授权',
+      requireAuthHint: '修改会话操作是否授权',
     },
     privacy: {
       redactPii: '脱敏 PII',

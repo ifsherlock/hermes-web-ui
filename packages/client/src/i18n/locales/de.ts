@@ -475,6 +475,8 @@ jobTriggered: 'Job ausgelost',
       liveMonitorHumanOnly: 'Live-Monitor: nur menschliche Sitzungen anzeigen',
       liveMonitorHumanOnlyHint: 'Im Live-Monitor Unteragenten- und Sitzungsmonitor-Rauschen standardmäßig ausblenden',
       atHourHint: 'Sitzung taglich zu dieser Stunde zurucksetzen',
+      requireAuth: 'Sitzungsautorisierung',
+      requireAuthHint: 'Erfordert Autorisierung für Sitzungsvorgänge',
     },
     privacy: {
       redactPii: 'Personliche Daten maskieren',
