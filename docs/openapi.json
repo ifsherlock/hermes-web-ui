@@ -1257,7 +1257,7 @@
       "summary": "List all group chat rooms",
       "operationId": "listGroupChatRooms",
       "responses": {
-        "200": { "description": "Room list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomListResponse" } } } } },
+        "200": { "description": "Room list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomListResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
       },
@@ -1269,7 +1269,7 @@
       "operationId": "createGroupChatRoom",
       "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateGroupChatRoomRequest" } } } },
       "responses": {
-        "200": { "description": "Room created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomDetailResponse" } } } } },
+        "200": { "description": "Room created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomDetailResponse" } } } },
         "400": { "description": "Missing required fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
@@ -1284,7 +1284,7 @@
       "operationId": "getGroupChatRoom",
       "parameters": [{ "name": "roomId", "in": "path", "required": true, "schema": { "type": "string" } }],
       "responses": {
-        "200": { "description": "Room detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomDetailResponse" } } } } },
+        "200": { "description": "Room detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomDetailResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "404": { "description": "Room not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
@@ -1311,7 +1311,7 @@
       "operationId": "joinGroupChatRoom",
       "parameters": [{ "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }],
       "responses": {
-        "200": { "description": "Room detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomResponse" } } } } },
+        "200": { "description": "Room detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "404": { "description": "Room not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
@@ -1342,7 +1342,7 @@
       "operationId": "listRoomAgents",
       "parameters": [{ "name": "roomId", "in": "path", "required": true, "schema": { "type": "string" } }],
       "responses": {
-        "200": { "description": "Agent list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatAgentListResponse" } } } } },
+        "200": { "description": "Agent list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatAgentListResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
       },
@@ -1355,7 +1355,7 @@
       "parameters": [{ "name": "roomId", "in": "path", "required": true, "schema": { "type": "string" } }],
       "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AddRoomAgentRequest" } } } },
       "responses": {
-        "200": { "description": "Agent added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatAgentResponse" } } } } },
+        "200": { "description": "Agent added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatAgentResponse" } } } },
         "400": { "description": "Missing profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "409": { "description": "Agent already in room", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
@@ -1389,7 +1389,7 @@
       "parameters": [{ "name": "roomId", "in": "path", "required": true, "schema": { "type": "string" } }],
       "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateRoomConfigRequest" } } } },
       "responses": {
-        "200": { "description": "Room config updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomResponse" } } } } },
+        "200": { "description": "Room config updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupChatRoomResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
       },
@@ -1403,7 +1403,7 @@
       "operationId": "compressRoomContext",
       "parameters": [{ "name": "roomId", "in": "path", "required": true, "schema": { "type": "string" } }],
       "responses": {
-        "200": { "description": "Context compressed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompressRoomResponse" } } } } },
+        "200": { "description": "Context compressed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompressRoomResponse" } } } },
         "401": { "$ref": "#/components/responses/Unauthorized" },
         "404": { "description": "Room not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
         "503": { "description": "Group chat not initialized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
@@ -1423,7 +1423,6 @@
       }
     }
   },
-  "components": {
   "components": {
     "securitySchemes": {
       "BearerAuth": {
