@@ -637,10 +637,8 @@ export const useChatStore = defineStore('chat', () => {
 
       // Helper to clean up this session's stream state
       const cleanup = () => {
-        console.log('[sendMessage] cleanup called, deleting stream state for sid:', sid)
         streamStates.value.delete(sid)
         serverWorking.value.delete(sid)
-        console.log('[sendMessage] cleanup done, isStreaming now:', isStreaming.value)
       }
 
       // Per-run flags used to detect silently-swallowed errors at run.completed.
@@ -692,13 +690,11 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'abort.started': {
-              console.log('[chat abort] pause started', evt)
               setAbortState({ aborting: true, synced: null })
               break
             }
 
             case 'abort.completed': {
-              console.log('[chat abort] pause completed', evt)
               setAbortState({ aborting: false, synced: (evt as any).synced ?? false })
               const msgs = getSessionMsgs(sid)
               const lastMsg = msgs[msgs.length - 1]
@@ -903,7 +899,6 @@ export const useChatStore = defineStore('chat', () => {
               }
 
               // 自动播放语音
-              console.log('[run.completed] autoPlaySpeechEnabled:', autoPlaySpeechEnabled.value)
               if (autoPlaySpeechEnabled.value) {
                 const msgs = getSessionMsgs(sid)
                 const lastAssistant = [...msgs].reverse().find(m => m.role === 'assistant')
@@ -958,7 +953,6 @@ export const useChatStore = defineStore('chat', () => {
         },
         // onDone
         () => {
-          console.log('[sendMessage] onDone callback called, cleaning up stream state')
           const msgs = getSessionMsgs(sid)
           const last = msgs[msgs.length - 1]
           if (last?.isStreaming) {
@@ -1061,13 +1055,11 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         case 'abort.started': {
-          console.log('[chat abort] resumed pause started', evt)
           setAbortState({ aborting: true, synced: null })
           break
         }
 
         case 'abort.completed': {
-          console.log('[chat abort] resumed pause completed', evt)
           setAbortState({ aborting: false, synced: (evt as any).synced ?? false })
           const msgs = getSessionMsgs(sid)
           const lastMsg = msgs[msgs.length - 1]
@@ -1317,7 +1309,6 @@ export const useChatStore = defineStore('chat', () => {
     if (isAborting.value) return
     const ctrl = streamStates.value.get(sid)
     if (ctrl) {
-      console.log('[chat abort] stop requested', { sessionId: sid })
       setAbortState({ aborting: true, synced: null })
       ctrl.abort()
       const msgs = getSessionMsgs(sid)
