@@ -37,6 +37,7 @@ process.on('unhandledRejection', (reason) => {
 })
 
 let server: any = null
+let chatRunServer: any = null
 
 export async function bootstrap() {
   console.log(`hermes-web-ui v${APP_VERSION} starting...`)
@@ -102,7 +103,7 @@ export async function bootstrap() {
   groupChatServer.setGatewayManager(getGatewayManagerInstance())
 
   // Chat run Socket.IO — shares the same Server instance, just adds /chat-run namespace
-  const chatRunServer = new ChatRunSocket(groupChatServer.getIO(), getGatewayManagerInstance())
+  chatRunServer = new ChatRunSocket(groupChatServer.getIO(), getGatewayManagerInstance())
   setChatRunServer(chatRunServer)
   chatRunServer.init()
 
@@ -139,7 +140,7 @@ export async function bootstrap() {
     logger.error({ err }, 'Server error')
   })
 
-  bindShutdown(server, groupChatServer)
+  bindShutdown(server, groupChatServer, chatRunServer)
   startVersionCheck()
 }
 
