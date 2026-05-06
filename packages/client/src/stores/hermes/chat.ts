@@ -119,10 +119,18 @@ async function buildContentBlocks(
 }
 
 function mapHermesMessages(msgs: HermesMessage[]): Message[] {
+  // Filter out assistant messages with empty content
+  const filteredMsgs = msgs.filter(m => {
+    if (m.role === 'assistant') {
+      return m.content && m.content.trim() !== ''
+    }
+    return true
+  })
+
   // Build lookups from assistant messages with tool_calls
   const toolNameMap = new Map<string, string>()
   const toolArgsMap = new Map<string, string>()
-  for (const msg of msgs) {
+  for (const msg of filteredMsgs) {
     if (msg.role === 'assistant' && msg.tool_calls) {
       for (const tc of msg.tool_calls) {
         if (tc.id) {
@@ -134,7 +142,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
   }
 
   const result: Message[] = []
-  for (const msg of msgs) {
+  for (const msg of filteredMsgs) {
     // Skip assistant messages that only contain tool_calls (no meaningful content)
     if (msg.role === 'assistant' && msg.tool_calls?.length && !msg.content?.trim()) {
       // Emit a tool.started message for each tool call
