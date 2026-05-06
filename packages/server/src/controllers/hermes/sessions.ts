@@ -284,6 +284,54 @@ export async function remove(ctx: any) {
   ctx.body = { ok: true }
 }
 
+export async function batchRemove(ctx: any) {
+  const { ids } = ctx.request.body as { ids?: string[] }
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    ctx.status = 400
+    ctx.body = { error: 'ids is required and must be a non-empty array' }
+    return
+  }
+
+  const validIds = ids.filter(id => typeof id === 'string' && id.trim() !== '')
+  if (validIds.length === 0) {
+    ctx.status = 400
+    ctx.body = { error: 'No valid session ids provided' }
+    return
+  }
+
+  const results = {
+    deleted: 0,
+    failed: 0,
+    errors: [] as Array<{ id: string; error: string }>
+  }
+
+  if (useLocalSessionStore()) {
+    for (const id of validIds) {
+      const ok = localDeleteSession(id)
+      if (ok) {
+        deleteUsage(id)
+        results.deleted++
+      } else {
+        results.failed++
+        results.errors.push({ id, error: 'Failed to delete session' })
+      }
+    }
+  } else {
+    for (const id of validIds) {
+      const ok = await hermesCli.deleteSession(id)
+      if (ok) {
+        deleteUsage(id)
+        results.deleted++
+      } else {
+        results.failed++
+        results.errors.push({ id, error: 'Failed to delete session' })
+      }
+    }
+  }
+
+  ctx.body = { ...results, ok: true }
+}
+
 export async function usageBatch(ctx: any) {
   const ids = (ctx.query.ids as string)
   if (!ids) {

@@ -108,6 +108,21 @@ export async function deleteSession(id: string): Promise<boolean> {
   }
 }
 
+export async function batchDeleteSessions(ids: string[]): Promise<{ deleted: number; failed: number; errors: Array<{ id: string; error: string }> }> {
+  try {
+    const res = await request<{ deleted: number; failed: number; errors: Array<{ id: string; error: string }> }>(
+      '/api/hermes/sessions/batch-delete',
+      {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      }
+    )
+    return res
+  } catch (err: any) {
+    throw err
+  }
+}
+
 export async function renameSession(id: string, title: string): Promise<boolean> {
   try {
     await request(`/api/hermes/sessions/${id}/rename`, {
