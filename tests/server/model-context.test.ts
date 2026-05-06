@@ -25,6 +25,14 @@ async function loadModelContext() {
     ...(await vi.importActual<typeof import('os')>('os')),
     homedir: () => homeDir,
   }))
+  // Mock getDb to return null to avoid "database is locked" errors in parallel tests
+  vi.doMock('../../packages/server/src/db/index', async () => {
+    const actual = await vi.importActual<typeof import('../../packages/server/src/db/index')>('../../packages/server/src/db/index')
+    return {
+      ...actual,
+      getDb: () => null,
+    }
+  })
   return import('../../packages/server/src/services/hermes/model-context')
 }
 
