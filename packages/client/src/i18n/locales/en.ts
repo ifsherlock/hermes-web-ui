@@ -792,7 +792,7 @@ export default {
   changelog: {
     new_0_5_12_1: 'Add batch session deletion: checkbox multi-select, select all, and batch delete for improved session management',
     new_0_5_12_2: 'Add visual context length editor: click token count to open edit modal with custom limit support',
-    new_0_5_12_3: 'Fix group chat @mention keyboard selection: replace NDropdown with custom dropdown supporting keyboard navigation and scroll following',
+    new_0_5_12_3: 'Fix group chat mention keyboard selection: replace NDropdown with custom dropdown supporting keyboard navigation and scroll following',
     new_0_5_12_4: 'Add chat completion sound: auto-play toggle for better user experience',
     new_0_5_12_5: 'Improve chat message display: filter empty assistant messages and better history/compression logic',
     new_0_5_12_6: 'Improve update mechanism: use npm prefix -g for dynamic path resolution supporting Homebrew and non-standard Node.js installations',

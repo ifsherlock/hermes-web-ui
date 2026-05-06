@@ -627,7 +627,7 @@ export default {
 
     new_0_5_12_1: '세션 일괄 삭제: 체크박스 다중 선택, 전체 선택, 일괄 삭제',
     new_0_5_12_2: '컨텍스트 길이 시각적 편집기: 토큰 수를 클릭하여 편집 모달 열기',
-    new_0_5_12_3: '그룹 채팅 @mention 키보드 선택 수정: NDropdown을 사용자 정의 드롭다운으로 교체',
+    new_0_5_12_3: '그룹 채팅 mention 키보드 선택 수정: NDropdown을 사용자 정의 드롭다운으로 교체',
     new_0_5_12_4: '채팅 완료 사운드: 자동 재생 토글',
     new_0_5_12_5: '채팅 메시지 표시 개선: 빈 어시스턴트 메시지 필터링',
     new_0_5_12_6: '업데이트 메커니즘 개선: npm prefix -g를 사용한 동적 경로 확인',
@@ -699,7 +699,7 @@ export default {
     new_0_4_7_9: '전환 시 config.model 재설정 및 CLI 커스텀 프로바이더 해결',
     new_0_4_7_10: '내장 프로바이더 삭제 시 .env에서 base_url_env 정리',
     new_0_4_7_11: '그룹 채팅 방 사이드바 배경을 세션 목록과 맞추기',
-    new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
+    new_0_4_5_1: 'Add group chat with multi-agent rooms, mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
     new_0_4_5_4: 'Replace jobs proxy with local controller and optimize model loading',

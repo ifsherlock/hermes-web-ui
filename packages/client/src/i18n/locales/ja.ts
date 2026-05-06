@@ -699,7 +699,7 @@ export default {
     new_0_4_7_9: '切り替え時にconfig.modelをリセットしCLIカスタムプロバイダーを解決',
     new_0_4_7_10: 'ビルトインプロバイダー削除時に.envからbase_url_envをクリア',
     new_0_4_7_11: 'グループチャットルームのサイドバー背景をセッションリストに合わせる',
-    new_0_4_5_1: 'Add group chat with multi-agent rooms, @mention routing, and typing status recovery',
+    new_0_4_5_1: 'Add group chat with multi-agent rooms, mention routing, and typing status recovery',
     new_0_4_5_2: 'Rewrite model-context config to use YAML with context_length setting',
     new_0_4_5_3: 'Add gpt-5.5 to OpenAI Codex model list',
     new_0_4_5_4: 'Replace jobs proxy with local controller and optimize model loading',
