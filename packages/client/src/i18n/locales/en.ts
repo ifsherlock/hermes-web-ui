@@ -792,6 +792,16 @@ export default {
 
   // Changelog
   changelog: {
+    new_0_5_13_1: 'Add message queue for sequential run processing to prevent concurrent request conflicts',
+    new_0_5_13_2: 'Support two-level skills directory structure with misc category for flat skills',
+    new_0_5_13_3: 'Filter out ephemeral sessions during startup sync to avoid importing internal sessions',
+    new_0_5_13_4: 'Add Termux/proot environment compatibility for mobile and embedded deployments',
+    new_0_5_13_5: 'Handle chat run abort lifecycle: proper cleanup and state reset on user cancellation',
+    new_0_5_13_6: 'Remove streaming indicator from history message list for cleaner display',
+    new_0_5_13_7: 'Fix context resolution for custom providers with improved model matching',
+    new_0_5_13_8: 'Fix IPv6 listen default to ensure correct address binding',
+    new_0_5_13_9: 'Improve chat message display and context compression logic',
+    new_0_5_13_10: 'Fix chat completion sound toggle not taking effect and cron silent run history empty issue',
     new_0_5_12_1: 'Add batch session deletion: checkbox multi-select, select all, and batch delete for improved session management',
     new_0_5_12_2: 'Add visual context length editor: click token count to open edit modal with custom limit support',
     new_0_5_12_3: 'Fix group chat mention keyboard selection: replace NDropdown with custom dropdown supporting keyboard navigation and scroll following',
