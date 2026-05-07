@@ -8,8 +8,7 @@ export function getListenHost(env: Record<string, string | undefined> = process.
 
 export const config = {
   port: parseInt(process.env.PORT || '8648', 10),
-  // Leave host undefined by default so Node binds to IPv6 when available,
-  // falling back to IPv4 on systems without IPv6 support.
+  // Default undefined: listenWithFallback tries :: first, falls back to 0.0.0.0
   host: getListenHost(),
   upstream: process.env.UPSTREAM || 'http://127.0.0.1:8642',
   uploadDir: process.env.UPLOAD_DIR || resolve(homedir(), '.hermes-web-ui', 'upload'),
