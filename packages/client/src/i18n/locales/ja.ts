@@ -634,6 +634,11 @@ export default {
     new_0_5_6_8: '重複するnodemonインスタンスを削除し、SQLiteデータベースのリセットを引き起こすマルチプロセス競合を修正',
     new_0_5_9_1: 'アプリケーション全体でプロファイル管理を統一し、一貫したAPIと状態管理を提供',
 
+	new_0_5_14_1: 'Add session export with full and compressed modes (JSON or plain text)',
+	new_0_5_14_2: 'Fix terminal PTY resource exhaustion, switch to lazy connect',
+	new_0_5_14_3: 'Fix WSL2 health check failure caused by IPv6 dual-stack binding',
+	new_0_5_14_4: 'Fix SQLite connection not released on shutdown causing database lock',
+	new_0_5_14_5: 'Update FUN provider models, add builtin badge and API relay link',
     new_0_5_13_1: 'メッセージキューによる順次実行処理で同時リクエストの競合を防止',
     new_0_5_13_2: '2階層スキルディレクトリ構造をサポート、フラットスキルは「その他」カテゴリに分類',
     new_0_5_13_3: '起動同期時に一時セッション（eph_*）をフィルタリング',

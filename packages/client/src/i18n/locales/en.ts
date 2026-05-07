@@ -800,6 +800,11 @@ export default {
 
   // Changelog
   changelog: {
+    new_0_5_14_1: 'Add session export with full and compressed modes (JSON or plain text)',
+    new_0_5_14_2: 'Fix terminal panel connecting on mount causing PTY resource exhaustion, switch to lazy connect',
+    new_0_5_14_3: 'Fix WSL2 health check failure caused by IPv6 dual-stack binding',
+    new_0_5_14_4: 'Fix SQLite connection not released on shutdown causing database lock on restart',
+    new_0_5_14_5: 'Update FUN-Codex/FUN-Claude model lists, add builtin badge and API relay link',
     new_0_5_13_1: 'Add message queue for sequential run processing to prevent concurrent request conflicts',
     new_0_5_13_2: 'Support two-level skills directory structure with misc category for flat skills',
     new_0_5_13_3: 'Filter out ephemeral sessions during startup sync to avoid importing internal sessions',

@@ -634,6 +634,11 @@ export default {
     new_0_5_6_8: '중복된 nodemon 인스턴스를 제거하여 SQLite 데이터베이스 재설정을 일으키는 다중 프로세스 충돌 수정',
     new_0_5_9_1: '일관된 API 및 상태 관리로 전체 응용 프로그램에서 프로필 관리 통합',
 
+	new_0_5_14_1: 'Add session export with full and compressed modes (JSON or plain text)',
+	new_0_5_14_2: 'Fix terminal PTY resource exhaustion, switch to lazy connect',
+	new_0_5_14_3: 'Fix WSL2 health check failure caused by IPv6 dual-stack binding',
+	new_0_5_14_4: 'Fix SQLite connection not released on shutdown causing database lock',
+	new_0_5_14_5: 'Update FUN provider models, add builtin badge and API relay link',
     new_0_5_13_1: '메시지 큐를 통한 순차 실행 처리로 동시 요청 충돌 방지',
     new_0_5_13_2: '2단계 스킬 디렉토리 구조 지원, 플랫 스킬은 기타 카테고리로 분류',
     new_0_5_13_3: '시작 동기화 시 임시 세션(eph_*) 필터링',
