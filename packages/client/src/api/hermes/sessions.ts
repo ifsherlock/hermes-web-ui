@@ -1,4 +1,4 @@
-import { request } from '../client'
+import { request, getApiKey, getBaseUrlValue } from '../client'
 
 export interface SessionSummary {
   id: string
@@ -145,6 +145,24 @@ export async function setSessionWorkspace(id: string, workspace: string | null):
   } catch {
     return false
   }
+}
+
+export async function exportSession(id: string, mode: 'full' | 'compressed' = 'full', ext: 'json' | 'txt' = 'json'): Promise<void> {
+  const baseUrl = getBaseUrlValue()
+  const token = getApiKey()
+  const url = `${baseUrl}/api/hermes/sessions/${id}/export?mode=${mode}&ext=${ext}&token=${encodeURIComponent(token)}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Export failed')
+  const blob = await res.blob()
+  const contentDisposition = res.headers.get('Content-Disposition') || ''
+  let filename = `session_${id}.${ext}`
+  const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;\n]+)/i)
+  if (match) filename = decodeURIComponent(match[1].replace(/"/g, ''))
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
 
 export interface UsageStatsResponse {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onUnmounted } from 'vue'
 import { NPopconfirm, NCheckbox } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import type { Session } from '@/stores/hermes/chat'
@@ -22,6 +23,49 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+const longPressTriggered = ref(false)
+
+function onTouchStart(e: TouchEvent) {
+  longPressTriggered.value = false
+  longPressTimer = setTimeout(() => {
+    longPressTriggered.value = true
+    const touch = e.touches[0]
+    const syntheticEvent = new MouseEvent('contextmenu', {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      bubbles: true,
+    })
+    emit('contextmenu', syntheticEvent)
+  }, 500)
+}
+
+function onTouchEnd() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function onTouchMove() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function onClick() {
+  if (longPressTriggered.value) {
+    longPressTriggered.value = false
+    return
+  }
+  emit('select')
+}
+
+onUnmounted(() => {
+  if (longPressTimer) clearTimeout(longPressTimer)
+})
 </script>
 
 <template>
@@ -29,8 +73,11 @@ const { t } = useI18n()
     class="session-item"
     :class="{ active, 'batch-mode': selectable }"
     :aria-current="active ? 'page' : undefined"
-    @click="emit('select')"
+    @click="onClick"
     @contextmenu="emit('contextmenu', $event)"
+    @touchstart="onTouchStart"
+    @touchend="onTouchEnd"
+    @touchmove="onTouchMove"
   >
     <div v-if="selectable" class="session-item-checkbox">
       <NCheckbox :checked="selected" @click.stop="emit('toggle-select')" />
