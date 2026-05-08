@@ -136,6 +136,7 @@ export default {
           ['AUTH_DISABLED', '设为 "1" 禁用认证'],
           ['AUTH_TOKEN', '自定义认证令牌（覆盖自动生成的令牌）'],
           ['PORT', '服务器监听端口（默认：8648）'],
+          ['BIND_HOST', '服务器绑定地址（默认：0.0.0.0）。如需 IPv6，请显式设置为 ::。'],
           ['UPSTREAM', 'Hermes 网关 URL（默认：http://127.0.0.1:8642）'],
           ['UPLOAD_DIR', '自定义上传目录路径'],
           ['CORS_ORIGINS', 'CORS 来源配置（默认：*）'],
