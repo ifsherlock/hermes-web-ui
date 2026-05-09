@@ -1109,14 +1109,6 @@ export class ChatRunSocket {
             finish_reason: 'tool_calls',
             timestamp: now(),
           })
-          addMessage({
-            session_id: sessionId,
-            role: 'assistant',
-            content: '',
-            tool_calls: [toolCall],
-            finish_reason: 'tool_calls',
-            timestamp: now(),
-          })
         }
         return {
           event: 'tool.started',
@@ -1145,14 +1137,6 @@ export class ChatRunSocket {
             id: state.messages.length + 1,
             session_id: sessionId,
             runMarker,
-            role: 'tool',
-            content: output,
-            tool_call_id: callId,
-            tool_name: toolName,
-            timestamp: now(),
-          })
-          addMessage({
-            session_id: sessionId,
             role: 'tool',
             content: output,
             tool_call_id: callId,
@@ -1215,10 +1199,11 @@ export class ChatRunSocket {
     if (run.textInserted || !text?.trim()) return
     run.textInserted = true
 
-    const last = [...state.messages].reverse().find(m => m.runMarker === runMarker)
-    if (last?.role === 'assistant' && !last.tool_calls?.length) {
-      last.content = text
-      last.finish_reason = 'stop'
+    const lastIdx = [...state.messages].map((m, i) => ({ m, i }))
+      .reverse().find(({ m }) => m.runMarker === runMarker)
+    if (lastIdx && lastIdx.m.role === 'assistant' && !lastIdx.m.tool_calls?.length) {
+      lastIdx.m.content = text
+      lastIdx.m.finish_reason = 'stop'
     } else {
       state.messages.push({
         id: state.messages.length + 1,
@@ -1230,13 +1215,30 @@ export class ChatRunSocket {
         timestamp: Math.floor(Date.now() / 1000),
       })
     }
-    addMessage({
-      session_id: sessionId,
-      role: 'assistant',
-      content: text,
-      finish_reason: 'stop',
-      timestamp: Math.floor(Date.now() / 1000),
-    })
+  }
+
+  /** Flush all non-user messages for this run to DB in order. */
+  private flushResponseRunToDb(state: SessionState, sessionId: string) {
+    const run = state.responseRun
+    if (!run?.runMarker) return
+    let flushed = 0
+    for (const msg of state.messages) {
+      if (msg.runMarker !== run.runMarker) continue
+      if (msg.role === 'user') continue
+      addMessage({
+        session_id: sessionId,
+        role: msg.role,
+        content: msg.content || '',
+        tool_call_id: msg.tool_call_id ?? null,
+        tool_calls: msg.tool_calls ?? null,
+        tool_name: msg.tool_name ?? null,
+        finish_reason: msg.finish_reason ?? null,
+        timestamp: msg.timestamp,
+      })
+      flushed++
+    }
+    logger.info('[chat-run-socket] flushResponseRunToDb: flushed %d messages for session %s',
+      flushed, sessionId)
   }
 
   // --- Abort handler ---
@@ -1274,6 +1276,9 @@ export class ChatRunSocket {
     })
     logger.info({ sessionId, runId }, '[chat-run-socket][abort] started')
 
+    // Flush in-memory assistant text to DB before aborting the stream.
+    this.flushResponseRunToDb(state, sessionId)
+
     if (state.abortController) {
       state.abortController.abort()
     }
@@ -1296,6 +1301,7 @@ export class ChatRunSocket {
       state.abortController = undefined
       state.runId = undefined
       state.events = []
+      this.flushResponseRunToDb(state, sessionId)
       state.responseRun = undefined
       state.profile = undefined
       updateSessionStats(sessionId)

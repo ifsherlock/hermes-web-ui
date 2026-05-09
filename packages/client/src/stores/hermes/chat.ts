@@ -827,9 +827,6 @@ export const useChatStore = defineStore('chat', () => {
                 }
               })
               cleanup()
-              if (sid === activeSessionId.value) {
-                void refreshActiveSession()
-              }
               setAbortState(null)
               break
             }
@@ -1268,9 +1265,6 @@ export const useChatStore = defineStore('chat', () => {
             }
           })
           cleanup()
-          if (sid === activeSessionId.value) {
-            void refreshActiveSession()
-          }
           setAbortState(null)
           break
         }
