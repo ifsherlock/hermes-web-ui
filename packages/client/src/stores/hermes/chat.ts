@@ -27,6 +27,7 @@ export interface Message {
   content: string
   timestamp: number
   toolName?: string
+  toolCallId?: string
   toolPreview?: string
   toolArgs?: string
   toolResult?: string
@@ -156,6 +157,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
           content: '',
           timestamp: Math.round(msg.timestamp * 1000),
           toolName: tc.function?.name || 'tool',
+          toolCallId: tc.id,
           toolArgs: tc.function?.arguments || undefined,
           toolStatus: 'done',
         })
@@ -191,6 +193,7 @@ function mapHermesMessages(msgs: HermesMessage[]): Message[] {
         content: '',
         timestamp: Math.round(msg.timestamp * 1000),
         toolName,
+        toolCallId: tcId || undefined,
         toolArgs,
         toolPreview: typeof preview === 'string' ? preview.slice(0, 100) || undefined : undefined,
         toolResult: msg.content || undefined,
@@ -910,6 +913,7 @@ export const useChatStore = defineStore('chat', () => {
             case 'tool.started': {
               runHadToolActivity = true
               const msgs = getSessionMsgs(sid)
+              const toolCallId = (evt as any).tool_call_id as string | undefined
               const last = activeAssistantMessageId
                 ? msgs.find(m => m.id === activeAssistantMessageId)
                 : msgs[msgs.length - 1]
@@ -917,13 +921,27 @@ export const useChatStore = defineStore('chat', () => {
                 updateMessage(sid, last.id, { isStreaming: false })
               }
               activeAssistantMessageId = null
+              const existingTool = toolCallId
+                ? msgs.find(m => m.role === 'tool' && m.toolCallId === toolCallId)
+                : null
+              if (existingTool) {
+                updateMessage(sid, existingTool.id, {
+                  toolName: evt.tool || evt.name,
+                  toolArgs: typeof (evt as any).arguments === 'string' ? (evt as any).arguments : existingTool.toolArgs,
+                  toolPreview: evt.preview || existingTool.toolPreview,
+                  toolStatus: existingTool.toolStatus || 'running',
+                })
+                break
+              }
               addMessage(sid, {
                 id: uid(),
                 role: 'tool',
                 content: '',
                 timestamp: Date.now(),
                 toolName: evt.tool || evt.name,
+                toolCallId,
                 toolPreview: evt.preview,
+                toolArgs: typeof (evt as any).arguments === 'string' ? (evt as any).arguments : undefined,
                 toolStatus: 'running',
               })
 
@@ -933,9 +951,10 @@ export const useChatStore = defineStore('chat', () => {
             case 'tool.completed': {
               runHadToolActivity = true
               const msgs = getSessionMsgs(sid)
-              const toolMsgs = msgs.filter(
-                m => m.role === 'tool' && m.toolStatus === 'running',
-              )
+              const toolCallId = (evt as any).tool_call_id as string | undefined
+              const toolMsgs = toolCallId
+                ? msgs.filter(m => m.role === 'tool' && m.toolCallId === toolCallId)
+                : msgs.filter(m => m.role === 'tool' && m.toolStatus === 'running')
               if (toolMsgs.length > 0) {
                 const last = toolMsgs[toolMsgs.length - 1]
                 // Check if tool errored
@@ -944,6 +963,7 @@ export const useChatStore = defineStore('chat', () => {
                 updateMessage(sid, last.id, {
                   toolStatus: hasError ? 'error' : 'done',
                   toolDuration: duration,
+                  toolResult: typeof (evt as any).output === 'string' ? (evt as any).output : undefined,
                 })
               }
 
@@ -1326,6 +1346,7 @@ export const useChatStore = defineStore('chat', () => {
         case 'tool.started': {
           runHadToolActivity = true
           const msgs = getSessionMsgs(sid)
+          const toolCallId = (evt as any).tool_call_id as string | undefined
           const last = activeAssistantMessageId
             ? msgs.find(m => m.id === activeAssistantMessageId)
             : msgs[msgs.length - 1]
@@ -1333,13 +1354,27 @@ export const useChatStore = defineStore('chat', () => {
             updateMessage(sid, last.id, { isStreaming: false })
           }
           activeAssistantMessageId = null
+          const existingTool = toolCallId
+            ? msgs.find(m => m.role === 'tool' && m.toolCallId === toolCallId)
+            : null
+          if (existingTool) {
+            updateMessage(sid, existingTool.id, {
+              toolName: evt.tool || evt.name,
+              toolArgs: typeof (evt as any).arguments === 'string' ? (evt as any).arguments : existingTool.toolArgs,
+              toolPreview: evt.preview || existingTool.toolPreview,
+              toolStatus: existingTool.toolStatus || 'running',
+            })
+            break
+          }
           addMessage(sid, {
             id: uid(),
             role: 'tool',
             content: '',
             timestamp: Date.now(),
             toolName: evt.tool || evt.name,
+            toolCallId,
             toolPreview: evt.preview,
+            toolArgs: typeof (evt as any).arguments === 'string' ? (evt as any).arguments : undefined,
             toolStatus: 'running',
           })
 
@@ -1349,12 +1384,16 @@ export const useChatStore = defineStore('chat', () => {
         case 'tool.completed': {
           runHadToolActivity = true
           const msgs = getSessionMsgs(sid)
-          const toolMsgs = msgs.filter(m => m.role === 'tool' && m.toolStatus === 'running')
+          const toolCallId = (evt as any).tool_call_id as string | undefined
+          const toolMsgs = toolCallId
+            ? msgs.filter(m => m.role === 'tool' && m.toolCallId === toolCallId)
+            : msgs.filter(m => m.role === 'tool' && m.toolStatus === 'running')
           if (toolMsgs.length > 0) {
             const hasError = (evt as any).error === true
             updateMessage(sid, toolMsgs[toolMsgs.length - 1].id, {
               toolStatus: hasError ? 'error' : 'done',
               toolDuration: (evt as any).duration,
+              toolResult: typeof (evt as any).output === 'string' ? (evt as any).output : undefined,
             })
           }
 
