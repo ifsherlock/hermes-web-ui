@@ -595,13 +595,9 @@ onBeforeUnmount(() => {
               <MarkdownRenderer v-else-if="message.content" :content="message.content" />
             </template>
 
-            <!-- Render assistant/system message content -->
+            <!-- Render assistant message content -->
             <MarkdownRenderer
               v-if="message.role === 'assistant' && message.content && !parsedThinking.body"
-              :content="message.content"
-            />
-            <MarkdownRenderer
-              v-else-if="message.role === 'system' && message.content"
               :content="message.content"
             />
 

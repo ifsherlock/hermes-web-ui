@@ -195,7 +195,7 @@ function handleDrop(e: DragEvent) {
 
 function handleSend() {
   const text = inputText.value.trim()
-  if (!canSend.value) return
+  if (!text && attachments.value.length === 0) return
 
   chatStore.sendMessage(text, attachments.value.length > 0 ? attachments.value : undefined)
   inputText.value = ''

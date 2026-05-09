@@ -1,4 +1,4 @@
-import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, submitApprovalViaSocket, type RunEvent, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
+import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, type RunEvent, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
 import { deleteSession as deleteSessionApi, fetchSession, fetchSessions, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
 import { getApiKey } from '@/api/client'
 import { defineStore } from 'pinia'
@@ -8,7 +8,6 @@ import { useProfilesStore } from './profiles'
 import { useSettingsStore } from './settings'
 import { primeCompletionSound, playCompletionSound } from '@/utils/completion-sound'
 import { detectThinkingBoundary } from '@/utils/thinking-parser'
-import { parseApprovalCommand } from '@/utils/approval-commands'
 
 // Re-export ContentBlock for convenience
 export type ContentBlock = ContentBlockImport
@@ -497,10 +496,6 @@ export const useChatStore = defineStore('chat', () => {
                   compressed: e.compressed ?? false,
                   error: e.error,
                 })
-              } else if (e.event === 'approval.requested' || e.event === 'approval.request') {
-                addApprovalRequestMessage(sessionId, { ...e, event: 'approval.request' })
-              } else if (e.event === 'approval.responded') {
-                addApprovalResponseMessage(sessionId, e)
               } else if (e.event === 'abort.started') {
                 setAbortState({ aborting: true, synced: null })
               } else if (e.event === 'abort.completed') {
@@ -633,88 +628,6 @@ export const useChatStore = defineStore('chat', () => {
     target.updatedAt = Date.now()
   }
 
-  function addApprovalRequestMessage(sessionId: string, evt: RunEvent) {
-    const msgs = getSessionMsgs(sessionId)
-    const last = msgs[msgs.length - 1]
-    if (last?.isStreaming) {
-      updateMessage(sessionId, last.id, { isStreaming: false })
-    }
-
-    const command = (evt.command || '').trim()
-    const description = (evt.description || '').trim()
-    const patterns = Array.from(new Set([
-      ...((evt as any).pattern_keys || []),
-      evt.pattern_key,
-    ].filter(Boolean))) as string[]
-    const patternText = patterns.join(', ')
-    const choices = Array.isArray(evt.choices) && evt.choices.length > 0
-      ? evt.choices
-      : ['once', 'session', 'always', 'deny']
-    const alreadyShown = msgs.some(m =>
-      m.role === 'system' &&
-      m.content.includes('Approval required') &&
-      (!command || m.content.includes(command)) &&
-      (!description || m.content.includes(description)) &&
-      (!patternText || m.content.includes(patternText)),
-    )
-    if (alreadyShown) return
-
-    const details = [
-      description ? `Reason: ${description}` : '',
-      patternText ? `Patterns: ${patternText}` : '',
-      choices.length ? `Choices: ${choices.join(', ')}` : '',
-      command ? `Command:\n\`\`\`\n${command}\n\`\`\`` : '',
-    ].filter(Boolean).join('\n\n')
-
-    addMessage(sessionId, {
-      id: uid(),
-      role: 'system',
-      content: `Approval required\n\n${details || 'The agent is waiting for your approval.'}\n\nReply with /approve to approve once, /approve session, /approve always, or /deny. Use /approve all or /deny all only to resolve all currently pending approval requests for this run.`,
-      timestamp: Date.now(),
-    })
-  }
-
-  function addApprovalResponseMessage(sessionId: string, evt: RunEvent) {
-    const choiceLabel = (() => {
-      switch (evt.choice) {
-        case 'once': return 'approved once'
-        case 'session': return 'approved for this session'
-        case 'always': return 'always allowed'
-        case 'deny': return 'denied'
-        default: return 'resolved'
-      }
-    })()
-    const resolved = typeof evt.resolved === 'number' ? evt.resolved : 0
-    const error = (evt as any).error
-    const content = error
-      ? `Approval response failed: ${error}`
-      : resolved > 0
-        ? `Approval ${choiceLabel}. Resolved ${resolved} pending request${resolved === 1 ? '' : 's'}.`
-        : `No pending approval request was found to ${evt.choice || 'resolve'}.`
-    const msgs = getSessionMsgs(sessionId)
-    const alreadyShown = msgs.some(m => m.role === 'system' && m.content === content)
-    if (alreadyShown) return
-    addMessage(sessionId, {
-      id: uid(),
-      role: 'system',
-      content,
-      timestamp: Date.now(),
-    })
-  }
-
-  function submitApprovalCommand(sessionId: string, content: string): boolean {
-    const approval = parseApprovalCommand(content)
-    if (!approval) return false
-    addMessage(sessionId, {
-      id: uid(),
-      role: 'user',
-      content: content.trim(),
-      timestamp: Date.now(),
-    })
-    submitApprovalViaSocket(sessionId, approval.choice, approval.all)
-    return true
-  }
-
   function primeCompletionBellIfEnabled() {
     if (useSettingsStore().display.bell_on_complete) {
       primeCompletionSound()
@@ -728,13 +641,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function sendMessage(content: string, attachments?: Attachment[]) {
-    const trimmed = content.trim()
-    if (isStreaming.value) {
-      const sid = activeSessionId.value
-      if (sid && !attachments?.length && submitApprovalCommand(sid, trimmed)) return
-    }
-
-    if ((!trimmed && !(attachments && attachments.length > 0))) return
+    if ((!content.trim() && !(attachments && attachments.length > 0))) return
 
     primeCompletionBellIfEnabled()
 
@@ -1040,17 +947,6 @@ export const useChatStore = defineStore('chat', () => {
                 })
               }
 
-              break
-            }
-
-            case 'approval.request':
-            case 'approval.requested': {
-              addApprovalRequestMessage(sid, { ...evt, event: 'approval.request' })
-              break
-            }
-
-            case 'approval.responded': {
-              addApprovalResponseMessage(sid, evt)
               break
             }
 
@@ -1465,17 +1361,6 @@ export const useChatStore = defineStore('chat', () => {
           break
         }
 
-        case 'approval.request':
-        case 'approval.requested': {
-          addApprovalRequestMessage(sid, { ...evt, event: 'approval.request' })
-          break
-        }
-
-        case 'approval.responded': {
-          addApprovalResponseMessage(sid, evt)
-          break
-        }
-
         case 'run.completed': {
           const hasQueue = (evt as any).queue_remaining > 0
           if (hasQueue) {
@@ -1624,8 +1509,6 @@ export const useChatStore = defineStore('chat', () => {
       onCompressionCompleted: (evt) => handleEvent(evt),
       onAbortStarted: (evt) => handleEvent(evt),
       onAbortCompleted: (evt) => handleEvent(evt),
-      onApprovalRequest: (evt) => handleEvent(evt),
-      onApprovalResponded: (evt) => handleEvent(evt),
       onUsageUpdated: (evt) => handleEvent(evt),
       onRunQueued: (evt) => handleEvent(evt),
     })
