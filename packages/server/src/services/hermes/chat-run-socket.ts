@@ -65,25 +65,36 @@ function isContentBlockArray(input: any): input is ContentBlock[] {
 }
 
 /**
- * Convert file/image blocks with path to base64 format for upstream API
+ * Convert ContentBlock[] to multimodal format for /v1/responses API.
  *
- * Converts images to base64 data URLs for Anthropic/OpenAI API compatibility.
- * File attachments are converted to text mentions.
+ * - text → { type: "input_text", text }
+ * - image → { type: "input_image", image_url: "data:image/...;base64,..." }
+ * - file → text mention [File: name]
  */
-async function convertContentBlocks(blocks: ContentBlock[]): Promise<string> {
-  let contentStr = ''
+async function convertContentBlocks(blocks: ContentBlock[]): Promise<Array<{ type: string; text?: string; image_url?: string }>> {
+  const parts: Array<{ type: string; text?: string; image_url?: string }> = []
+  const fs = await import('fs/promises')
+  const path = await import('path')
 
   for (const block of blocks) {
     if (block.type === 'text') {
-      contentStr += block.text
+      parts.push({ type: 'input_text', text: block.text })
     } else if (block.type === 'image') {
-      contentStr += `[Image: ${block.path}]`
+      try {
+        const buf = await fs.readFile(block.path)
+        const ext = path.extname(block.path).toLowerCase().replace('.', '')
+        const mime = ext === 'jpg' ? 'jpeg' : ext || 'png'
+        const base64 = buf.toString('base64')
+        parts.push({ type: 'input_image', image_url: `data:image/${mime};base64,${base64}` })
+      } catch {
+        parts.push({ type: 'input_text', text: `[Image: ${block.path}]` })
+      }
     } else if (block.type === 'file') {
-      contentStr += `[File: ${block.path}]`
+      parts.push({ type: 'input_text', text: `[File: ${block.name || block.path}]` })
     }
   }
 
-  return contentStr
+  return parts
 }
 
 const compressor = new ChatContextCompressor()
@@ -112,8 +123,12 @@ function convertHistoryFormat(messages: any[]): any[] {
       if (typeof content === 'string') {
         result.push({ role: 'user', content: content })
       } else if (Array.isArray(content)) {
-        // Already in array format, assume it's correct
-        result.push({ role: 'user', content: convertContentBlocks(content) })
+        // Extract text from content blocks for history
+        const textParts = content
+          .filter((b: any) => b.type === 'text')
+          .map((b: any) => b.text)
+          .join('\n')
+        result.push({ role: 'user', content: textParts || JSON.stringify(content) })
       }
       continue
     }
@@ -660,7 +675,7 @@ export class ChatRunSocket {
               logger.info('[context-compress] session=%s: snapshot at %d, %d new messages, assembled ~%d tokens (threshold %d)',
                 session_id, snapshot.lastMessageIndex, newMessages.length, totalTokens, triggerTokens)
               // triggerTokens
-              if (totalTokens <= triggerTokens && newMessages.length <= 200) {
+              if (totalTokens <= triggerTokens && newMessages.length <= 150) {
                 // Under threshold — use assembled context directly, no LLM call needed
                 history = [
                   { role: 'user', content: SUMMARY_PREFIX + '\n\n' + snapshot.summary },
@@ -766,7 +781,7 @@ export class ChatRunSocket {
             } else if (history.length > 4) {
               // No snapshot — check if raw history exceeds threshold
 
-              if (totalTokens <= triggerTokens && history.length <= 200) {
+              if (totalTokens <= triggerTokens && history.length <= 150) {
                 // Under threshold — use raw history as-is
                 logger.info('[context-compress] session=%s: %d messages, ~%d tokens — under threshold, skip', session_id, history.length, totalTokens)
               } else {
@@ -880,9 +895,10 @@ export class ChatRunSocket {
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
-      // Convert input from ContentBlock[] to Anthropic format (with base64 images)
+      // Convert input from ContentBlock[] to multimodal message format for /v1/responses
       if (isContentBlockArray(input)) {
-        body.input = await convertContentBlocks(input)
+        const parts = await convertContentBlocks(input)
+        body.input = [{ role: 'user', content: parts }]
       }
 
       // Debug: write history to JSON file for analysis (before conversion)
