@@ -13,6 +13,7 @@ import { initLoginLimiter } from './services/login-limiter'
 import { initGatewayManager, getGatewayManagerInstance } from './services/gateway-bootstrap'
 import { bindShutdown } from './services/shutdown'
 import { setupTerminalWebSocket } from './routes/hermes/terminal'
+import { setupKanbanEventsWebSocket } from './routes/hermes/kanban-events'
 import { startVersionCheck } from './routes/health'
 import { registerRoutes } from './routes'
 import { setGroupChatServer } from './routes/hermes/group-chat'
@@ -140,7 +141,8 @@ export async function bootstrap() {
   console.log('[bootstrap] app.listen called')
 
   setupTerminalWebSocket(servers)
-  console.log('[bootstrap] terminal websocket setup')
+  setupKanbanEventsWebSocket(servers)
+  console.log('[bootstrap] terminal + kanban websocket setup')
 
   // Group chat Socket.IO (must be after server is created)
   const groupChatServer = new GroupChatServer(servers)
@@ -163,7 +165,7 @@ export async function bootstrap() {
   servers.forEach((httpServer) => {
     httpServer.on('upgrade', (req: any, socket: any) => {
       const url = new URL(req.url || '', `http://${req.headers.host}`)
-      if (url.pathname !== '/api/hermes/terminal' && !url.pathname.startsWith('/socket.io/')) {
+      if (url.pathname !== '/api/hermes/terminal' && url.pathname !== '/api/hermes/kanban/events' && !url.pathname.startsWith('/socket.io/')) {
         socket.destroy()
       }
     })
