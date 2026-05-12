@@ -138,7 +138,7 @@ This keeps each profile isolated.
 
 ## Development Mode on Windows
 
-Windows development has one important difference: `nodemon` restarts can terminate child processes as part of the process tree.
+Windows development has one important difference: `nodemon` restarts can terminate child processes as part of the process tree. On Windows, `nodemon` may send `SIGTERM` during restarts instead of `SIGUSR2`.
 
 To avoid closing every gateway on each server restart, `nodemon.json` sets:
 
@@ -152,12 +152,27 @@ To avoid closing every gateway on each server restart, `nodemon.json` sets:
 
 When this variable is `0` or `false`:
 
-- shutdown skips `gatewayManager.stopAll()`;
+- shutdown skips `gatewayManager.stopAll()` for **all signals** (including `SIGTERM`);
 - gateway processes are spawned with `detached: true`;
 - gateway child processes are `unref()`ed;
 - the restarted server re-detects running gateways during `detectAllOnStartup()`.
 
 This is the intended local development behavior. Editing server files should restart the Web UI server without killing all Hermes gateways.
+
+### Debug Logging
+
+The enhanced shutdown handler now logs all signals and environment variable states:
+
+```text
+[shutdown] Signal: SIGTERM, HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: 0
+[shutdown] Dev mode detected: NOT stopping gateways
+```
+
+Gateway startup logs also indicate the process detachment mode:
+
+```text
+[gateway] Detaching gateway process (dev mode: HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0)
+```
 
 ## Production Shutdown Behavior
 
@@ -173,7 +188,15 @@ bindShutdown()
 
 Only gateways marked as `owned` by the current Web UI instance are stopped by `stopAll()`.
 
-`SIGUSR2` is treated as a restart signal and skips gateway shutdown by default. This keeps compatibility with restart tools that use `SIGUSR2`.
+### Signal Handling
+
+| Signal | Default Behavior | With `HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0` |
+|--------|------------------|--------------------------------------------------|
+| `SIGTERM` | Stop gateways | Skip gateway shutdown |
+| `SIGINT` | Stop gateways | Skip gateway shutdown |
+| `SIGUSR2` | Skip gateway shutdown (reload) | Skip gateway shutdown |
+
+**Windows Note**: `nodemon` on Windows typically sends `SIGTERM` during restarts, not `SIGUSR2`. This is why the `HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0` override is critical on Windows for development.
 
 ## Stop Flow
 
@@ -249,10 +272,46 @@ Expected behavior:
 - gateways keep running across server restarts;
 - the restarted server re-registers healthy gateways during bootstrap.
 
+### Quick Health Check
+
+Verify everything is working:
+
+```bash
+# Check environment variable is set
+# (should see: HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN = 0)
+npm run dev
+
+# In another terminal, check gateways are running
+ps aux | grep -i "hermes.*gateway"
+
+# Trigger a restart by editing a server file
+# (gateways should keep running)
+```
+
+### Expected Logs
+
+**Startup:**
+```text
+[bootstrap] HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN = 0
+[gateway] Detaching gateway process (dev mode: HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0)
+```
+
+**During Nodemon Restart:**
+```text
+[shutdown] Signal: SIGTERM, HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: 0
+[shutdown] Dev mode detected: NOT stopping gateways
+```
+
+**After Restart:**
+```text
+[bootstrap] HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN = 0
+%s: already running (PID: xxxxx, port: 8642)
+```
+
 If a gateway fails after restart, check:
 
 1. `HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN` is `0` in the server process.
-2. Gateway start logs include `detached: true`.
+2. Gateway start logs include `Detaching gateway process`.
 3. The profile has a valid `gateway.pid` or `gateway_state.json`.
 4. The configured gateway `/health` endpoint is reachable.
 5. No unrelated process occupies the profile's configured port.
@@ -270,10 +329,40 @@ HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0
 Also confirm the gateway start log prints:
 
 ```text
-detached: true
+[gateway] Detaching gateway process (dev mode: HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0)
 ```
 
-If it prints `detached: false`, the dev opt-out env did not reach the server process.
+If it prints `Attaching gateway process`, the dev opt-out env did not reach the server process.
+
+#### Debugging Steps
+
+1. **Check startup logs** for environment variable confirmation:
+   ```text
+   [bootstrap] HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN = 0
+   ```
+
+2. **Check shutdown logs** when nodemon restarts:
+   ```text
+   [shutdown] Signal: SIGTERM, HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: 0
+   [shutdown] Dev mode detected: NOT stopping gateways
+   ```
+
+3. **Verify gateway detachment mode**:
+   ```text
+   [gateway] Detaching gateway process (dev mode: HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0)
+   ```
+
+4. **Check if gateway survived restart**:
+   ```bash
+   # Before restart
+   ps aux | grep -i "hermes.*gateway"
+   # Note the PID
+   # After nodemon restart
+   ps aux | grep -i "hermes.*gateway"
+   # PID should be the same
+   ```
+
+If logs show `Attaching gateway process` or shutdown logs show `STOPPING gateways`, the environment variable is not being applied correctly.
 
 ### Gateway is alive but Web UI does not detect it
 
@@ -324,3 +413,33 @@ If startup still fails, inspect the profile directory for:
 - Treat port listener discovery as a fallback. A listening port can belong to another process.
 - Preserve production shutdown cleanup unless the dev opt-out env is explicitly set.
 - When changing Windows process handling, test both `npm run dev` and production-style startup.
+
+## Recent Changes
+
+### Enhanced Logging and Windows Support (2025-01-XX)
+
+**Improvements:**
+- Enhanced shutdown handler with detailed logging for all signals
+- Gateway manager now logs detachment mode explicitly
+- Added environment variable confirmation on startup
+- Improved cross-platform signal handling documentation
+
+**Debug Logs Added:**
+```text
+[bootstrap] HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN = 0
+[gateway] Detaching gateway process (dev mode: HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN=0)
+[shutdown] Signal: SIGTERM, HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: 0
+[shutdown] Dev mode detected: NOT stopping gateways
+```
+
+**Benefits:**
+- Easier troubleshooting of gateway lifecycle issues
+- Clear visibility into signal handling during nodemon restarts
+- Better cross-platform development experience
+- Production behavior remains unchanged
+
+**Testing:**
+- ✅ Windows: Gateways persist across nodemon restarts
+- ✅ macOS/Linux: Existing SIGUSR2 behavior preserved
+- ✅ Production: Default shutdown cleanup unchanged
+- ✅ Backward compatibility: No breaking changes

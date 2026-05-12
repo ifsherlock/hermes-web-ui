@@ -85,6 +85,10 @@ export async function bootstrap() {
 
   const authToken = await getToken()
   await initLoginLimiter()
+
+  // Debug: log environment variable
+  console.log('[bootstrap] HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN =', process.env.HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN)
+
   const app = new Koa()
 
   await initGatewayManager()
