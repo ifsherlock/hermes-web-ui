@@ -221,7 +221,7 @@ export class GatewayManager {
       const data = JSON.parse(content)
       const pid = typeof data.pid === 'number' ? data.pid : parseInt(data.pid, 10) || null
       const state = data?.gateway_state
-      return pid && (state === 'running' || state === 'starting') ? pid : null
+      return pid && Number.isFinite(pid) && pid > 0 && (state === 'running' || state === 'starting') ? pid : null
     } catch {
       return null
     }

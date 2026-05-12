@@ -64,7 +64,6 @@ function getWindowsShell() {
   const systemRoot = process.env.SystemRoot || 'C:\\Windows'
   const candidates = [
     process.env.ComSpec,
-    join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
     join(systemRoot, 'System32', 'cmd.exe'),
   ].filter(Boolean)
 
@@ -141,11 +140,12 @@ function getPort() {
 
 function getListeningPids(port) {
   if (!port || isNaN(port)) return []
+  const uniquePids = (pids) => [...new Set(pids.filter(pid => Number.isFinite(pid)))]
 
   try {
     if (process.platform === 'win32') {
       const out = execSync('netstat -aon -p tcp', { encoding: 'utf-8' })
-      return [...new Set(out.split('\n')
+      return uniquePids(out.split('\n')
         .map(line => line.trim())
         .filter(line => line.includes('LISTENING'))
         .map(line => line.split(/\s+/))
@@ -154,15 +154,38 @@ function getListeningPids(port) {
           const listenPort = parseInt(address.split(':').pop(), 10)
           return listenPort === port
         })
-        .map(parts => parseInt(parts[parts.length - 1], 10))
-        .filter(pid => Number.isFinite(pid)))]
+        .map(parts => parseInt(parts[parts.length - 1], 10)))
     }
-
-    const out = execSync(`lsof -tiTCP:${port} -sTCP:LISTEN`, { encoding: 'utf-8' }).trim()
-    return [...new Set(out.split('\n').map(pid => parseInt(pid, 10)).filter(pid => Number.isFinite(pid)))]
   } catch {
     return []
   }
+
+  try {
+    const out = execSync(`lsof -tiTCP:${port} -sTCP:LISTEN`, { encoding: 'utf-8' }).trim()
+    return uniquePids(out.split('\n').map(pid => parseInt(pid, 10)))
+  } catch {}
+
+  try {
+    const out = execSync(`ss -ltnp 'sport = :${port}'`, { encoding: 'utf-8' })
+    return uniquePids(out.split('\n')
+      .map(line => line.match(/pid=(\d+)/)?.[1])
+      .map(pid => parseInt(pid || '', 10)))
+  } catch {}
+
+  return []
+}
+
+function killListeningPids(port, pids = getListeningPids(port)) {
+  if (pids.length === 0) return
+
+  console.log(`  ⚠ Port ${port} is in use by PID(s): ${pids.join(' ')}, killing...`)
+  try {
+    if (process.platform === 'win32') {
+      execSync(`taskkill /F /PID ${pids.join(' /PID ')}`, { encoding: 'utf-8' })
+    } else {
+      execSync(`kill -9 ${pids.join(' ')}`, { encoding: 'utf-8' })
+    }
+  } catch {}
 }
 
 function recoverPidFromPort() {
@@ -177,16 +200,23 @@ function recoverPidFromPort() {
   return null
 }
 
-function getPid() {
-  const recovered = recoverPidFromPort()
-  if (recovered) return recovered
-
+function readPidFile() {
   try {
     const pid = parseInt(readFileSync(PID_FILE, 'utf-8').trim())
-    if (pid && isRunning(pid)) return pid
+    return Number.isFinite(pid) ? pid : null
   } catch {}
 
   return null
+}
+
+function getPid() {
+  const pid = readPidFile()
+  if (pid) {
+    if (isRunning(pid)) return pid
+    removePid()
+  }
+
+  return recoverPidFromPort()
 }
 
 function isRunning(pid) {
@@ -216,28 +246,11 @@ function startDaemon(port) {
   removePid()
 
   // Check if port is already in use
-  try {
-    const isWin = process.platform === 'win32'
-    let pids = ''
-    if (isWin) {
-      const out = execSync(`netstat -aon | findstr :${port}`, { encoding: 'utf-8' }).trim()
-      const lines = out.split('\n').filter(l => l.includes('LISTENING'))
-      pids = [...new Set(lines.map(l => l.trim().split(/\s+/).pop()).filter(Boolean))].join(' ')
-    } else {
-      pids = execSync(`lsof -ti:${port}`, { encoding: 'utf-8' }).trim()
-    }
-    if (pids) {
-      console.log(`  ⚠ Port ${port} is in use by PID(s): ${pids}, killing...`)
-      if (isWin) {
-        execSync(`taskkill /F /PID ${pids.split(' ').join(' /PID ')}`, { encoding: 'utf-8' })
-      } else {
-        execSync(`kill -9 ${pids}`, { encoding: 'utf-8' })
-      }
-      // Brief wait for port to be released
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500)
-    }
-  } catch {
-    // Port is free
+  const occupied = getListeningPids(port)
+  if (occupied.length) {
+    killListeningPids(port, occupied)
+    // Brief wait for port to be released
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500)
   }
 
   mkdirSync(PID_DIR, { recursive: true })
