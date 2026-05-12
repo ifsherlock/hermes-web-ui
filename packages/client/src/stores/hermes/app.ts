@@ -12,6 +12,7 @@ import {
   type ModelVisibility,
   type ModelVisibilityRule,
 } from '@/api/hermes/system'
+import { hasApiKey } from '@/api/client'
 
 const WEB_UI_VERSION = __APP_VERSION__
 
@@ -128,6 +129,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   async function loadModels() {
+    if (!hasApiKey()) return
     try {
       const res = await fetchAvailableModels()
       applyAvailableModelsResponse(res)
