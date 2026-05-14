@@ -565,6 +565,10 @@ function aggregateSessionDetail(
   }
 }
 
+function chainOrderSql(ids: string[]): string {
+  return ids.map((_, index) => `WHEN ? THEN ${index}`).join(' ')
+}
+
 async function openSessionDb() {
   if (!SQLITE_AVAILABLE) {
     throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
@@ -598,7 +602,7 @@ export async function getSessionMessagesFromDb(sessionId: string): Promise<{
     const messageRows = db.prepare(`
       SELECT * FROM messages
       WHERE session_id = ?
-      ORDER BY timestamp, id
+      ORDER BY id
     `).all(sessionId) as Record<string, unknown>[]
 
     return {
@@ -622,11 +626,12 @@ export async function getSessionDetailFromDb(sessionId: string): Promise<HermesS
 
     const ids = chain.map(session => session.id)
     const placeholders = ids.map(() => '?').join(', ')
+    const orderSql = chainOrderSql(ids)
     const messageRows = db.prepare(`
       SELECT * FROM messages
       WHERE session_id IN (${placeholders})
-      ORDER BY timestamp, id
-    `).all(...ids) as Record<string, unknown>[]
+      ORDER BY CASE session_id ${orderSql} ELSE ${ids.length} END, id
+    `).all(...ids, ...ids) as Record<string, unknown>[]
     const messages = messageRows.map(mapMessageRow)
     return aggregateSessionDetail(chain, messages, sessionId)
   } finally {
@@ -648,11 +653,12 @@ export async function getSessionDetailFromDbWithProfile(sessionId: string, profi
 
     const ids = chain.map(session => session.id)
     const placeholders = ids.map(() => '?').join(', ')
+    const orderSql = chainOrderSql(ids)
     const messageRows = db.prepare(`
       SELECT * FROM messages
       WHERE session_id IN (${placeholders})
-      ORDER BY timestamp, id
-    `).all(...ids) as Record<string, unknown>[]
+      ORDER BY CASE session_id ${orderSql} ELSE ${ids.length} END, id
+    `).all(...ids, ...ids) as Record<string, unknown>[]
     const messages = messageRows.map(mapMessageRow)
     return aggregateSessionDetail(chain, messages, sessionId)
   } finally {
@@ -672,7 +678,7 @@ export async function getExactSessionDetailFromDbWithProfile(sessionId: string, 
     const messageRows = db.prepare(`
       SELECT * FROM messages
       WHERE session_id = ?
-      ORDER BY timestamp, id
+      ORDER BY id
     `).all(sessionId) as Record<string, unknown>[]
     const messages = messageRows.map(mapMessageRow)
     return aggregateSessionDetail([requested], messages, sessionId)
@@ -818,10 +824,6 @@ export async function getUsageStatsFromDb(
     const apiCallsExpr = tableHasColumn(db, 'sessions', 'api_call_count')
       ? 'COALESCE(SUM(api_call_count), 0)'
       : '0'
-    const sourceFilter = tableHasColumn(db, 'sessions', 'source')
-      ? " AND COALESCE(source, '') != 'api_server'"
-      : ''
-
     const totals = db.prepare(`
       SELECT
         COALESCE(SUM(input_tokens), 0) AS input_tokens,
@@ -833,7 +835,7 @@ export async function getUsageStatsFromDb(
         COUNT(*) AS sessions,
         ${apiCallsExpr} AS total_api_calls
       FROM sessions
-      WHERE started_at > ?${sourceFilter}
+      WHERE started_at > ?
     `).get(since) as Record<string, unknown> | undefined
 
     if (!totals) return empty
@@ -848,7 +850,7 @@ export async function getUsageStatsFromDb(
         COALESCE(SUM(reasoning_tokens), 0) AS reasoning_tokens,
         COUNT(*) AS sessions
       FROM sessions
-      WHERE started_at > ?${sourceFilter} AND model IS NOT NULL
+      WHERE started_at > ? AND model IS NOT NULL
       GROUP BY model
       ORDER BY COALESCE(SUM(input_tokens), 0) + COALESCE(SUM(output_tokens), 0) DESC
     `).all(since).map(row => ({
@@ -871,7 +873,7 @@ export async function getUsageStatsFromDb(
         COUNT(*) AS sessions,
         COALESCE(SUM(COALESCE(actual_cost_usd, estimated_cost_usd, 0)), 0) AS cost
       FROM sessions
-      WHERE started_at > ?${sourceFilter}
+      WHERE started_at > ?
       GROUP BY date
       ORDER BY date ASC
     `).all(since).map(row => ({

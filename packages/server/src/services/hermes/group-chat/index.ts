@@ -424,7 +424,13 @@ export class GroupChatServer {
         const servers = Array.isArray(httpServers) ? httpServers : [httpServers]
 
         this.io = new Server(servers[0], {
-            cors: { origin: '*' }
+            cors: { origin: '*' },
+            pingInterval: 25_000,
+            pingTimeout: 90_000,
+            connectionStateRecovery: {
+                maxDisconnectionDuration: 2 * 60_000,
+                skipMiddlewares: true,
+            },
         })
         servers.slice(1).forEach((httpServer) => this.io.attach(httpServer))
         this.nsp = this.io.of('/group-chat')

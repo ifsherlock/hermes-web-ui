@@ -14,6 +14,7 @@ services:
       - PORT=${PORT:-6060}
       - HERMES_HOME=/home/agent/.hermes
       - HERMES_BIN=/opt/hermes/.venv/bin/hermes
+      - PATH=/opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       - AUTH_DISABLED=${AUTH_DISABLED:-false}
       - HERMES_ALLOW_ROOT_GATEWAY=1
     restart: unless-stopped

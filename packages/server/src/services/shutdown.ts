@@ -27,7 +27,7 @@ function shouldStopGatewaysOnShutdown(signal: string): boolean {
   return shouldStop
 }
 
-export function bindShutdown(server: any, groupChatServer?: any, chatRunServer?: any): void {
+export function bindShutdown(server: any, groupChatServer?: any, chatRunServer?: any, agentBridgeManager?: any): void {
   let isShuttingDown = false
 
   const shutdown = async (signal: string) => {
@@ -56,6 +56,15 @@ export function bindShutdown(server: any, groupChatServer?: any, chatRunServer?:
         }
       } else {
         logger.info('Skipping gateway shutdown for %s', signal)
+      }
+
+      if (agentBridgeManager) {
+        try {
+          await agentBridgeManager.stop()
+          logger.info('Agent bridge stopped')
+        } catch (err) {
+          logger.warn(err, 'Failed to stop agent bridge (non-fatal)')
+        }
       }
 
       // Close ChatRunSocket first to abort all active runs and close EventSource connections
