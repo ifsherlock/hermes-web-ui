@@ -3,7 +3,6 @@ export default {
     home: 'Home',
     docs: 'Documentation',
     github: 'GitHub',
-    qqGroup: 'QQ Group',
   },
   hero: {
     title: 'Self-Hosted AI Chat Dashboard',
