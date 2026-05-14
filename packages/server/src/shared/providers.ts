@@ -327,18 +327,18 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     builtin: true,
     base_url: 'https://opencode.ai/zen/go/v1',
     models: [
-      'kimi-k2.6',
-      'kimi-k2.5',
       'glm-5.1',
       'glm-5',
+      'kimi-k2.5',
+      'kimi-k2.6',
+      'deepseek-v4-pro',
+      'deepseek-v4-flash',
       'mimo-v2.5-pro',
       'mimo-v2.5',
-      'mimo-v2-pro',
-      'mimo-v2-omni',
       'minimax-m2.7',
       'minimax-m2.5',
       'qwen3.6-plus',
-      'qwen3.5-plus',
+      'qwen3.5-plus'
     ],
   },
   {
@@ -408,6 +408,13 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     builtin: true,
     base_url: 'https://api.stepfun.ai/step_plan/v1',
     models: ['step-3.5-flash', 'step-3.5-flash-2603'],
+  },
+  {
+    label: 'Ollama Cloud',
+    value: 'ollama-cloud',
+    builtin: true,
+    base_url: 'https://ollama.com/v1',
+    models: [],
   },
   {
     label: 'OpenRouter',
