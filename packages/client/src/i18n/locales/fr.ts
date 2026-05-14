@@ -92,7 +92,7 @@ export default {
     updateVersion: 'Mettre a jour vers v{version}',
     reloadClientVersion: 'Recharger pour v{version}',
     updating: 'Mise a jour...',
-    updateSuccess: 'Mise a jour terminee, veuillez redemarrer le serveur',
+    updateSuccess: 'Mise a jour terminee. Veuillez actualiser la page sous peu. Si le service ne demarre pas apres un moment, demarrez-le manuellement.',
     updateFailed: 'Echec de la mise a jour',
     logout: 'Deconnexion',
     nodeVersionWarning: 'Node.js v{version} detecte. Veuillez passer a la version 23 ou ulterieure.',

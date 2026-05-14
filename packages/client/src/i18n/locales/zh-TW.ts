@@ -104,7 +104,7 @@ export default {
     updateVersion: '升級版本 v{version}',
     reloadClientVersion: '重新整理到 v{version}',
     updating: '正在更新...',
-    updateSuccess: '更新完成，請重新啟動服務',
+    updateSuccess: '更新成功，請稍後重新整理頁面，如長時間未啟動，請手動啟動',
     updateFailed: '更新失敗',
     logout: '登出',
     nodeVersionWarning: '偵測到 Node.js v{version}，請升級至 23 以上版本。',

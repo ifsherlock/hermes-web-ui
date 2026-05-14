@@ -92,7 +92,7 @@ export default {
     updateVersion: 'Actualizar a v{version}',
     reloadClientVersion: 'Recargar para v{version}',
     updating: 'Actualizando...',
-    updateSuccess: 'Actualizacion completa, por favor reinicia el servidor',
+    updateSuccess: 'Actualizacion completada. Actualiza la pagina en breve. Si no se inicia despues de un tiempo, inicialo manualmente.',
     updateFailed: 'Error al actualizar',
     logout: 'Cerrar sesion',
     nodeVersionWarning: 'Se detecto Node.js v{version}. Actualiza a la version 23 o posterior.',

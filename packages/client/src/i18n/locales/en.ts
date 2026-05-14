@@ -104,7 +104,7 @@ export default {
     updateVersion: 'Upgrade to v{version}',
     reloadClientVersion: 'Reload for v{version}',
     updating: 'Updating...',
-    updateSuccess: 'Update complete, please restart the server',
+    updateSuccess: 'Update successful. Please refresh the page shortly. If it does not start after a while, start it manually.',
     updateFailed: 'Update failed',
     logout: 'Sign Out',
     nodeVersionWarning: 'Detected Node.js v{version}. Please upgrade to version 23 or later.',

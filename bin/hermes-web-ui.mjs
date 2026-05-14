@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { spawn, execSync } from 'child_process'
-import { resolve, dirname, join } from 'path'
+import { spawn, execSync, execFileSync } from 'child_process'
+import { resolve, dirname, join, delimiter } from 'path'
 import { fileURLToPath } from 'url'
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, openSync, chmodSync, statSync, existsSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -56,8 +56,27 @@ function getNpmBin() {
   return join(getNodeBinDir(), process.platform === 'win32' ? 'npm.cmd' : 'npm')
 }
 
-function getCliBin() {
-  return join(getNodeBinDir(), process.platform === 'win32' ? 'hermes-web-ui.cmd' : 'hermes-web-ui')
+function getCurrentNodeEnv() {
+  return {
+    ...process.env,
+    PATH: [getNodeBinDir(), process.env.PATH].filter(Boolean).join(delimiter),
+    npm_node_execpath: process.execPath,
+  }
+}
+
+function getGlobalPrefix() {
+  return execFileSync(getNpmBin(), ['prefix', '-g'], {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: getCurrentNodeEnv(),
+  }).trim()
+}
+
+function getGlobalCliBin() {
+  const prefix = getGlobalPrefix()
+  return process.platform === 'win32'
+    ? join(prefix, 'hermes-web-ui.cmd')
+    : join(prefix, 'bin', 'hermes-web-ui')
 }
 
 function getWindowsShell() {
@@ -431,18 +450,36 @@ function doUpdate() {
   const child = spawnCli(getNpmBin(), ['install', '-g', 'hermes-web-ui@latest'], {
     stdio: 'inherit',
     windowsHide: true,
+    env: getCurrentNodeEnv(),
+  })
+
+  child.on('error', (err) => {
+    console.log(`  ✗ Update failed: ${err.message}`)
+    process.exit(1)
   })
 
   child.on('exit', (code) => {
     if (code === 0) {
       console.log('  ✓ Update complete, restarting...')
-      const restart = spawnCli(getCliBin(), ['restart', '--port', String(getUpdatePort())], {
+      const cli = getGlobalCliBin()
+      if (!existsSync(cli)) {
+        console.log(`  ✗ Updated CLI not found: ${cli}`)
+        process.exit(1)
+      }
+
+      const restart = spawnCli(cli, ['restart', '--port', String(getUpdatePort())], {
         stdio: 'inherit',
         windowsHide: true,
+        env: getCurrentNodeEnv(),
+      })
+      restart.on('error', (err) => {
+        console.log(`  ✗ Restart failed: ${err.message}`)
+        process.exit(1)
       })
       restart.on('exit', (restartCode) => process.exit(restartCode ?? 1))
     } else {
       console.log('  ✗ Update failed')
+      process.exit(code ?? 1)
     }
   })
 }

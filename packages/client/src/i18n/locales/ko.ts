@@ -92,7 +92,7 @@ export default {
     updateVersion: 'v{version}(으)로 업그레이드',
     reloadClientVersion: 'v{version}(으)로 새로고침',
     updating: '업데이트 중...',
-    updateSuccess: '업데이트 완료, 서버를 재시작해 주세요',
+    updateSuccess: '업데이트가 완료되었습니다. 잠시 후 페이지를 새로고침하세요. 오랫동안 시작되지 않으면 수동으로 시작하세요.',
     updateFailed: '업데이트 실패',
     logout: '로그아웃',
     nodeVersionWarning: 'Node.js v{version}이 감지되었습니다. 버전 23 이상으로 업그레이드하세요.',

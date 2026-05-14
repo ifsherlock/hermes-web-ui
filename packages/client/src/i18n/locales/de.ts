@@ -92,7 +92,7 @@ export default {
     updateVersion: 'Aktualisieren auf v{version}',
     reloadClientVersion: 'Für v{version} neu laden',
     updating: 'Aktualisierung...',
-    updateSuccess: 'Aktualisierung abgeschlossen, bitte Server neu starten',
+    updateSuccess: 'Aktualisierung erfolgreich. Bitte aktualisieren Sie die Seite in Kurze. Wenn der Dienst langere Zeit nicht startet, starten Sie ihn manuell.',
     updateFailed: 'Aktualisierung fehlgeschlagen',
     logout: 'Abmelden',
     nodeVersionWarning: 'Node.js v{version} erkannt. Bitte aktualisieren Sie auf Version 23 oder neuer.',
