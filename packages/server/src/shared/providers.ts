@@ -14,7 +14,7 @@ export interface ProviderPreset {
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
-    label: 'FUN-Codex',
+    label: 'Codex-apikey.fun',
     value: 'fun-codex',
     builtin: true,
     base_url: 'https://api.apikey.fun/v1',
@@ -27,7 +27,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ],
   },
   {
-    label: 'FUN-Claude',
+    label: 'Claude-apikey.fun',
     value: 'fun-claude',
     builtin: true,
     base_url: 'https://api.apikey.fun',

@@ -732,6 +732,7 @@ class AgentPool:
         instructions: str | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
         profile: str | None = None,
+        force_compress: bool = False,
     ) -> RunRecord:
         session = self.get_or_create(session_id, profile=profile)
         with session.lock:
@@ -747,14 +748,14 @@ class AgentPool:
 
         thread = threading.Thread(
             target=self._run_chat,
-            args=(session, record, message, instructions, conversation_history, profile),
+            args=(session, record, message, instructions, conversation_history, profile, force_compress),
             daemon=True,
             name=f"hermes-bridge-run-{run_id[:8]}",
         )
         thread.start()
         return record
 
-    def _run_chat(self, session: AgentSession, record: RunRecord, message: Any, instructions: str | None = None, conversation_history: list[dict[str, Any]] | None = None, profile: str | None = None) -> None:
+    def _run_chat(self, session: AgentSession, record: RunRecord, message: Any, instructions: str | None = None, conversation_history: list[dict[str, Any]] | None = None, profile: str | None = None, force_compress: bool = False) -> None:
         def stream_callback(delta: str) -> None:
             with self._lock:
                 record.deltas.append(str(delta))
@@ -774,6 +775,19 @@ class AgentPool:
             except Exception:
                 previous_approval_callback = None
             self._prepersist_user_message(session, message, conversation_history, profile)
+            if force_compress:
+                compress = getattr(session.agent, "_compress_context", None)
+                if callable(compress):
+                    compressed_history, compressed_system = compress(
+                        conversation_history if isinstance(conversation_history, list) else [],
+                        instructions,
+                        approx_tokens=None,
+                        focus_topic="debug_force_compress",
+                    )
+                    if isinstance(compressed_history, list):
+                        conversation_history = compressed_history
+                    if isinstance(compressed_system, str):
+                        instructions = compressed_system
             kwargs: dict[str, Any] = dict(
                 task_id=session.session_id,
                 stream_callback=stream_callback,
@@ -996,7 +1010,14 @@ class BridgeServer:
             instructions = req.get("instructions") or req.get("system_message")
             conversation_history = req.get("conversation_history")
             profile = req.get("profile")
-            record = self.pool.start_chat(session_id, message, instructions, conversation_history, profile)
+            record = self.pool.start_chat(
+                session_id,
+                message,
+                instructions,
+                conversation_history,
+                profile,
+                bool(req.get("force_compress")),
+            )
             if req.get("wait"):
                 timeout = float(req.get("timeout", 0) or 0)
                 deadline = time.time() + timeout if timeout > 0 else None
