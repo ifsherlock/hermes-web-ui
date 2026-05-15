@@ -872,6 +872,7 @@ export default {
     new_0_5_23_3: 'Isolate gateway profile environment variables to prevent credentials leaking across profiles',
     new_0_5_23_4: 'Reserve the Web UI port during gateway allocation to avoid startup conflicts',
     new_0_5_23_5: 'Fix self-update restart handling so successful helper exits are not reported as failures',
+    new_0_5_24_1: 'Align Bridge chat with API Server handling for multimodal input, system prompt, and workspace context',
     new_0_5_5_1: '🎉 노동절 감사합니다! 오늘은 쉬니까 양해 부탁드립니다',
     new_0_5_5_2: 'Hermes 세션 기록 페이지 추가',
     new_0_5_5_3: '기록 페이지는 독립적으로 세션 관리',

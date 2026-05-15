@@ -1153,6 +1153,7 @@ export default {
     new_0_5_23_3: 'Isolate gateway profile environment variables to prevent credentials leaking across profiles',
     new_0_5_23_4: 'Reserve the Web UI port during gateway allocation to avoid startup conflicts',
     new_0_5_23_5: 'Fix self-update restart handling so successful helper exits are not reported as failures',
+    new_0_5_24_1: 'Align Bridge chat with API Server handling for multimodal input, system prompt, and workspace context',
 
     new_0_5_6_1: 'Add voice playback feature with Web Speech API: manual button, auto-play toggle, rainbow border animation, and mobile optimization',
     new_0_5_6_2: 'Add robust LLM JSON parser with tolerance for Python format and extract text from streaming events',

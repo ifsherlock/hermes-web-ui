@@ -54,3 +54,20 @@ export async function convertContentBlocks(blocks: ContentBlock[]): Promise<Arra
 
   return parts
 }
+
+/**
+ * Convert ContentBlock[] to the normalized multimodal shape Hermes agent
+ * receives after /v1/responses input normalization.
+ */
+export async function convertContentBlocksForAgent(blocks: ContentBlock[]): Promise<Array<{ type: string; text?: string; image_url?: { url: string } }>> {
+  const responseParts = await convertContentBlocks(blocks)
+  return responseParts.map((part) => {
+    if (part.type === 'input_text') {
+      return { type: 'text', text: part.text || '' }
+    }
+    if (part.type === 'input_image') {
+      return { type: 'image_url', image_url: { url: part.image_url || '' } }
+    }
+    return { type: 'text', text: part.text || '' }
+  })
+}

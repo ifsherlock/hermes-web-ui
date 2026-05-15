@@ -1155,6 +1155,7 @@ export default {
     new_0_5_23_3: '隔離 gateway profile 環境變數，防止憑證在不同 profile 之間串用',
     new_0_5_23_4: 'gateway 分配連接埠時保留 Web UI 連接埠，避免啟動連接埠衝突',
     new_0_5_23_5: '修復自更新重啟邏輯，避免將 restart helper 的成功退出誤報為失敗',
+    new_0_5_24_1: '對齊 Bridge 聊天與 API Server 的多模態輸入、系統提示詞和工作區上下文處理',
     new_0_5_6_1: '新增語音播放功能：使用 Web Speech API，支援手動播放按鈕、自動播放開關、彩虹邊框動畫和行動端最佳化',
     new_0_5_6_2: '新增強健的 LLM JSON 解析器，相容 Python 格式並從串流事件中擷取文字',
     new_0_5_6_3: 'Skills 功能增強：使用統計、來源過濾、封存技能、來源追溯和釘選切換',

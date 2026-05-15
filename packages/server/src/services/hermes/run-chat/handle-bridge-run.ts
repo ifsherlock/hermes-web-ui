@@ -4,11 +4,12 @@
  */
 
 import type { Server, Socket } from 'socket.io'
+import { getSystemPrompt } from '../../../lib/llm-prompt'
 import { getSession, createSession, addMessage, updateSessionStats } from '../../../db/hermes/session-store'
 import { updateUsage } from '../../../db/hermes/usage-store'
 import { logger, bridgeLogger } from '../../logger'
 import { AgentBridgeClient, type AgentBridgeMessage, type AgentBridgeOutput } from '../agent-bridge'
-import { contentBlocksToString, extractTextForPreview } from './content-blocks'
+import { contentBlocksToString, convertContentBlocksForAgent, extractTextForPreview, isContentBlockArray } from './content-blocks'
 import { buildCompressedHistory } from './compression'
 import { pushState, replaceState } from './compression'
 import { calcAndUpdateUsage, estimateUsageTokensFromMessages } from './usage'
@@ -22,6 +23,7 @@ import {
 import { forceCompressBridgeHistory } from './compression'
 import { summarizeToolArguments } from './response-utils'
 import { buildDbHistory } from './compression'
+import { convertHistoryFormat } from './message-format'
 import type { ContentBlock, SessionState } from './types'
 import type { ChatMessage } from '../../../lib/context-compressor'
 
@@ -43,6 +45,15 @@ export async function handleBridgeRun(
   if (!session_id) {
     socket.emit('run.failed', { event: 'run.failed', error: 'session_id is required for cli source' })
     return
+  }
+
+  let fullInstructions = instructions
+    ? `${getSystemPrompt()}\n${instructions}`
+    : getSystemPrompt()
+  const sessionRow = getSession(session_id)
+  if (sessionRow?.workspace) {
+    const workspaceCtx = `[Current working directory: ${sessionRow.workspace}]`
+    fullInstructions = `\n${workspaceCtx}\n${fullInstructions}`
   }
 
   const runMarker = `cli_run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
@@ -107,17 +118,22 @@ export async function handleBridgeRun(
     emit,
     sessionMap,
   )
+  const bridgeHistory = history.length > 0 ? convertHistoryFormat(history) : history
 
   try {
+    const bridgeInput = isContentBlockArray(input)
+      ? await convertContentBlocksForAgent(input)
+      : input
     logger.info('[chat-run-socket] starting CLI bridge run for session %s', session_id)
     bridgeLogger.info({
       sessionId: session_id,
       profile,
       inputChars: inputStr.length,
       historyMessages: history.length,
-      hasInstructions: Boolean(instructions),
+      hasInstructions: Boolean(fullInstructions),
+      multimodalInput: isContentBlockArray(input),
     }, '[chat-run-socket] starting CLI bridge run')
-    const started = await bridge.chat(session_id, input as AgentBridgeMessage, history, instructions, profile)
+    const started = await bridge.chat(session_id, bridgeInput as AgentBridgeMessage, bridgeHistory, fullInstructions, profile)
     state.runId = started.run_id
     bridgeLogger.info({
       sessionId: session_id,

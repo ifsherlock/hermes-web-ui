@@ -1155,6 +1155,7 @@ export default {
     new_0_5_23_3: '隔离 gateway profile 环境变量，防止凭据在不同 profile 之间串用',
     new_0_5_23_4: 'gateway 分配端口时保留 Web UI 端口，避免启动端口冲突',
     new_0_5_23_5: '修复自更新重启逻辑，避免将 restart helper 的成功退出误报为失败',
+    new_0_5_24_1: '对齐 Bridge 聊天与 API Server 的多模态输入、系统提示词和工作区上下文处理',
 
     new_0_5_6_1: '新增语音播放功能：使用 Web Speech API，支持手动播放按钮、自动播放开关、彩虹边框动画和移动端优化',
     new_0_5_6_2: '新增健壮的 LLM JSON 解析器，兼容 Python 格式并从流式事件中提取文本',
