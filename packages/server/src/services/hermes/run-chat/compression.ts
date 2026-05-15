@@ -66,6 +66,24 @@ export async function buildDbHistory(
   }).filter((m): m is ChatMessage => m !== null)
 }
 
+export function estimateSnapshotAwareHistoryUsage(
+  sessionId: string,
+  history: ChatMessage[],
+): { messageCount: number; tokenCount: number } {
+  const snapshot = getCompressionSnapshot(sessionId)
+  const messages = snapshot
+    ? [
+        { role: 'user', content: SUMMARY_PREFIX + snapshot.summary },
+        ...history.slice(snapshot.lastMessageIndex + 1),
+      ]
+    : history
+  const usage = estimateUsageTokensFromMessages(messages)
+  return {
+    messageCount: messages.length,
+    tokenCount: usage.inputTokens + usage.outputTokens,
+  }
+}
+
 export async function buildCompressedHistory(
   sessionId: string,
   profile: string,
@@ -210,12 +228,13 @@ export async function forceCompressBridgeHistory(
 
   const upstream = getUpstream(profile).replace(/\/$/, '')
   const apiKey = getApiKey(profile) || undefined
-  const beforeUsage = estimateUsageTokensFromMessages(history)
-  const totalTokens = beforeUsage.inputTokens + beforeUsage.outputTokens
+  const beforeUsage = estimateSnapshotAwareHistoryUsage(sessionId, history)
+  const totalTokens = beforeUsage.tokenCount
   bridgeLogger.info({
     sessionId,
     profile,
     historyMessages: history.length,
+    snapshotAwareMessages: beforeUsage.messageCount,
     bridgeProvidedMessages: Array.isArray(_messages) ? _messages.length : 0,
     tokenEstimate: totalTokens,
     snapshotAware: true,

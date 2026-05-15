@@ -3,9 +3,9 @@ import { addMessage, clearSessionMessages, createSession, getSession, renameSess
 import { logger } from '../../logger'
 import type { AgentBridgeClient } from '../agent-bridge'
 import { flushBridgePendingToDb } from './bridge-message'
-import { buildDbHistory, forceCompressBridgeHistory, getOrCreateSession, replaceState } from './compression'
+import { buildDbHistory, estimateSnapshotAwareHistoryUsage, forceCompressBridgeHistory, getOrCreateSession, replaceState } from './compression'
 import { handleAbort } from './abort'
-import { calcAndUpdateUsage, estimateUsageTokensFromMessages } from './usage'
+import { calcAndUpdateUsage } from './usage'
 import type { ContentBlock, QueuedRun, SessionState } from './types'
 
 type CommandName =
@@ -232,12 +232,11 @@ export async function handleSessionCommand(
       const emit = (event: string, payload: any) => emitToSession(ctx.nsp, ctx.socket, sessionId, event, payload)
       try {
         const history = await buildDbHistory(sessionId, { excludeLastUser: true })
-        const usageEstimate = estimateUsageTokensFromMessages(history)
-        const tokenEstimate = usageEstimate.inputTokens + usageEstimate.outputTokens
+        const usageEstimate = estimateSnapshotAwareHistoryUsage(sessionId, history)
         emit('compression.started', {
           event: 'compression.started',
-          message_count: history.length,
-          token_count: tokenEstimate,
+          message_count: usageEstimate.messageCount,
+          token_count: usageEstimate.tokenCount,
           source: 'command',
         })
         const result = await forceCompressBridgeHistory(
