@@ -19,7 +19,7 @@ import { registerRoutes } from './routes'
 import { setGroupChatServer } from './routes/hermes/group-chat'
 import { setChatRunServer } from './routes/hermes/chat-run'
 import { GroupChatServer } from './services/hermes/group-chat'
-import { ChatRunSocket } from './services/hermes/chat-run-socket'
+import { ChatRunSocket } from './services/hermes/run-chat'
 import { startAgentBridgeManager } from './services/hermes/agent-bridge'
 import { logger } from './services/logger'
 
