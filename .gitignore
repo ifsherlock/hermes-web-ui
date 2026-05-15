@@ -12,6 +12,7 @@ dist
 playwright-report
 test-results
 dist-ssr
+coverage
 __pycache__/
 *.py[cod]
 server/dist
