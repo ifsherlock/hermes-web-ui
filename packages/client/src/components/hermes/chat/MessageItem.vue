@@ -371,22 +371,22 @@ const canPlaySpeech = computed(() => {
   // 只有 assistant 消息可以播放
   if (props.message.role !== 'assistant') return false
   if (!copyableContent.value) return false
-  // OpenAI / Custom / Edge 不依赖浏览器 Web Speech API
-  if (voiceSettings.provider.value === 'openai' || voiceSettings.provider.value === 'custom' || voiceSettings.provider.value === 'edge') return true
+  // OpenAI / Custom / Edge / MiMo 不依赖浏览器 Web Speech API
+  if (voiceSettings.provider.value === 'openai' || voiceSettings.provider.value === 'custom' || voiceSettings.provider.value === 'edge' || voiceSettings.provider.value === 'mimo') return true
   return speech.isSupported
 })
 
 const isPlayingThisMessage = computed(() => {
-  // OpenAI / Custom / Edge 模式
-  if (voiceSettings.provider.value === 'openai' || voiceSettings.provider.value === 'custom' || voiceSettings.provider.value === 'edge') {
+  // OpenAI / Custom / Edge / MiMo 模式
+  if (voiceSettings.provider.value === 'openai' || voiceSettings.provider.value === 'custom' || voiceSettings.provider.value === 'edge' || voiceSettings.provider.value === 'mimo') {
     return speech.currentCustomMessageId.value === props.message.id && speech.isCustomPlaying.value
   }
   return speech.currentMessageId.value === props.message.id && speech.isPlaying.value
 })
 
 const isPausedThisMessage = computed(() => {
-  // OpenAI / Custom / Edge 模式
-  if (voiceSettings.provider.value === 'openai' || voiceSettings.provider.value === 'custom' || voiceSettings.provider.value === 'edge') {
+  // OpenAI / Custom / Edge / MiMo 模式
+  if (voiceSettings.provider.value === 'openai' || voiceSettings.provider.value === 'custom' || voiceSettings.provider.value === 'edge' || voiceSettings.provider.value === 'mimo') {
     return speech.currentCustomMessageId.value === props.message.id && speech.isCustomPaused.value
   }
   return speech.currentMessageId.value === props.message.id && speech.isPaused.value
@@ -441,6 +441,24 @@ function handleSpeechToggle() {
     return
   }
 
+  // MiMo TTS 模式
+  if (voiceSettings.provider.value === 'mimo') {
+    const apiKey = voiceSettings.mimoApiKey.value
+    if (!apiKey) {
+      console.warn('[MessageItem] MiMo TTS API Key 为空')
+      return
+    }
+    speech.mimoToggle(props.message.id, content, {
+      baseUrl: voiceSettings.mimoBaseUrl.value,
+      apiKey,
+      model: voiceSettings.mimoModel.value,
+      voice: voiceSettings.mimoVoice.value,
+      voiceDesignDesc: voiceSettings.mimoVoiceDesignDesc.value || undefined,
+      stylePrompt: voiceSettings.mimoStylePrompt.value || undefined,
+    })
+    return
+  }
+
   // Web Speech API 模式
   if (voiceSettings.provider.value === 'webspeech') {
     const text = speech.extractReadableText(content)
@@ -486,6 +504,18 @@ onMounted(() => {
           rate: speedToEdgeRate(voiceSettings.edgeRate.value),
           pitch: hzToEdgePitch(voiceSettings.edgePitchHz.value),
         })
+      } else if (voiceSettings.provider.value === 'mimo') {
+        const apiKey = voiceSettings.mimoApiKey.value
+        if (apiKey) {
+          speech.mimoPlay(props.message.id, content, {
+            baseUrl: voiceSettings.mimoBaseUrl.value,
+            apiKey,
+            model: voiceSettings.mimoModel.value,
+            voice: voiceSettings.mimoVoice.value,
+            voiceDesignDesc: voiceSettings.mimoVoiceDesignDesc.value || undefined,
+            stylePrompt: voiceSettings.mimoStylePrompt.value || undefined,
+          })
+        }
       } else if (voiceSettings.provider.value === 'webspeech') {
         const text = speech.extractReadableText(content)
         if (text) {
