@@ -139,6 +139,8 @@ export default {
       destroy: 'Bridge-Agent für diese Sitzung freigeben',
     },
     attachFiles: 'Dateien anhangen',
+    showToolCalls: 'Tool-Aufrufe anzeigen',
+    hideToolCalls: 'Tool-Aufrufe ausblenden',
     messageQueue: 'Nachrichtenwarteschlange',
     removeQueuedMessage: 'Nachricht aus Warteschlange entfernen',
     stop: 'Stopp',

@@ -139,6 +139,8 @@ export default {
       destroy: 'Liberar o Bridge Agent desta sessão',
     },
     attachFiles: 'Anexar arquivos',
+    showToolCalls: 'Mostrar chamadas de ferramentas',
+    hideToolCalls: 'Ocultar chamadas de ferramentas',
     messageQueue: 'Fila de mensagens',
     removeQueuedMessage: 'Remover mensagem da fila',
     stop: 'Parar',

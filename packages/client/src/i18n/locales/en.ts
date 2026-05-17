@@ -153,6 +153,8 @@ export default {
     },
     attachFiles: 'Attach files',
     autoPlaySpeech: 'Auto-play voice',
+    showToolCalls: 'Show tool calls',
+    hideToolCalls: 'Hide tool calls',
     messageQueue: 'Message queue',
     removeQueuedMessage: 'Remove queued message',
     stop: 'Stop',

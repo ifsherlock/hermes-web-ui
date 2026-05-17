@@ -153,6 +153,8 @@ export default {
     },
     attachFiles: '添加附件',
     autoPlaySpeech: '自动播放语音',
+    showToolCalls: '显示工具调用',
+    hideToolCalls: '隐藏工具调用',
     messageQueue: '消息队列',
     removeQueuedMessage: '移除队列消息',
     stop: '停止',

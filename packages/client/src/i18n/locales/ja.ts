@@ -139,6 +139,8 @@ export default {
       destroy: 'このセッションの Bridge Agent を解放',
     },
     attachFiles: 'ファイルを添付',
+    showToolCalls: 'ツール呼び出しを表示',
+    hideToolCalls: 'ツール呼び出しを非表示',
     messageQueue: 'メッセージキュー',
     removeQueuedMessage: 'キューのメッセージを削除',
     stop: '停止',

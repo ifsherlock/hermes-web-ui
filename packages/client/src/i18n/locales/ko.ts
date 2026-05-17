@@ -139,6 +139,8 @@ export default {
       destroy: '이 세션의 Bridge Agent 해제',
     },
     attachFiles: '파일 첨부',
+    showToolCalls: '도구 호출 표시',
+    hideToolCalls: '도구 호출 숨기기',
     messageQueue: '메시지 대기열',
     removeQueuedMessage: '대기열 메시지 제거',
     stop: '중지',

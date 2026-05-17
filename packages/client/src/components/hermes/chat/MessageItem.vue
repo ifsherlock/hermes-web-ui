@@ -19,7 +19,13 @@ import { useGlobalSpeech } from "@/composables/useSpeech";
 import { useVoiceSettings } from "@/composables/useVoiceSettings";
 import { speedToEdgeRate, hzToEdgePitch } from "@/utils/ttsHelpers";
 
-const TOOL_PAYLOAD_DISPLAY_LIMIT = 2000;
+const TOOL_PAYLOAD_DISPLAY_LIMIT = 1000;
+const JSON_STRING_DISPLAY_LIMIT = 200;
+const JSON_MAX_DEPTH = 6;
+const JSON_MAX_NODES = 1000;
+const JSON_MAX_KEYS_PER_OBJECT = 50;
+const JSON_MAX_ITEMS_PER_ARRAY = 50;
+const JSON_TRUNCATED_KEY = "__truncated__";
 
 const props = defineProps<{ message: Message; highlight?: boolean }>();
 const { t } = useI18n();
@@ -353,19 +359,96 @@ type ToolPayload = {
   language?: string;
 };
 
+function truncateLongString(value: string, marker: string): string {
+  return value.length > JSON_STRING_DISPLAY_LIMIT
+    ? value.slice(0, JSON_STRING_DISPLAY_LIMIT) + "\n" + marker
+    : value;
+}
+
+function truncateJsonValue(value: unknown, marker: string): unknown {
+  let nodeCount = 0;
+  const seen = new WeakSet<object>();
+
+  function stringifyLength(candidate: unknown): number {
+    return JSON.stringify(candidate, null, 2).length;
+  }
+
+  function visit(current: unknown, depth: number): unknown {
+    nodeCount += 1;
+    if (nodeCount > JSON_MAX_NODES) {
+      return marker;
+    }
+
+    if (typeof current === "string") return truncateLongString(current, marker);
+    if (current === null || typeof current !== "object") return current;
+
+    if (seen.has(current)) return `[Circular ${marker}]`;
+    if (depth >= JSON_MAX_DEPTH) {
+      return Array.isArray(current) ? `[Array ${marker}]` : `[Object ${marker}]`;
+    }
+
+    seen.add(current);
+
+    if (Array.isArray(current)) {
+      const result: unknown[] = [];
+      const maxItems = Math.min(current.length, JSON_MAX_ITEMS_PER_ARRAY);
+      for (let i = 0; i < maxItems; i += 1) {
+        const remaining = current.length - i;
+        result.push(visit(current[i], depth + 1));
+        if (stringifyLength(result) > TOOL_PAYLOAD_DISPLAY_LIMIT) {
+          result.pop();
+          result.push(`${marker}: ${remaining} more items`);
+          seen.delete(current);
+          return result;
+        }
+      }
+      if (current.length > maxItems) {
+        result.push(`${marker}: ${current.length - maxItems} more items`);
+      }
+      seen.delete(current);
+      return result;
+    }
+
+    const entries = Object.entries(current as Record<string, unknown>);
+    const result: Record<string, unknown> = {};
+    const maxKeys = Math.min(entries.length, JSON_MAX_KEYS_PER_OBJECT);
+    for (let i = 0; i < maxKeys; i += 1) {
+      const [key, val] = entries[i];
+      const remaining = entries.length - i;
+      result[key] = visit(val, depth + 1);
+      if (stringifyLength(result) > TOOL_PAYLOAD_DISPLAY_LIMIT) {
+        delete result[key];
+        result[JSON_TRUNCATED_KEY] = `${marker}: ${remaining} more keys`;
+        seen.delete(current);
+        return result;
+      }
+    }
+    if (entries.length > maxKeys) {
+      result[JSON_TRUNCATED_KEY] = `${marker}: ${entries.length - maxKeys} more keys`;
+    }
+    seen.delete(current);
+    return result;
+  }
+
+  const truncated = visit(value, 0);
+  if (stringifyLength(truncated) <= TOOL_PAYLOAD_DISPLAY_LIMIT) return truncated;
+  return { [JSON_TRUNCATED_KEY]: marker };
+}
+
 function formatToolPayload(raw?: string): ToolPayload {
   if (!raw) {
     return { full: "", display: "" };
   }
 
   try {
-    const full = JSON.stringify(JSON.parse(raw), null, 2);
+    const parsed = JSON.parse(raw);
+    const full = JSON.stringify(parsed, null, 2);
+    const display = full.length > TOOL_PAYLOAD_DISPLAY_LIMIT
+      ? JSON.stringify(truncateJsonValue(parsed, t("chat.truncated")), null, 2)
+      : full;
     return {
       full,
-      display:
-        full.length > TOOL_PAYLOAD_DISPLAY_LIMIT
-          ? full.slice(0, TOOL_PAYLOAD_DISPLAY_LIMIT) + "\n" + t("chat.truncated")
-          : full,
+      display,
       language: "json",
     };
   } catch {

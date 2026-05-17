@@ -152,6 +152,8 @@ export default {
     },
     attachFiles: '新增附件',
     autoPlaySpeech: '自動播放語音',
+    showToolCalls: '顯示工具呼叫',
+    hideToolCalls: '隱藏工具呼叫',
     messageQueue: '訊息佇列',
     removeQueuedMessage: '移除佇列訊息',
     stop: '停止',
