@@ -491,12 +491,21 @@ class AgentPool:
         self,
         session_id: str,
         profile: str | None = None,
+        model: str | None = None,
+        provider: str | None = None,
     ) -> AgentSession:
+        requested_model = str(model or "").strip()
+        requested_provider = str(provider or "").strip()
         with self._lock:
             existing = self._sessions.get(session_id)
             if existing is not None:
                 # If profile changed, destroy old session and recreate
-                if profile and existing.config.get("profile") != profile:
+                config_changed = bool(
+                    (profile and existing.config.get("profile") != profile)
+                    or (requested_model and existing.config.get("model") != requested_model)
+                    or (requested_provider and existing.config.get("provider") != requested_provider)
+                )
+                if config_changed:
                     if not existing.running:
                         self._destroy_session(session_id)
                     else:
@@ -512,8 +521,8 @@ class AgentPool:
 
             with _profile_env(profile):
                 cfg = _load_cfg()
-                resolved_model = _resolve_model(cfg)
-                runtime = _resolve_runtime(resolved_model)
+                resolved_model = requested_model or _resolve_model(cfg)
+                runtime = _resolve_runtime(resolved_model, requested_provider or None)
                 agent_cfg = cfg.get("agent") or {}
                 prompt = str(agent_cfg.get("system_prompt", "") or "").strip() or None
 
@@ -949,8 +958,10 @@ class AgentPool:
         conversation_history: list[dict[str, Any]] | None = None,
         profile: str | None = None,
         force_compress: bool = False,
+        model: str | None = None,
+        provider: str | None = None,
     ) -> RunRecord:
-        session = self.get_or_create(session_id, profile=profile)
+        session = self.get_or_create(session_id, profile=profile, model=model, provider=provider)
         with session.lock:
             if session.running:
                 raise RuntimeError(f"session {session_id} is already running")
@@ -1265,6 +1276,8 @@ class BridgeServer:
             instructions = req.get("instructions") or req.get("system_message")
             conversation_history = req.get("conversation_history")
             profile = req.get("profile")
+            model = req.get("model")
+            provider = req.get("provider")
             record = self.pool.start_chat(
                 session_id,
                 message,
@@ -1273,6 +1286,8 @@ class BridgeServer:
                 conversation_history,
                 profile,
                 bool(req.get("force_compress")),
+                model,
+                provider,
             )
             if req.get("wait"):
                 timeout = float(req.get("timeout", 0) or 0)

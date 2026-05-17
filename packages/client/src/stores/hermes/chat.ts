@@ -1,5 +1,5 @@
 import { startRunViaSocket, resumeSession, registerSessionHandlers, unregisterSessionHandlers, getChatRunSocket, respondToolApproval, type RunEvent, type ContentBlock as ContentBlockImport } from '@/api/hermes/chat'
-import { deleteSession as deleteSessionApi, fetchSession, fetchSessions, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
+import { deleteSession as deleteSessionApi, fetchSession, fetchSessions, setSessionModel, type HermesMessage, type SessionSummary } from '@/api/hermes/sessions'
 import { getApiKey } from '@/api/client'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -238,7 +238,7 @@ function mapHermesSession(s: SessionSummary): Session {
     createdAt: Math.round(s.started_at * 1000),
     updatedAt: Math.round((s.last_active || s.ended_at || s.started_at) * 1000),
     model: s.model,
-    provider: (s as any).billing_provider || '',
+    provider: s.provider || (s as any).billing_provider || '',
     messageCount: s.message_count,
     endedAt: s.ended_at != null ? Math.round(s.ended_at * 1000) : null,
     lastActiveAt: s.last_active != null ? Math.round(s.last_active * 1000) : undefined,
@@ -611,18 +611,25 @@ export const useChatStore = defineStore('chat', () => {
     // Inherit current global model
     const appStore = useAppStore()
     session.model = appStore.selectedModel || undefined
+    session.provider = appStore.selectedProvider || ''
     switchSession(session.id)
   }
 
-  async function switchSessionModel(modelId: string, provider?: string) {
-    if (!activeSession.value) return
-    activeSession.value.model = modelId
-    activeSession.value.provider = provider || ''
-    // If provider changed, update global config too (Hermes requires it)
-    if (provider) {
-      const { useAppStore } = await import('./app')
-      await useAppStore().switchModel(modelId, provider)
+  async function switchSessionModel(modelId: string, provider?: string, sessionId?: string): Promise<boolean> {
+    const targetId = sessionId || activeSession.value?.id
+    if (!targetId) return false
+    const ok = await setSessionModel(targetId, modelId, provider || '')
+    if (!ok) return false
+    const target = sessions.value.find(s => s.id === targetId)
+    if (target) {
+      target.model = modelId
+      target.provider = provider || ''
     }
+    if (activeSession.value?.id === targetId) {
+      activeSession.value.model = modelId
+      activeSession.value.provider = provider || ''
+    }
+    return true
   }
 
   async function deleteSession(sessionId: string) {
@@ -903,13 +910,21 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       const appStore = useAppStore()
+      await appStore.loadModels()
       const sessionModel = activeSession.value?.model || appStore.selectedModel
+      const isBridgeSource = activeSession.value?.source === 'cli'
+      const sessionProvider = activeSession.value?.provider || appStore.selectedProvider
       const runPayload = {
         input,
         session_id: sid,
-        model: sessionModel || undefined,
+        model: isBridgeSource ? undefined : sessionModel || undefined,
+        provider: isBridgeSource ? undefined : sessionProvider || undefined,
+        model_groups: appStore.modelGroups.map(group => ({
+          provider: group.provider,
+          models: group.models,
+        })),
         queue_id: userMsg.id,
-        source: (activeSession.value?.source === 'cli' ? 'cli' : 'api_server') as 'cli' | 'api_server',
+        source: (isBridgeSource ? 'cli' : 'api_server') as 'cli' | 'api_server',
       }
 
       if (shouldQueue) {

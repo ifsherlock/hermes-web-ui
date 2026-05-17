@@ -75,14 +75,14 @@ export async function loadSessionStateFromDb(sid: string, _sessionMap: Map<strin
 export async function handleApiRun(
   nsp: ReturnType<Server['of']>,
   socket: Socket,
-  data: { input: string | ContentBlock[]; session_id?: string; model?: string; instructions?: string; source?: string },
+  data: { input: string | ContentBlock[]; session_id?: string; model?: string; provider?: string; instructions?: string; source?: string },
   profile: string,
   sessionMap: Map<string, SessionState>,
   gatewayManager: any,
   skipUserMessage = false,
   dequeueNextQueuedRun: (socket: Socket, sessionId: string, fallbackProfile?: string) => void,
 ) {
-  const { input, session_id, model, instructions } = data
+  const { input, session_id, model, provider, instructions } = data
 
   // Build full instructions with system prompt + workspace context
   let fullInstructions = instructions
@@ -131,7 +131,7 @@ export async function handleApiRun(
       if (!getSession(session_id)) {
         const previewText = extractTextForPreview(input)
         const preview = previewText.replace(/[\r\n]/g, ' ').substring(0, 100)
-        createSession({ id: session_id, profile, source: 'api_server', model, title: preview })
+        createSession({ id: session_id, profile, source: 'api_server', model, provider, title: preview })
       }
 
       addMessage({
@@ -153,7 +153,7 @@ export async function handleApiRun(
       if (!getSession(session_id)) {
         const previewText = extractTextForPreview(input)
         const preview = previewText.replace(/[\r\n]/g, ' ').substring(0, 100)
-        createSession({ id: session_id, profile, source: 'api_server', model, title: preview })
+        createSession({ id: session_id, profile, source: 'api_server', model, provider, title: preview })
       }
       addMessage({
         session_id,

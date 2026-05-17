@@ -34,6 +34,7 @@ export const SESSIONS_SCHEMA: Record<string, string> = {
   source: 'TEXT NOT NULL DEFAULT \'api_server\'',
   user_id: 'TEXT',
   model: 'TEXT NOT NULL DEFAULT \'\'',
+  provider: 'TEXT NOT NULL DEFAULT \'\'',
   title: 'TEXT',
   started_at: 'INTEGER NOT NULL',
   ended_at: 'INTEGER',

@@ -66,6 +66,8 @@ export class ChatRunSocket {
       session_id?: string
       model?: string
       instructions?: string
+      provider?: string
+      model_groups?: Array<{ provider: string; models: string[] }>
       queue_id?: string
       source?: string
     }) => {
@@ -102,6 +104,8 @@ export class ChatRunSocket {
             queue_id: data.queue_id || `queue_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
             input: data.input,
             model: data.model,
+            provider: data.provider,
+            model_groups: data.model_groups,
             instructions: data.instructions,
             profile: currentProfile(),
             source,
@@ -191,7 +195,15 @@ export class ChatRunSocket {
 
   private async handleRun(
     socket: Socket,
-    data: { input: string | ContentBlock[]; session_id?: string; model?: string; instructions?: string; source?: string },
+    data: {
+      input: string | ContentBlock[]
+      session_id?: string
+      model?: string
+      provider?: string
+      model_groups?: Array<{ provider: string; models: string[] }>
+      instructions?: string
+      source?: string
+    },
     profile: string,
     skipUserMessage = false,
   ) {
@@ -273,6 +285,8 @@ export class ChatRunSocket {
       input: next.input,
       session_id: sessionId,
       model: next.model,
+      provider: next.provider,
+      model_groups: next.model_groups,
       instructions: next.instructions,
       source: next.source,
     }, next.profile || fallbackProfile, true)

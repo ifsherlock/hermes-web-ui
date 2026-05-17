@@ -17,6 +17,7 @@ import { hasApiKey } from '@/api/client'
 const WEB_UI_VERSION = __APP_VERSION__
 
 const SIDEBAR_COLLAPSED_KEY = 'hermes_sidebar_collapsed'
+const MODELS_CACHE_TTL_MS = 30000
 
 export const useAppStore = defineStore('app', () => {
   const sidebarOpen = ref(false)
@@ -42,6 +43,8 @@ export const useAppStore = defineStore('app', () => {
   const streamEnabled = ref(true)
   const sessionPersistence = ref(true)
   const maxTokens = ref(4096)
+  let modelsLoadPromise: Promise<void> | null = null
+  let modelsLoadedAt = 0
 
   async function doUpdate(): Promise<boolean> {
     updating.value = true
@@ -128,14 +131,26 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function loadModels() {
+  async function loadModels(force = false) {
     if (!hasApiKey()) return
-    try {
-      const res = await fetchAvailableModels()
-      applyAvailableModelsResponse(res)
-    } catch {
-      // ignore
-    }
+    if (!force && modelsLoadPromise) return modelsLoadPromise
+    if (!force && modelGroups.value.length > 0 && Date.now() - modelsLoadedAt < MODELS_CACHE_TTL_MS) return
+    modelsLoadPromise = (async () => {
+      try {
+        const res = await fetchAvailableModels()
+        applyAvailableModelsResponse(res)
+        modelsLoadedAt = Date.now()
+      } catch {
+        // ignore
+      } finally {
+        modelsLoadPromise = null
+      }
+    })()
+    return modelsLoadPromise
+  }
+
+  async function reloadModels() {
+    return loadModels(true)
   }
 
   function getModelAlias(modelId: string, provider?: string): string {
@@ -220,7 +235,7 @@ export const useAppStore = defineStore('app', () => {
   async function setModelVisibility(provider: string, rule: ModelVisibilityRule) {
     const res = await updateModelVisibility({ provider, mode: rule.mode, models: rule.models })
     modelVisibility.value = res.model_visibility || {}
-    await loadModels()
+    await reloadModels()
   }
 
   function startHealthPolling(interval = 30000) {
@@ -285,6 +300,7 @@ export const useAppStore = defineStore('app', () => {
     maxTokens,
     checkConnection,
     loadModels,
+    reloadModels,
     applyAvailableModelsResponse,
     switchModel,
     removeCustomModel,

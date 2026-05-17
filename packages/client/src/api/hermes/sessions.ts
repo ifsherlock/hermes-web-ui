@@ -4,6 +4,7 @@ export interface SessionSummary {
   id: string
   source: string
   model: string
+  provider?: string
   title: string | null
   preview?: string
   started_at: number
@@ -140,6 +141,18 @@ export async function setSessionWorkspace(id: string, workspace: string | null):
     await request(`/api/hermes/sessions/${id}/workspace`, {
       method: 'POST',
       body: JSON.stringify({ workspace: workspace || '' }),
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function setSessionModel(id: string, model: string, provider: string): Promise<boolean> {
+  try {
+    await request(`/api/hermes/sessions/${id}/model`, {
+      method: 'POST',
+      body: JSON.stringify({ model, provider }),
     })
     return true
   } catch {

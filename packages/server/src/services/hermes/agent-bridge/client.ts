@@ -28,6 +28,13 @@ export interface AgentBridgeRequestOptions {
   timeoutMs?: number
 }
 
+export interface AgentBridgeChatOptions {
+  force_compress?: boolean
+  storage_message?: AgentBridgeMessage
+  model?: string
+  provider?: string
+}
+
 export type AgentBridgeMessage =
   | string
   | Array<Record<string, unknown>>
@@ -306,7 +313,7 @@ export class AgentBridgeClient {
     conversationHistory?: unknown[],
     instructions?: string,
     profile?: string,
-    options: { force_compress?: boolean; storage_message?: AgentBridgeMessage } = {},
+    options: AgentBridgeChatOptions = {},
   ): Promise<AgentBridgeChatStarted> {
     return this.request<AgentBridgeChatStarted>({
       action: 'chat',
@@ -316,6 +323,8 @@ export class AgentBridgeClient {
       ...(conversationHistory ? { conversation_history: conversationHistory } : {}),
       ...(instructions ? { instructions } : {}),
       ...(profile ? { profile } : {}),
+      ...(options.model ? { model: options.model } : {}),
+      ...(options.provider ? { provider: options.provider } : {}),
       ...(options.force_compress ? { force_compress: true } : {}),
     })
   }
