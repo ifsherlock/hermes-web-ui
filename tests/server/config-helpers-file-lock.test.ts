@@ -67,6 +67,19 @@ describe('config-helpers locked file updates', () => {
     expect(env).toContain('MOONSHOT_API_KEY=moonshot')
   })
 
+  it('rejects invalid .env keys instead of writing keyless lines', async () => {
+    const envPath = join(hermesHome, '.env')
+    await writeFile(envPath, 'OPENROUTER_API_KEY=keep\n', 'utf-8')
+    const { saveEnvValue } = await loadHelpers()
+
+    await expect(saveEnvValue('', 'leaked-value')).rejects.toThrow('Invalid .env key')
+    await expect(saveEnvValue('=BROKEN', 'leaked-value')).rejects.toThrow('Invalid .env key')
+
+    const env = await readFile(envPath, 'utf-8')
+    expect(env).toBe('OPENROUTER_API_KEY=keep\n')
+    expect(env).not.toContain('=leaked-value')
+  })
+
   it('skips writing config.yaml when an updater returns write false', async () => {
     const configPath = join(hermesHome, 'config.yaml')
     await writeFile(configPath, 'model:\n  default: old\n', 'utf-8')

@@ -88,7 +88,14 @@ export async function updateConfigYaml<T = void>(
 
 // --- .env helpers ---
 
+function assertValidEnvKey(key: string): void {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    throw new Error(`Invalid .env key: ${JSON.stringify(key)}`)
+  }
+}
+
 export async function saveEnvValue(key: string, value: string): Promise<void> {
+  assertValidEnvKey(key)
   const envPath = getActiveEnvPath()
   await safeFileStore.updateText(envPath, (raw) => {
     const remove = !value

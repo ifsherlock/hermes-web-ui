@@ -185,29 +185,27 @@ def _profile_home(profile: str | None) -> Path:
 def _read_dotenv(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}
+    values: dict[str, str] = {}
     try:
-        from dotenv import dotenv_values
-
-        values = dotenv_values(path)
-        return {str(k): str(v) for k, v in values.items() if k and v is not None}
-    except Exception:
-        values: dict[str, str] = {}
-        try:
-            for line in path.read_text(encoding="utf-8").splitlines():
-                stripped = line.strip()
-                if not stripped or stripped.startswith("#") or "=" not in stripped:
-                    continue
-                key, value = stripped.split("=", 1)
-                key = key.strip()
-                value = value.strip()
-                if not key:
-                    continue
-                if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-                    value = value[1:-1]
-                values[key] = value
-        except Exception:
-            return {}
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            if stripped.startswith("export "):
+                stripped = stripped[7:].strip()
+            key, value = stripped.split("=", 1)
+            key = key.strip()
+            if not key or not (key[0].isalpha() or key[0] == "_"):
+                continue
+            if not all(ch.isalnum() or ch == "_" for ch in key):
+                continue
+            value = value.strip()
+            if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+                value = value[1:-1]
+            values[key] = value
         return values
+    except Exception:
+        return {}
 
 
 def _profile_dotenv_keys() -> set[str]:
