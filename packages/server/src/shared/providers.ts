@@ -9,7 +9,7 @@ export interface ProviderPreset {
   base_url: string
   models: string[]
   builtin: boolean
-  api_mode?: 'openai' | 'anthropic' | 'anthropic_messages'
+  api_mode?: 'chat_completions' | 'codex_responses' | 'anthropic_messages' | 'bedrock_converse' | 'codex_app_server'
 }
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
@@ -18,6 +18,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     value: 'fun-codex',
     builtin: true,
     base_url: 'https://api.apikey.fun/v1',
+    api_mode: 'codex_responses',
     models: [
       'gpt-5.5',
       'gpt-5.4',
