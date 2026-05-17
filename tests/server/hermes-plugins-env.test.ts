@@ -57,4 +57,42 @@ describe('Hermes plugin discovery environment', () => {
     expect(secondArg).toBe('-c')
     expect(resolvedRoot).toBe(agentRoot)
   })
+
+  it('uses package Python without isolated mode when no source root is resolved', async () => {
+    const binDir = join(tempDir, 'bin')
+    const captureFile = join(tempDir, 'capture-package.txt')
+    const fakePython = join(binDir, 'python')
+    const fakeHermes = join(binDir, 'hermes')
+
+    mkdirSync(binDir, { recursive: true })
+    writeFileSync(fakePython, [
+      '#!/bin/sh',
+      'printf "%s\\n%s\\n%s\\n%s\\n" "$0" "$1" "${PYTHONPATH-unset}" "${PYTHONHOME-unset}" > "$CAPTURE_FILE"',
+      'printf "%s\\n" \'{"plugins":[],"warnings":[],"metadata":{"hermesAgentRoot":"","pythonExecutable":"","cwd":"","projectPluginsEnabled":false}}\'',
+      '',
+    ].join('\n'))
+    chmodSync(fakePython, 0o755)
+    writeFileSync(fakeHermes, `#!${fakePython}\n`)
+    chmodSync(fakeHermes, 0o755)
+
+    delete process.env.HERMES_AGENT_ROOT
+    delete process.env.HERMES_AGENT_BRIDGE_PYTHON
+    delete process.env.HERMES_AGENT_BRIDGE_UV
+    delete process.env.UV
+    delete process.env.HERMES_PYTHON
+    process.env.HERMES_HOME = join(tempDir, 'home')
+    process.env.HERMES_BIN = fakeHermes
+    process.env.CAPTURE_FILE = captureFile
+    process.env.PYTHONPATH = join(tempDir, 'shadow-path')
+    process.env.PYTHONHOME = join(tempDir, 'shadow-home')
+
+    const { listHermesPlugins } = await import('../../packages/server/src/services/hermes/plugins')
+    await expect(listHermesPlugins()).resolves.toMatchObject({ plugins: [] })
+
+    const [command, firstArg, pythonPath, pythonHome] = readFileSync(captureFile, 'utf8').trim().split('\n')
+    expect(command).toBe(fakePython)
+    expect(firstArg).toBe('-c')
+    expect(pythonPath).toBe('unset')
+    expect(pythonHome).toBe('unset')
+  })
 })

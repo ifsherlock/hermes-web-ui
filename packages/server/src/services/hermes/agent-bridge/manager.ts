@@ -47,6 +47,12 @@ function pathCandidates(agentRoot?: string): string[] {
 }
 
 function uvCandidates(agentRoot?: string): string[] {
+  if (!agentRoot) {
+    return [
+      process.env.HERMES_AGENT_BRIDGE_UV,
+      process.env.UV,
+    ].filter((value): value is string => !!value && value.trim().length > 0)
+  }
   return [
     process.env.HERMES_AGENT_BRIDGE_UV,
     process.env.UV,

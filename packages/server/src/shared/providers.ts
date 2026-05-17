@@ -120,15 +120,22 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     builtin: true,
     base_url: 'https://api.x.ai/v1',
     models: [
+      'grok-4.3',
       'grok-4.20-0309-reasoning',
       'grok-4.20-0309-non-reasoning',
       'grok-4.20-multi-agent-0309',
-      'grok-4-1-fast',
-      'grok-4-1-fast-non-reasoning',
-      'grok-4-fast',
-      'grok-4-fast-non-reasoning',
-      'grok-4',
-      'grok-code-fast-1',
+    ],
+  },
+  {
+    label: 'xAI Grok OAuth (SuperGrok Subscription)',
+    value: 'xai-oauth',
+    builtin: true,
+    base_url: 'https://api.x.ai/v1',
+    models: [
+      'grok-4.3',
+      'grok-4.20-0309-reasoning',
+      'grok-4.20-0309-non-reasoning',
+      'grok-4.20-multi-agent-0309',
     ],
   },
   {

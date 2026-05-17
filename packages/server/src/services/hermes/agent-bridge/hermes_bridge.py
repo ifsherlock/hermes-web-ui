@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import importlib.util
 import json
 import os
 import queue
@@ -116,10 +117,17 @@ def _candidate_agent_roots(raw: str | None = None) -> list[Path]:
     return unique
 
 
-def _discover_agent_root(raw: str | None = None) -> Path:
+def _find_agent_root(raw: str | None = None) -> Path | None:
     for candidate in _candidate_agent_roots(raw):
         if (candidate / "run_agent.py").exists():
             return candidate
+    return None
+
+
+def _discover_agent_root(raw: str | None = None) -> Path:
+    root = _find_agent_root(raw)
+    if root is not None:
+        return root
     attempted = ", ".join(str(path) for path in _candidate_agent_roots(raw))
     raise RuntimeError(
         "hermes-agent run_agent.py not found. Pass --agent-root or set "
@@ -154,8 +162,8 @@ def _jsonable(value: Any) -> Any:
         return str(value)
 
 
-def _agent_root() -> Path:
-    return _discover_agent_root(os.environ.get("HERMES_AGENT_ROOT"))
+def _agent_root() -> Path | None:
+    return _find_agent_root(os.environ.get("HERMES_AGENT_ROOT"))
 
 
 def _hermes_home() -> Path:
@@ -216,7 +224,11 @@ def _profile_dotenv_keys() -> set[str]:
 
 
 def _set_path_env(agent_root: str | None = None, hermes_home: str | None = None) -> None:
-    os.environ["HERMES_AGENT_ROOT"] = str(_discover_agent_root(agent_root))
+    resolved_root = _discover_agent_root(agent_root) if agent_root else _find_agent_root()
+    if resolved_root is not None:
+        os.environ["HERMES_AGENT_ROOT"] = str(resolved_root)
+    else:
+        os.environ.pop("HERMES_AGENT_ROOT", None)
     resolved_home = _discover_hermes_home(hermes_home)
     os.environ["HERMES_HOME"] = str(resolved_home)
     os.environ["HERMES_AGENT_BRIDGE_BASE_HOME"] = str(_normalize_base_home(resolved_home))
@@ -224,11 +236,16 @@ def _set_path_env(agent_root: str | None = None, hermes_home: str | None = None)
 
 def _ensure_agent_imports() -> None:
     root = _agent_root()
-    if not (root / "run_agent.py").exists():
-        raise RuntimeError(f"hermes-agent run_agent.py not found under {root}")
-    root_s = str(root)
-    if root_s not in sys.path:
-        sys.path.insert(0, root_s)
+    if root is not None:
+        root_s = str(root)
+        if root_s not in sys.path:
+            sys.path.insert(0, root_s)
+    elif importlib.util.find_spec("run_agent") is None:
+        raise RuntimeError(
+            "hermes-agent run_agent.py not found in source locations and the "
+            "current Python environment cannot import run_agent. Install "
+            "hermes-agent or pass --agent-root/HERMES_AGENT_ROOT."
+        )
     os.environ.setdefault("HERMES_HOME", str(_hermes_home()))
     os.environ.setdefault("HERMES_AGENT_BRIDGE_BASE_HOME", str(_hermes_home()))
 

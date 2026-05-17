@@ -205,6 +205,14 @@ Open **http://localhost:6060**
 
 For detailed notes and troubleshooting, see [`docs/docker.md`](./docs/docker.md).
 
+### Hermes Agent Runtime Discovery
+
+When Web UI starts backend chat features, it prefers a source checkout that
+contains `run_agent.py` such as `~/.hermes/hermes-agent`. If no source checkout
+is found, it falls back to the Python environment used by the installed
+`hermes` command, then the system Python. This supports both source installs
+and package installs such as `pip install hermes-agent`.
+
 ## Web UI Environment Variables
 
 These variables configure Hermes Web UI itself. Provider API keys and Hermes Agent settings are managed separately through Hermes profiles.

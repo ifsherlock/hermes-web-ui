@@ -222,15 +222,31 @@ function extractError(err: any): string {
 export async function listHermesPlugins(): Promise<HermesPluginsResponse> {
   const command = resolveAgentBridgeCommand()
   const agentRoot = command.agentRoot || ''
-  const env = {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     HERMES_AGENT_ROOT_RESOLVED: agentRoot,
     HERMES_HOME: getActiveProfileDir(),
   }
+  if (!agentRoot) {
+    delete env.PYTHONHOME
+    delete env.PYTHONPATH
+  }
+  const pythonArgs = [
+    ...command.argsPrefix,
+    ...(agentRoot ? ['-I'] : []),
+    '-c',
+    PYTHON_BRIDGE,
+  ]
+  const displayArgs = [
+    ...command.argsPrefix,
+    ...(agentRoot ? ['-I'] : []),
+    '-c',
+    '<plugin-discovery>',
+  ].join(' ')
 
   const errors: string[] = []
   try {
-    const { stdout, stderr } = await execFileAsync(command.command, [...command.argsPrefix, '-I', '-c', PYTHON_BRIDGE], {
+    const { stdout, stderr } = await execFileAsync(command.command, pythonArgs, {
       cwd: process.cwd(),
       env,
       windowsHide: true,
@@ -246,8 +262,7 @@ export async function listHermesPlugins(): Promise<HermesPluginsResponse> {
     }
     return parsed
   } catch (err: any) {
-    const args = [...command.argsPrefix, '-I', '-c', '<plugin-discovery>'].join(' ')
-    errors.push(`${command.command} ${args}: ${extractError(err)}`)
+    errors.push(`${command.command} ${displayArgs}: ${extractError(err)}`)
   }
 
   throw new Error(`Failed to discover Hermes plugins.\n${errors.join('\n')}`)

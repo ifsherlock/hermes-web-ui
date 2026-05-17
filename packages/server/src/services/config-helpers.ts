@@ -22,6 +22,7 @@ export const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_en
   'alibaba-coding-plan': { api_key_env: 'ALIBABA_CODING_PLAN_API_KEY', base_url_env: 'ALIBABA_CODING_PLAN_BASE_URL' },
   anthropic: { api_key_env: 'ANTHROPIC_API_KEY', base_url_env: '' },
   xai: { api_key_env: 'XAI_API_KEY', base_url_env: '' },
+  'xai-oauth': { api_key_env: '', base_url_env: '' },
   xiaomi: { api_key_env: 'XIAOMI_API_KEY', base_url_env: '' },
   'xiaomi-token-plan': { api_key_env: '', base_url_env: '' },
   gemini: { api_key_env: 'GEMINI_API_KEY', base_url_env: '' },

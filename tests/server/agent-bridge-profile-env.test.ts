@@ -144,6 +144,51 @@ print(json.dumps({
     })
   })
 
+  it('falls back to package imports when no Hermes Agent source root exists', async () => {
+    const packageDir = join(tempDir, 'site-packages')
+    const hermesHome = join(tempDir, 'home')
+    await mkdir(packageDir, { recursive: true })
+    await mkdir(hermesHome, { recursive: true })
+    await writeFile(join(packageDir, 'run_agent.py'), 'class AIAgent: pass\n', 'utf-8')
+    const expectedHermesHome = await realpath(hermesHome)
+
+    const result = await runBridgeProbe(`
+import importlib.util
+import json
+import os
+import sys
+
+spec = importlib.util.spec_from_file_location("hermes_bridge", os.environ["BRIDGE_PATH"])
+bridge = importlib.util.module_from_spec(spec)
+sys.modules["hermes_bridge"] = bridge
+spec.loader.exec_module(bridge)
+
+package_dir = os.path.join(os.environ["TEST_HERMES_HOME"], "site-packages")
+hermes_home = os.path.join(os.environ["TEST_HERMES_HOME"], "home")
+sys.path.insert(0, package_dir)
+bridge._candidate_agent_roots = lambda raw=None: []
+os.environ.pop("HERMES_AGENT_ROOT", None)
+
+bridge._set_path_env(None, hermes_home)
+bridge._ensure_agent_imports()
+from run_agent import AIAgent
+
+print(json.dumps({
+    "agent_root": os.environ.get("HERMES_AGENT_ROOT"),
+    "home": os.environ.get("HERMES_HOME"),
+    "base": os.environ.get("HERMES_AGENT_BRIDGE_BASE_HOME"),
+    "agent_class": AIAgent.__name__,
+}))
+`)
+
+    expect(result).toEqual({
+      agent_root: null,
+      home: expectedHermesHome,
+      base: expectedHermesHome,
+      agent_class: 'AIAgent',
+    })
+  })
+
   it('keeps inherited profile env keys for default profile compatibility', async () => {
     await mkdir(join(tempDir, 'profiles', 'work'), { recursive: true })
     await writeFile(join(tempDir, '.env'), 'OPENAI_API_KEY=default-openai\n', 'utf-8')

@@ -213,6 +213,13 @@ docker compose logs -f hermes-webui
 
 更详细的说明与排错见：[`docs/docker.md`](./docs/docker.md)
 
+### Hermes Agent 运行时发现
+
+Web UI 启动后端聊天能力时，会优先使用包含 `run_agent.py` 的源码目录，例如
+`~/.hermes/hermes-agent`。如果找不到源码目录，会退回到已安装 `hermes` 命令所使用
+的 Python 环境，再退到系统 Python。因此源码安装和 `pip install hermes-agent` 这类
+包安装方式都可以兼容。
+
 ## Web UI 环境变量
 
 这些变量只用于配置 Hermes Web UI 自身。Provider API Key 和 Hermes Agent 相关设置仍通过 Hermes profile 管理。

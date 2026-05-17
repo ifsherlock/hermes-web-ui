@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import CodexLoginModal from './CodexLoginModal.vue'
 import NousLoginModal from './NousLoginModal.vue'
 import CopilotLoginModal from './CopilotLoginModal.vue'
+import XaiOAuthLoginModal from './XaiOAuthLoginModal.vue'
 import { checkCopilotToken, enableCopilot, type CopilotTokenSource } from '@/api/hermes/copilot-auth'
 import { fetchProviderModels } from '@/api/hermes/system'
 
@@ -26,6 +27,7 @@ const fetchingModels = ref(false)
 const showCodexLogin = ref(false)
 const showNousLogin = ref(false)
 const showCopilotLogin = ref(false)
+const showXaiLogin = ref(false)
 const copilotChecking = ref(false)
 
 const providerType = ref<'preset' | 'custom'>('preset')
@@ -44,6 +46,7 @@ const CODEX_KEY = 'openai-codex'
 const NOUS_KEY = 'nous'
 const COPILOT_KEY = 'copilot'
 const CLIPROXYAPI_KEY = 'cliproxyapi'
+const XAI_OAUTH_KEY = 'xai-oauth'
 const ALIBABA_CODING_KEY = 'alibaba-coding-plan'
 const ALIBABA_CODING_REGIONS = {
   intl: 'https://coding-intl.dashscope.aliyuncs.com/v1',
@@ -54,6 +57,7 @@ const isCodex = computed(() => selectedPreset.value === CODEX_KEY)
 const isNous = computed(() => selectedPreset.value === NOUS_KEY)
 const isCopilot = computed(() => selectedPreset.value === COPILOT_KEY)
 const isCliproxyApi = computed(() => selectedPreset.value === CLIPROXYAPI_KEY)
+const isXaiOAuth = computed(() => selectedPreset.value === XAI_OAUTH_KEY)
 const isAlibabaCoding = computed(() => selectedPreset.value === ALIBABA_CODING_KEY)
 const alibabaCodingRegion = ref<'intl' | 'cn'>('intl')
 
@@ -93,6 +97,8 @@ watch(selectedPreset, (val) => {
     if (val === COPILOT_KEY) {
       // 判断是否已能解析到 token：有 → 弹简单确认；无 → 走 in-app device flow
       void triggerCopilotAdd()
+    } else if (val === XAI_OAUTH_KEY) {
+      showXaiLogin.value = true
     }
   }
 })
@@ -170,11 +176,16 @@ async function handleSave() {
     return
   }
 
+  if (isXaiOAuth.value) {
+    showXaiLogin.value = true
+    return
+  }
+
   if (!formData.value.base_url.trim()) {
     message.warning(t('models.baseUrlRequired'))
     return
   }
-  if (!formData.value.api_key.trim() && !isCliproxyApi.value) {
+  if (!formData.value.api_key.trim() && !isCliproxyApi.value && !isXaiOAuth.value) {
     message.warning(t('models.apiKeyRequired'))
     return
   }
@@ -221,6 +232,12 @@ async function handleNousSuccess() {
 
 async function handleCopilotSuccess() {
   showCopilotLogin.value = false
+  message.success(t('models.providerAdded'))
+  emit('saved')
+}
+
+async function handleXaiSuccess() {
+  showXaiLogin.value = false
   message.success(t('models.providerAdded'))
   emit('saved')
 }
@@ -281,6 +298,11 @@ function handleCopilotClose() {
   selectedPreset.value = null
 }
 
+function handleXaiClose() {
+  showXaiLogin.value = false
+  selectedPreset.value = null
+}
+
 function handleClose() {
   showModal.value = false
   setTimeout(() => emit('close'), 200)
@@ -293,7 +315,7 @@ function handleClose() {
     preset="card"
     :title="t('models.addProvider')"
     :style="{ width: 'min(520px, calc(100vw - 32px))' }"
-    :mask-closable="!loading && !showCodexLogin && !showNousLogin && !showCopilotLogin"
+    :mask-closable="!loading && !showCodexLogin && !showNousLogin && !showCopilotLogin && !showXaiLogin"
     @after-leave="emit('close')"
   >
     <NForm label-placement="top">
@@ -353,7 +375,7 @@ function handleClose() {
         />
       </NFormItem>
 
-      <NFormItem v-if="!isCodex && !isNous" :label="t('models.apiKey')" :required="!isCliproxyApi">
+      <NFormItem v-if="!isCodex && !isNous" :label="t('models.apiKey')" :required="!isCliproxyApi && !isXaiOAuth">
         <NInput
           v-model:value="formData.api_key"
           type="password"
@@ -419,6 +441,12 @@ function handleClose() {
       v-if="showCopilotLogin"
       @close="handleCopilotClose"
       @success="handleCopilotSuccess"
+    />
+
+    <XaiOAuthLoginModal
+      v-if="showXaiLogin"
+      @close="handleXaiClose"
+      @success="handleXaiSuccess"
     />
   </NModal>
 </template>
