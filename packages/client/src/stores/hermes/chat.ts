@@ -910,7 +910,7 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       const appStore = useAppStore()
-      await appStore.loadModels()
+      await appStore.waitForModelsForRun()
       const sessionModel = activeSession.value?.model || appStore.selectedModel
       const isBridgeSource = activeSession.value?.source === 'cli'
       const sessionProvider = activeSession.value?.provider || appStore.selectedProvider

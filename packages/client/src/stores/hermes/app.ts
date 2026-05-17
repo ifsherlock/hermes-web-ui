@@ -44,7 +44,7 @@ export const useAppStore = defineStore('app', () => {
   const sessionPersistence = ref(true)
   const maxTokens = ref(4096)
   let modelsLoadPromise: Promise<void> | null = null
-  let modelsLoadedAt = 0
+  let modelsLastRequestedAt = 0
 
   async function doUpdate(): Promise<boolean> {
     updating.value = true
@@ -134,12 +134,12 @@ export const useAppStore = defineStore('app', () => {
   async function loadModels(force = false) {
     if (!hasApiKey()) return
     if (!force && modelsLoadPromise) return modelsLoadPromise
-    if (!force && modelGroups.value.length > 0 && Date.now() - modelsLoadedAt < MODELS_CACHE_TTL_MS) return
+    if (!force && modelsLastRequestedAt > 0 && Date.now() - modelsLastRequestedAt < MODELS_CACHE_TTL_MS) return
+    modelsLastRequestedAt = Date.now()
     modelsLoadPromise = (async () => {
       try {
         const res = await fetchAvailableModels()
         applyAvailableModelsResponse(res)
-        modelsLoadedAt = Date.now()
       } catch {
         // ignore
       } finally {
@@ -147,6 +147,16 @@ export const useAppStore = defineStore('app', () => {
       }
     })()
     return modelsLoadPromise
+  }
+
+  async function waitForModelsForRun(timeoutMs = 15000) {
+    if (!hasApiKey()) return
+    const pending = modelsLoadPromise || (modelsLastRequestedAt === 0 ? loadModels() : null)
+    if (!pending) return
+    await Promise.race([
+      pending,
+      new Promise<void>(resolve => setTimeout(resolve, timeoutMs)),
+    ])
   }
 
   async function reloadModels() {
@@ -300,6 +310,7 @@ export const useAppStore = defineStore('app', () => {
     maxTokens,
     checkConnection,
     loadModels,
+    waitForModelsForRun,
     reloadModels,
     applyAvailableModelsResponse,
     switchModel,
