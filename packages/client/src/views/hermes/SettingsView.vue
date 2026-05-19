@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/stores/hermes/settings";
 import DisplaySettings from "@/components/hermes/settings/DisplaySettings.vue";
 import AgentSettings from "@/components/hermes/settings/AgentSettings.vue";
 import MemorySettings from "@/components/hermes/settings/MemorySettings.vue";
+import CompressionSettings from "@/components/hermes/settings/CompressionSettings.vue";
 import SessionSettings from "@/components/hermes/settings/SessionSettings.vue";
 import PrivacySettings from "@/components/hermes/settings/PrivacySettings.vue";
 import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
@@ -48,6 +49,9 @@ onMounted(() => {
           </NTabPane>
           <NTabPane name="memory" :tab="t('settings.tabs.memory')">
             <MemorySettings />
+          </NTabPane>
+          <NTabPane name="compression" :tab="t('settings.tabs.compression')">
+            <CompressionSettings />
           </NTabPane>
           <NTabPane name="session" :tab="t('settings.tabs.session')">
             <SessionSettings />

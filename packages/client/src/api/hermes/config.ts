@@ -28,6 +28,14 @@ export interface MemoryConfig {
   user_char_limit?: number
 }
 
+export interface CompressionConfig {
+  enabled?: boolean
+  threshold?: number
+  target_ratio?: number
+  protect_last_n?: number
+  protect_first_n?: number
+}
+
 export interface SessionResetConfig {
   mode?: string
   idle_minutes?: number
@@ -47,6 +55,7 @@ export interface AppConfig {
   display?: DisplayConfig
   agent?: AgentConfig
   memory?: MemoryConfig
+  compression?: CompressionConfig
   session_reset?: SessionResetConfig
   privacy?: PrivacyConfig
   approvals?: ApprovalConfig

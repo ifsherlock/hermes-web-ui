@@ -53,7 +53,7 @@ export async function calcAndUpdateUsage(
     const snapshot = getCompressionSnapshot(sid)
     let inputTokens: number
     let outputTokens: number
-    if (snapshot && msgs.length) {
+    if (snapshot && msgs.length && snapshot.lastMessageIndex >= 0 && snapshot.lastMessageIndex < msgs.length) {
       const newMessages = msgs.slice(snapshot.lastMessageIndex + 1)
       const newUsage = estimateUsageTokensFromMessages(newMessages)
       inputTokens = countTokens(SUMMARY_PREFIX + snapshot.summary) +

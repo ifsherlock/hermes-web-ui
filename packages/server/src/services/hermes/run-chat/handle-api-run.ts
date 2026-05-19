@@ -38,7 +38,7 @@ export async function loadSessionStateFromDb(sid: string, _sessionMap: Map<strin
     let inputTokens: number
     let outputTokens: number
     const snapshot = getCompressionSnapshot(sid)
-    if (snapshot) {
+    if (snapshot && snapshot.lastMessageIndex >= 0 && snapshot.lastMessageIndex < messages.length) {
       const newMessages = messages.slice(snapshot.lastMessageIndex + 1)
       const newUsage = estimateUsageTokensFromMessages(newMessages)
       inputTokens = countTokens(SUMMARY_PREFIX + snapshot.summary) +
