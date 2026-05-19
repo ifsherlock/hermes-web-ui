@@ -52,6 +52,7 @@ export interface SessionState {
   source?: ChatRunSource
   bridgePendingAssistantContent?: string
   bridgePendingReasoningContent?: string
+  bridgePendingToolCallMarkup?: string
   bridgeOutput?: string
   bridgeToolCounter?: number
   bridgePendingTools?: Array<{

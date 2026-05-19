@@ -37,6 +37,11 @@ const allModels = computed(() => props.provider.available_models?.length ? props
 const visibilityRule = computed(() => appStore.getProviderVisibility(props.provider.provider))
 const isFiltered = computed(() => visibilityRule.value.mode === 'include')
 const visibleCountLabel = computed(() => `${props.provider.models.length}/${allModels.value.length}`)
+const isDefaultProvider = computed(() => modelsStore.defaultProvider === props.provider.provider)
+
+function isDefaultModel(model: string) {
+  return isDefaultProvider.value && modelsStore.defaultModel === model
+}
 
 function modelAlias(model: string) {
   return appStore.getModelAlias(model, props.provider.provider)
@@ -157,9 +162,12 @@ async function handleDelete() {
   <div class="provider-card">
     <div class="card-header">
       <h3 class="provider-name">{{ displayName }}</h3>
-      <span class="type-badge" :class="isCustom ? 'custom' : 'builtin'">
-        {{ isCustom ? t('models.customType') : t('models.builtIn') }}
-      </span>
+      <div class="provider-badges">
+        <span v-if="isDefaultProvider" class="type-badge default">{{ t('models.currentDefault') }}</span>
+        <span class="type-badge" :class="isCustom ? 'custom' : 'builtin'">
+          {{ isCustom ? t('models.customType') : t('models.builtIn') }}
+        </span>
+      </div>
     </div>
 
     <div class="card-body">
@@ -182,11 +190,13 @@ async function handleDelete() {
           v-for="model in provider.models.slice(0, 20)"
           :key="model"
           class="model-tag model-tag-button"
+          :class="{ default: isDefaultModel(model) }"
           type="button"
           :title="t('models.aliasTitleFor', { model })"
           @click="openAliasEditor(model)"
         >
           <span class="model-tag-name">{{ modelDisplayName(model) }}</span>
+          <span v-if="isDefaultModel(model)" class="model-tag-default">{{ t('models.defaultShort') }}</span>
           <span v-if="modelAlias(model)" class="model-tag-id">{{ model }}</span>
         </button>
         <span v-if="provider.models.length > 20" class="model-tag model-tag-more">
@@ -213,6 +223,7 @@ async function handleDelete() {
         <div v-for="model in provider.models" :key="model" class="alias-row">
           <div class="alias-row-text">
             <span class="alias-row-name">{{ modelDisplayName(model) }}</span>
+            <span v-if="isDefaultModel(model)" class="alias-row-default">{{ t('models.defaultShort') }}</span>
             <code class="alias-row-id">{{ model }}</code>
           </div>
           <NButton size="tiny" quaternary @click="openAliasEditor(model)">{{ t('models.aliasEdit') }}</NButton>
@@ -311,6 +322,7 @@ async function handleDelete() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
@@ -324,11 +336,20 @@ async function handleDelete() {
   max-width: 70%;
 }
 
+.provider-badges {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
 .type-badge {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 500;
+  white-space: nowrap;
 
   &.builtin {
     background: rgba(var(--accent-primary-rgb), 0.12);
@@ -338,6 +359,11 @@ async function handleDelete() {
   &.custom {
     background: rgba(var(--success-rgb), 0.12);
     color: $success;
+  }
+
+  &.default {
+    background: rgba(var(--warning-rgb), 0.14);
+    color: $warning;
   }
 }
 
@@ -409,6 +435,11 @@ async function handleDelete() {
     color: $accent-primary;
     font-weight: 500;
   }
+
+  &.default {
+    background: rgba(var(--warning-rgb), 0.14);
+    color: $text-primary;
+  }
 }
 
 .model-tag-button {
@@ -431,6 +462,14 @@ async function handleDelete() {
 .model-tag-id {
   color: $text-muted;
   font-size: 9px;
+}
+
+.model-tag-default,
+.alias-row-default {
+  color: $warning;
+  font-family: $font-ui;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .card-actions {

@@ -50,7 +50,7 @@ test('sends a chat run and renders streamed Socket.IO response events', async ({
     input: 'Summarize the queue',
     queue_id: expect.any(String),
     session_id: expect.any(String),
-    source: 'api_server',
+    source: 'cli',
   })
   expect(run.model).toBe('test-model')
 

@@ -67,4 +67,11 @@ describe('agent bridge manager command resolution', () => {
       hermesHome: homeDir,
     })
   })
+
+  it('uses an isolated default bridge endpoint while running under Vitest', async () => {
+    const { DEFAULT_AGENT_BRIDGE_ENDPOINT } = await import('../../packages/server/src/services/hermes/agent-bridge/client')
+
+    expect(DEFAULT_AGENT_BRIDGE_ENDPOINT).toContain(`hermes-agent-bridge-test-${process.pid}`)
+    expect(DEFAULT_AGENT_BRIDGE_ENDPOINT).not.toBe('ipc:///tmp/hermes-agent-bridge.sock')
+  })
 })

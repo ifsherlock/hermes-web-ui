@@ -23,7 +23,7 @@ function writeAuthJson(auth: Record<string, unknown>) {
 }
 
 function makeCtx(): any {
-  return { params: {}, request: { body: {} }, body: undefined, status: 200 }
+  return { params: {}, query: {}, request: { body: {} }, body: undefined, status: 200 }
 }
 
 async function loadModelsController() {

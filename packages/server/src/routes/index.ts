@@ -21,7 +21,6 @@ import { codexAuthRoutes } from './hermes/codex-auth'
 import { nousAuthRoutes } from './hermes/nous-auth'
 import { copilotAuthRoutes } from './hermes/copilot-auth'
 import { xaiAuthRoutes } from './hermes/xai-auth'
-import { gatewayRoutes } from './hermes/gateways'
 import { weixinRoutes } from './hermes/weixin'
 import { fileRoutes } from './hermes/files'
 import { downloadRoutes } from './hermes/download'
@@ -29,6 +28,7 @@ import { jobRoutes } from './hermes/jobs'
 import { cronHistoryRoutes } from './hermes/cron-history'
 import { kanbanRoutes } from './hermes/kanban'
 import { ttsRoutes } from './hermes/tts'
+import { mediaRoutes } from './hermes/media'
 import { proxyRoutes, proxyMiddleware } from './hermes/proxy'
 import { groupChatRoutes, setGroupChatServer } from './hermes/group-chat'
 
@@ -64,7 +64,6 @@ export function registerRoutes(app: any, requireAuth: (ctx: Context, next: Next)
   app.use(nousAuthRoutes.routes())
   app.use(copilotAuthRoutes.routes())
   app.use(xaiAuthRoutes.routes())
-  app.use(gatewayRoutes.routes())
   app.use(weixinRoutes.routes())
   app.use(groupChatRoutes.routes())       // Must be before proxy
   app.use(fileRoutes.routes())              // Must be before proxy (proxy catch-all matches everything)
@@ -72,6 +71,7 @@ export function registerRoutes(app: any, requireAuth: (ctx: Context, next: Next)
   app.use(jobRoutes.routes())               // Must be before proxy
   app.use(cronHistoryRoutes.routes())        // Must be before proxy
   app.use(kanbanRoutes.routes())             // Must be before proxy
+  app.use(mediaRoutes.routes())              // Must be before proxy
   app.use(proxyRoutes.routes())
 
   // Proxy catch-all middleware (must be last)

@@ -44,7 +44,7 @@ const currentToolCalls = computed(() => {
 });
 
 const visibleToolCalls = computed(() =>
-  toolTraceVisible.value ? currentToolCalls.value.filter((tool) => !!tool.toolName) : [],
+  currentToolCalls.value.filter((tool) => !!tool.toolName),
 );
 
 const displayMessages = computed(() => {

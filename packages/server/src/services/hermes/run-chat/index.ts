@@ -12,7 +12,7 @@ import type { Server, Socket } from 'socket.io'
 import { logger } from '../../logger'
 import { getSystemPrompt } from '../../../lib/llm-prompt'
 import { getSession } from '../../../db/hermes/session-store'
-import { getActiveProfileName } from '../hermes-profile'
+import { getActiveProfileName, getProfileDir, listProfileNamesFromDisk } from '../hermes-profile'
 import { AgentBridgeClient } from '../agent-bridge'
 import { handleApiRun, resolveRunSource, loadSessionStateFromDb } from './handle-api-run'
 import { handleBridgeRun } from './handle-bridge-run'
@@ -25,14 +25,12 @@ export type { ContentBlock } from './types'
 
 export class ChatRunSocket {
   private nsp: ReturnType<Server['of']>
-  private gatewayManager: any
   private bridge = new AgentBridgeClient()
   /** sessionId → session state (messages, working status, events, run tracking) */
   private sessionMap = new Map<string, SessionState>()
 
-  constructor(io: Server, gatewayManager: any) {
+  constructor(io: Server) {
     this.nsp = io.of('/chat-run')
-    this.gatewayManager = gatewayManager
   }
 
   init() {
@@ -60,6 +58,17 @@ export class ChatRunSocket {
   private onConnection(socket: Socket) {
     const socketProfile = (socket.handshake.query?.profile as string) || 'default'
     const currentProfile = () => getActiveProfileName() || socketProfile || 'default'
+    const profileExists = (profile: string) => {
+      if (!profile || profile === 'default') return true
+      return listProfileNamesFromDisk().includes(profile)
+    }
+    const resolveRunProfile = (sessionId?: string, requested?: string) => {
+      const requestedProfile = typeof requested === 'string' ? requested.trim() : ''
+      if (requestedProfile && profileExists(requestedProfile)) return requestedProfile
+      if (!sessionId) return currentProfile()
+      const storedProfile = getSession(sessionId)?.profile || ''
+      return storedProfile && profileExists(storedProfile) ? storedProfile : currentProfile()
+    }
 
     socket.on('run', async (data: {
       input: string | ContentBlock[]
@@ -70,7 +79,9 @@ export class ChatRunSocket {
       model_groups?: Array<{ provider: string; models: string[] }>
       queue_id?: string
       source?: string
+      profile?: string
     }) => {
+      const runProfile = resolveRunProfile(data.session_id, data.profile)
       if (data.session_id) {
         const state = getOrCreateSession(this.sessionMap, data.session_id)
         const source = resolveRunSource(data.source, data.session_id)
@@ -82,8 +93,7 @@ export class ChatRunSocket {
               socket,
               sessionMap: this.sessionMap,
               bridge: this.bridge,
-              gatewayManager: this.gatewayManager,
-              profile: currentProfile(),
+              profile: runProfile,
               model: data.model,
               instructions: data.instructions,
               runQueuedItem: this.runQueuedItem.bind(this),
@@ -107,7 +117,7 @@ export class ChatRunSocket {
             provider: data.provider,
             model_groups: data.model_groups,
             instructions: data.instructions,
-            profile: currentProfile(),
+            profile: runProfile,
             source,
           })
           this.nsp.to(`session:${data.session_id}`).emit('run.queued', {
@@ -119,11 +129,11 @@ export class ChatRunSocket {
           return
         }
         state.isWorking = true
-        state.profile = currentProfile()
+        state.profile = runProfile
         state.source = source
       }
       try {
-        await this.handleRun(socket, data, currentProfile())
+        await this.handleRun(socket, data, runProfile)
       } catch (err) {
         if (data.session_id) {
           const state = this.sessionMap.get(data.session_id)
@@ -224,7 +234,7 @@ export class ChatRunSocket {
 
       await handleBridgeRun(
         this.nsp, socket, { ...data, instructions: fullInstructions }, profile,
-        this.sessionMap, this.gatewayManager, this.bridge,
+        this.sessionMap, this.bridge,
         skipUserMessage,
         loadSessionStateFromDb,
         this.dequeueNextQueuedRun.bind(this),
@@ -234,7 +244,7 @@ export class ChatRunSocket {
 
     await handleApiRun(
       this.nsp, socket, data, profile,
-      this.sessionMap, this.gatewayManager,
+      this.sessionMap,
       skipUserMessage,
       this.dequeueNextQueuedRun.bind(this),
     )

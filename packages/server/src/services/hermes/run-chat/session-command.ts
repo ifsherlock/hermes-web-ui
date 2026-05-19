@@ -30,7 +30,6 @@ interface SessionCommandContext {
   socket: Socket
   sessionMap: Map<string, SessionState>
   bridge: AgentBridgeClient
-  gatewayManager: any
   profile: string
   model?: string
   instructions?: string
@@ -243,8 +242,6 @@ export async function handleSessionCommand(
           sessionId,
           ctx.profile,
           [],
-          (profile: string) => ctx.gatewayManager.getUpstream(profile),
-          (profile: string) => ctx.gatewayManager.getApiKey(profile),
         )
         state.bridgeCompressionResults = state.bridgeCompressionResults || {}
         await calcAndUpdateUsage(sessionId, state, emit)
@@ -312,11 +309,11 @@ export async function handleSessionCommand(
       try {
         if (wasWorking) {
           flushBridgePendingToDb(state, sessionId)
-          await ctx.bridge.interrupt(sessionId, 'Destroyed by user').catch((err) => {
+          await ctx.bridge.interrupt(sessionId, 'Destroyed by user', state.profile).catch((err) => {
             logger.warn(err, '[chat-run-socket] /destroy interrupt failed for session %s', sessionId)
           })
         }
-        await ctx.bridge.destroy(sessionId).catch((err) => {
+        await ctx.bridge.destroy(sessionId, state.profile).catch((err) => {
           bridgeReachable = false
           bridgeError = err instanceof Error ? err.message : String(err)
           logger.warn(err, '[chat-run-socket] /destroy bridge unavailable for session %s', sessionId)
@@ -337,6 +334,7 @@ export async function handleSessionCommand(
         state.queue = []
         state.bridgePendingAssistantContent = undefined
         state.bridgePendingReasoningContent = undefined
+        state.bridgePendingToolCallMarkup = undefined
         state.bridgeOutput = undefined
         state.bridgePendingTools = undefined
         state.bridgeCompressionResults = undefined
@@ -366,6 +364,7 @@ export async function handleSessionCommand(
 function clearTransientRunState(state: SessionState) {
   state.events = []
   state.bridgePendingTools = undefined
+  state.bridgePendingToolCallMarkup = undefined
   state.bridgeCompressionResults = undefined
   state.responseRun = undefined
   state.activeRunMarker = undefined

@@ -5,8 +5,10 @@ const getConversationDetailFromDbMock = vi.fn()
 const listConversationSummariesMock = vi.fn()
 const getConversationDetailMock = vi.fn()
 const getSessionDetailFromDbMock = vi.fn()
+const getExactSessionDetailFromDbWithProfileMock = vi.fn()
 const getUsageStatsFromDbMock = vi.fn()
 const getSessionMock = vi.fn()
+const deleteHermesSessionForProfileMock = vi.fn()
 const localListSessionsMock = vi.fn()
 const localGetSessionDetailMock = vi.fn()
 const localSearchSessionsMock = vi.fn()
@@ -41,6 +43,7 @@ vi.mock('../../packages/server/src/services/hermes/hermes-cli', () => ({
   listSessions: vi.fn(),
   getSession: getSessionMock,
   deleteSession: vi.fn(),
+  deleteSessionForProfile: deleteHermesSessionForProfileMock,
   renameSession: vi.fn(),
 }))
 
@@ -48,6 +51,7 @@ vi.mock('../../packages/server/src/db/hermes/sessions-db', () => ({
   listSessionSummaries: vi.fn(),
   searchSessionSummaries: vi.fn(),
   getSessionDetailFromDb: getSessionDetailFromDbMock,
+  getExactSessionDetailFromDbWithProfile: getExactSessionDetailFromDbWithProfileMock,
   getUsageStatsFromDb: getUsageStatsFromDbMock,
 }))
 
@@ -79,6 +83,7 @@ vi.mock('../../packages/server/src/services/hermes/model-context', () => ({
 
 vi.mock('../../packages/server/src/services/hermes/hermes-profile', () => ({
   getActiveProfileName: getActiveProfileNameMock,
+  listProfileNamesFromDisk: () => ['default', 'travel'],
 }))
 
 vi.mock('../../packages/server/src/db/hermes/compression-snapshot', () => ({
@@ -96,10 +101,6 @@ vi.mock('../../packages/server/src/lib/context-compressor/export-compressor', ()
   },
 }))
 
-vi.mock('../../packages/server/src/services/gateway-bootstrap', () => ({
-  getGatewayManagerInstance: () => null,
-}))
-
 describe('session conversations controller', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -108,8 +109,10 @@ describe('session conversations controller', () => {
     listConversationSummariesMock.mockReset()
     getConversationDetailMock.mockReset()
     getSessionDetailFromDbMock.mockReset()
+    getExactSessionDetailFromDbWithProfileMock.mockReset()
     getUsageStatsFromDbMock.mockReset()
     getSessionMock.mockReset()
+    deleteHermesSessionForProfileMock.mockReset()
     localListSessionsMock.mockReset()
     localGetSessionDetailMock.mockReset()
     localSearchSessionsMock.mockReset()
@@ -317,6 +320,26 @@ describe('session conversations controller', () => {
     expect(localCreateSessionMock).not.toHaveBeenCalled()
     expect(localUpdateSessionMock).toHaveBeenCalledWith('session-1', { model: 'grok-4', provider: 'xai' })
     expect(ctx.body).toEqual({ ok: true })
+  })
+
+  it('deletes a current-profile Hermes history session even when no local Web UI session exists', async () => {
+    getActiveProfileNameMock.mockReturnValue('travel')
+    getSessionMock.mockReturnValue(null)
+    getExactSessionDetailFromDbWithProfileMock.mockResolvedValue({ id: 'history-only', messages: [] })
+    deleteHermesSessionForProfileMock.mockResolvedValue(true)
+
+    const mod = await import('../../packages/server/src/controllers/hermes/sessions')
+    const ctx: any = { params: { id: 'history-only' }, body: null }
+    await mod.remove(ctx)
+
+    expect(getExactSessionDetailFromDbWithProfileMock).toHaveBeenCalledWith('history-only', 'travel')
+    expect(deleteHermesSessionForProfileMock).toHaveBeenCalledWith('history-only', 'travel')
+    expect(localDeleteSessionMock).not.toHaveBeenCalled()
+    expect(ctx.body).toEqual({
+      ok: true,
+      deleted: false,
+      hermes: { attempted: true, deleted: true, profile: 'travel', error: undefined },
+    })
   })
 
   describe('exportSession', () => {

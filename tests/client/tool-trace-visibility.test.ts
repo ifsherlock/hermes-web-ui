@@ -94,7 +94,7 @@ describe('tool trace visibility', () => {
     ])
   })
 
-  it('hides named live and history tool traces when the localStorage toggle is off', () => {
+  it('hides named transcript traces when the toggle is off while keeping live tool stream visible', () => {
     useToolTraceVisibility().setToolTraceVisible(false)
 
     const liveWrapper = mountLiveList()
@@ -102,7 +102,7 @@ describe('tool trace visibility', () => {
       'user-1',
       'assistant-1',
     ])
-    expect(liveWrapper.findAll('.tool-call-name').map(node => node.text())).not.toContain('read_file')
+    expect(liveWrapper.findAll('.tool-call-name').map(node => node.text())).toContain('read_file')
 
     const historyWrapper = mount(HistoryMessageList, {
       props: { session: makeSession(sampleMessages) },

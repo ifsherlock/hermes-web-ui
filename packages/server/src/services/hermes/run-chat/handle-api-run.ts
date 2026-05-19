@@ -25,15 +25,8 @@ import { countTokens, SUMMARY_PREFIX } from '../../../lib/context-compressor'
 import { getCompressionSnapshot } from '../../../db/hermes/compression-snapshot'
 import type { ContentBlock, SessionState, ChatRunSource } from './types'
 
-export function resolveRunSource(source?: string, sessionId?: string): ChatRunSource {
-  const normalized = String(source || '').trim()
-  if (normalized === 'cli') return 'cli'
-  if (normalized === 'api_server') return 'api_server'
-  if (sessionId) {
-    const existing = getSession(sessionId)
-    if (existing?.source === 'cli') return 'cli'
-  }
-  return 'api_server'
+export function resolveRunSource(_source?: string, _sessionId?: string): ChatRunSource {
+  return 'cli'
 }
 
 export async function loadSessionStateFromDb(sid: string, _sessionMap: Map<string, SessionState>): Promise<SessionState> {
@@ -78,7 +71,6 @@ export async function handleApiRun(
   data: { input: string | ContentBlock[]; session_id?: string; model?: string; provider?: string; instructions?: string; source?: string },
   profile: string,
   sessionMap: Map<string, SessionState>,
-  gatewayManager: any,
   skipUserMessage = false,
   dequeueNextQueuedRun: (socket: Socket, sessionId: string, fallbackProfile?: string) => void,
 ) {
@@ -96,8 +88,8 @@ export async function handleApiRun(
     }
   }
 
-  const upstream = gatewayManager.getUpstream(profile).replace(/\/$/, '')
-  const apiKey = gatewayManager.getApiKey(profile) || undefined
+  const upstream = ''
+  const apiKey = undefined
 
   const runMarker = session_id
     ? `resp_run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
@@ -179,7 +171,11 @@ export async function handleApiRun(
     if (model) body.model = model
     body.instructions = fullInstructions
     if (session_id) {
-      const compressed = await buildCompressedHistory(session_id, profile, upstream, apiKey, emit, sessionMap)
+      const sessionRow = getSession(session_id)
+      const compressed = await buildCompressedHistory(session_id, profile, upstream, apiKey, emit, sessionMap, {
+        model: sessionRow?.model || model,
+        provider: sessionRow?.provider || provider,
+      })
       if (compressed.length > 0) {
         body.conversation_history = compressed
       }

@@ -2,7 +2,7 @@ import { readFile, chmod } from 'fs/promises'
 import { readdir, stat } from 'fs/promises'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { getActiveProfileDir, getActiveConfigPath, getActiveEnvPath, getActiveAuthPath } from './hermes/hermes-profile'
+import { getActiveProfileDir, getActiveConfigPath, getActiveEnvPath, getActiveAuthPath, getProfileDir } from './hermes/hermes-profile'
 import { logger } from './logger'
 import { safeFileStore } from './safe-file-store'
 
@@ -76,6 +76,10 @@ export async function readConfigYaml(): Promise<Record<string, any>> {
   return safeFileStore.readYaml(configPath())
 }
 
+export async function readConfigYamlForProfile(profile: string): Promise<Record<string, any>> {
+  return safeFileStore.readYaml(join(getProfileDir(profile), 'config.yaml'))
+}
+
 export async function writeConfigYaml(config: Record<string, any>): Promise<void> {
   await safeFileStore.writeYaml(configPath(), config, { backup: true })
 }
@@ -84,6 +88,20 @@ export async function updateConfigYaml<T = void>(
   updater: (config: Record<string, any>) => Record<string, any> | { data: Record<string, any>; result: T; write?: boolean } | Promise<Record<string, any> | { data: Record<string, any>; result: T; write?: boolean }>,
 ): Promise<T | undefined> {
   return safeFileStore.updateYaml(configPath(), updater, { backup: true })
+}
+
+export function stripLegacyApiServerGatewayConfig(config: Record<string, any>): { config: Record<string, any>; changed: boolean } {
+  if (!config.platforms || typeof config.platforms !== 'object' || Array.isArray(config.platforms)) {
+    return { config, changed: false }
+  }
+
+  if (config.platforms.api_server !== undefined) {
+    delete config.platforms.api_server
+    if (Object.keys(config.platforms).length === 0) delete config.platforms
+    return { config, changed: true }
+  }
+
+  return { config, changed: false }
 }
 
 // --- .env helpers ---

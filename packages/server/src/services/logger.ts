@@ -1,12 +1,15 @@
 import pino from 'pino'
-import { resolve } from 'path'
+import { tmpdir } from 'os'
+import { join, resolve } from 'path'
 import { mkdirSync, statSync, truncateSync, openSync, readSync, closeSync, writeFileSync } from 'fs'
 import { config } from '../config'
 
 const MAX_LOG_SIZE = 3 * 1024 * 1024 // 3MB
 const CHECK_INTERVAL = 60_000 // Check every minute
 
-const logDir = resolve(config.appHome, 'logs')
+const logDir = process.env.VITEST
+  ? resolve(tmpdir(), 'hermes-web-ui-test-logs', String(process.pid))
+  : resolve(config.appHome, 'logs')
 mkdirSync(logDir, { recursive: true })
 
 const logFile = resolve(logDir, 'server.log')
