@@ -6,6 +6,7 @@ export interface HermesProfile {
   model: string
   gatewayStatus?: string
   alias: string
+  avatar?: ProfileAvatar | null
 }
 
 export interface HermesProfileDetail {
@@ -16,6 +17,14 @@ export interface HermesProfileDetail {
   skills: number
   hasEnv: boolean
   hasSoulMd: boolean
+  avatar?: ProfileAvatar | null
+}
+
+export interface ProfileAvatar {
+  type: 'generated' | 'image'
+  seed?: string
+  dataUrl?: string
+  updatedAt?: number
 }
 
 export interface ProfileRuntimeStatus {
@@ -60,6 +69,18 @@ export async function fetchProfileRuntimeStatus(name: string): Promise<ProfileRu
 export async function fetchProfileRuntimeStatuses(): Promise<ProfileRuntimeStatus[]> {
   const res = await request<{ profiles: ProfileRuntimeStatus[] }>('/api/hermes/profiles/runtime-statuses')
   return res.profiles
+}
+
+export async function updateProfileAvatar(name: string, avatar: ProfileAvatar): Promise<ProfileAvatar> {
+  const res = await request<{ avatar: ProfileAvatar }>(`/api/hermes/profiles/${encodeURIComponent(name)}/avatar`, {
+    method: 'PUT',
+    body: JSON.stringify(avatar),
+  })
+  return res.avatar
+}
+
+export async function deleteProfileAvatar(name: string): Promise<void> {
+  await request(`/api/hermes/profiles/${encodeURIComponent(name)}/avatar`, { method: 'DELETE' })
 }
 
 export async function restartProfileGateway(name: string): Promise<ProfileRuntimeStatus['gateway']> {

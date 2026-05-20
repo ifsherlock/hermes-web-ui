@@ -1,7 +1,8 @@
-import { createReadStream, existsSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'fs'
+import { createReadStream, existsSync, readFileSync, readdirSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import { basename, join } from 'path'
 import { tmpdir } from 'os'
+import { getWebUiHome } from '../../config'
 import * as hermesCli from '../../services/hermes/hermes-cli'
 import { SessionDeleter } from '../../services/hermes/session-deleter'
 import { AgentBridgeClient } from '../../services/hermes/agent-bridge'
@@ -16,6 +17,21 @@ import { getActiveProfileName } from '../../services/hermes/hermes-profile'
 import type { HermesProfile } from '../../services/hermes/hermes-cli'
 
 const bridgeCleanupClient = () => new AgentBridgeClient({ connectRetryMs: 0, timeoutMs: 5000 })
+
+interface ProfileAvatarMeta {
+  type: 'generated' | 'image'
+  seed?: string
+  file?: string
+  mime?: string
+  updatedAt?: number
+}
+
+interface ProfileAvatarResponse {
+  type: 'generated' | 'image'
+  seed?: string
+  dataUrl?: string
+  updatedAt?: number
+}
 
 const RESERVED_PROFILE_NAMES = new Set([
   'hermes', 'default', 'test', 'tmp', 'root', 'sudo',
@@ -92,6 +108,78 @@ function filterVisibleProfiles(profiles: HermesProfile[]): HermesProfile[] {
   return profiles.filter(profile => !isForbiddenProfileName(profile.name))
 }
 
+function profileMetadataRoot(): string {
+  return join(getWebUiHome(), 'profile-metadata')
+}
+
+function profileMetadataDir(name: string): string {
+  const segment = Buffer.from(name || 'default', 'utf-8').toString('base64url')
+  return join(profileMetadataRoot(), segment)
+}
+
+function profileAvatarMetaPath(name: string): string {
+  return join(profileMetadataDir(name), 'avatar.json')
+}
+
+function profileAvatarImagePath(name: string, file = 'avatar.bin'): string {
+  return join(profileMetadataDir(name), file)
+}
+
+function readProfileAvatar(name: string): ProfileAvatarResponse | null {
+  const metaPath = profileAvatarMetaPath(name)
+  if (!existsSync(metaPath)) return null
+  try {
+    const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as ProfileAvatarMeta
+    if (meta.type === 'generated') {
+      return {
+        type: 'generated',
+        seed: typeof meta.seed === 'string' ? meta.seed : name,
+        updatedAt: meta.updatedAt,
+      }
+    }
+    if (meta.type === 'image' && meta.file && meta.mime) {
+      const imagePath = profileAvatarImagePath(name, meta.file)
+      if (!existsSync(imagePath)) return null
+      const data = readFileSync(imagePath).toString('base64')
+      return {
+        type: 'image',
+        dataUrl: `data:${meta.mime};base64,${data}`,
+        updatedAt: meta.updatedAt,
+      }
+    }
+  } catch (err) {
+    logger.warn(err, '[profiles] failed to read avatar metadata for profile "%s"', name)
+  }
+  return null
+}
+
+function attachProfileAvatars<T extends HermesProfile>(profiles: T[]): Array<T & { avatar: ProfileAvatarResponse | null }> {
+  return profiles.map(profile => ({
+    ...profile,
+    avatar: readProfileAvatar(profile.name),
+  }))
+}
+
+function parseAvatarDataUrl(dataUrl: string): { mime: string; buffer: Buffer } {
+  const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([a-zA-Z0-9+/=]+)$/)
+  if (!match) throw new Error('Avatar image must be a PNG, JPEG, or WebP data URL')
+  const buffer = Buffer.from(match[2], 'base64')
+  if (buffer.length > 1024 * 1024) throw new Error('Avatar image must be 1MB or smaller')
+  return { mime: match[1], buffer }
+}
+
+function removeProfileMetadata(name: string): void {
+  rmSync(profileMetadataDir(name), { recursive: true, force: true })
+}
+
+function renameProfileMetadata(oldName: string, newName: string): void {
+  const oldDir = profileMetadataDir(oldName)
+  const newDir = profileMetadataDir(newName)
+  if (!existsSync(oldDir) || oldDir === newDir) return
+  rmSync(newDir, { recursive: true, force: true })
+  renameSync(oldDir, newDir)
+}
+
 async function useProfileWithFallback(name: string): Promise<string> {
   if (isForbiddenProfileName(name)) {
     throw new Error(`Profile name '${name}' is reserved and cannot be activated`)
@@ -136,9 +224,22 @@ async function buildRuntimeStatus(profile: HermesProfile | string, bridgeState?:
   const bridge = bridgeState || await readBridgeWorkers()
   let gateway: { running: boolean; profile: string; error?: string }
   if (typeof profile !== 'string' && profile.gatewayStatus !== undefined) {
-    gateway = {
-      running: gatewayStatusLooksRunning(profile.gatewayStatus),
-      profile: name,
+    const profileListRunning = gatewayStatusLooksRunning(profile.gatewayStatus)
+    if (profileListRunning) {
+      gateway = {
+        running: true,
+        profile: name,
+      }
+    } else {
+      try {
+        gateway = await getGatewayRuntimeStatusForProfile(name)
+      } catch (err: any) {
+        gateway = {
+          running: false,
+          profile: name,
+          error: err?.message || 'Gateway status check failed',
+        }
+      }
     }
   } else {
     try {
@@ -198,7 +299,7 @@ export async function list(ctx: any) {
       p.active = (p.name === activeProfileName)
     })
 
-    ctx.body = { profiles }
+    ctx.body = { profiles: attachProfileAvatars(profiles) }
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }
@@ -268,9 +369,59 @@ export async function create(ctx: any) {
 export async function get(ctx: any) {
   try {
     const profile = await hermesCli.getProfile(ctx.params.name)
-    ctx.body = { profile }
+    ctx.body = { profile: { ...profile, avatar: readProfileAvatar(profile.name) } }
   } catch (err: any) {
     ctx.status = err.message.includes('not found') ? 404 : 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function updateAvatar(ctx: any) {
+  const name = String(ctx.params.name || '').trim() || 'default'
+  if (isForbiddenProfileName(name)) {
+    ctx.status = 400
+    ctx.body = { error: `Profile name '${name}' is reserved` }
+    return
+  }
+  const body = ctx.request.body as { type?: string; seed?: string; dataUrl?: string }
+  try {
+    const dir = profileMetadataDir(name)
+    await mkdir(dir, { recursive: true })
+    const updatedAt = Date.now()
+
+    if (body.type === 'generated') {
+      const seed = String(body.seed || name).trim() || name
+      const meta: ProfileAvatarMeta = { type: 'generated', seed, updatedAt }
+      rmSync(profileAvatarImagePath(name), { force: true })
+      await writeFile(profileAvatarMetaPath(name), JSON.stringify(meta, null, 2) + '\n', { mode: 0o600 })
+      ctx.body = { avatar: readProfileAvatar(name) }
+      return
+    }
+
+    if (body.type === 'image' && typeof body.dataUrl === 'string') {
+      const { mime, buffer } = parseAvatarDataUrl(body.dataUrl)
+      const meta: ProfileAvatarMeta = { type: 'image', file: 'avatar.bin', mime, updatedAt }
+      await writeFile(profileAvatarImagePath(name), buffer, { mode: 0o600 })
+      await writeFile(profileAvatarMetaPath(name), JSON.stringify(meta, null, 2) + '\n', { mode: 0o600 })
+      ctx.body = { avatar: readProfileAvatar(name) }
+      return
+    }
+
+    ctx.status = 400
+    ctx.body = { error: 'Invalid avatar payload' }
+  } catch (err: any) {
+    ctx.status = 400
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function deleteAvatar(ctx: any) {
+  const name = String(ctx.params.name || '').trim() || 'default'
+  try {
+    removeProfileMetadata(name)
+    ctx.body = { success: true }
+  } catch (err: any) {
+    ctx.status = 500
     ctx.body = { error: err.message }
   }
 }
@@ -374,8 +525,10 @@ export async function remove(ctx: any) {
     }
     const ok = await hermesCli.deleteProfile(name)
     if (ok) {
+      removeProfileMetadata(name)
       ctx.body = { success: true }
     } else if (deleteForbiddenProfileFromDisk(name)) {
+      removeProfileMetadata(name)
       ctx.body = { success: true, fallback: 'removed_reserved_profile_from_disk' }
     } else {
       ctx.status = 500
@@ -397,6 +550,7 @@ export async function rename(ctx: any) {
   try {
     const ok = await hermesCli.renameProfile(ctx.params.name, new_name)
     if (ok) {
+      renameProfileMetadata(ctx.params.name, new_name)
       ctx.body = { success: true }
     } else {
       ctx.status = 500

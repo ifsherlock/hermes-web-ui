@@ -1,5 +1,5 @@
 import { execFile } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { promisify } from 'util'
 import { stripLegacyApiServerGatewayConfig } from '../config-helpers'
@@ -42,8 +42,22 @@ function isTermuxRuntime(): boolean {
     existsSync('/data/data/com.termux/files/usr')
 }
 
-function requiresManagedGatewayRun(): boolean {
-  return isDockerRuntime() || isTermuxRuntime() || process.platform === 'win32'
+function envFlagEnabled(name: string): boolean {
+  const value = String(process.env[name] || '').trim().toLowerCase()
+  return ['1', 'true', 'yes', 'on'].includes(value)
+}
+
+export function shouldUseManagedGatewayRun(): boolean {
+  return envFlagEnabled('HERMES_WEB_UI_MANAGED_GATEWAY') ||
+    isDockerRuntime() ||
+    isTermuxRuntime() ||
+    process.platform === 'win32'
+}
+
+export function shouldUseManagedGatewayRunForAutostart(): boolean {
+  return envFlagEnabled('HERMES_WEB_UI_MANAGED_GATEWAY') ||
+    isDockerRuntime() ||
+    isTermuxRuntime()
 }
 
 export function gatewayStatusLooksRunning(output: string): boolean {
@@ -57,6 +71,42 @@ export function gatewayStatusLooksRuntimeLocked(output: string): boolean {
   return text.includes('runtime lock is already held')
     || text.includes('gateway runtime lock is already held')
     || text.includes('already held by another instance')
+}
+
+function isProcessAlive(pid: number): boolean {
+  if (!Number.isFinite(pid) || pid <= 0) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (err: any) {
+    return err?.code === 'EPERM'
+  }
+}
+
+function readJsonPid(path: string): number | null {
+  if (!existsSync(path)) return null
+  try {
+    const data = JSON.parse(readFileSync(path, 'utf-8'))
+    const pid = typeof data?.pid === 'number' ? data.pid : parseInt(String(data?.pid || ''), 10)
+    return Number.isFinite(pid) && pid > 0 ? pid : null
+  } catch {
+    return null
+  }
+}
+
+export function gatewayStateLooksRunningForProfile(profileDir: string): boolean {
+  const statePath = join(profileDir, 'gateway_state.json')
+  if (existsSync(statePath)) {
+    try {
+      const data = JSON.parse(readFileSync(statePath, 'utf-8'))
+      const state = String(data?.gateway_state || '').toLowerCase()
+      const pid = typeof data?.pid === 'number' ? data.pid : parseInt(String(data?.pid || ''), 10)
+      if ((state === 'running' || state === 'starting') && isProcessAlive(pid)) return true
+    } catch {}
+  }
+
+  const pid = readJsonPid(join(profileDir, 'gateway.pid'))
+  return pid !== null && isProcessAlive(pid)
 }
 
 export function parseGatewayStatusesFromProfileListOutput(stdout: string): Map<string, string> {
@@ -91,6 +141,8 @@ async function isGatewayRunningInProfileList(hermesBin: string, profile: string)
 }
 
 export async function isGatewayRunningForProfile(hermesBin: string, profileDir: string): Promise<boolean> {
+  if (gatewayStateLooksRunningForProfile(profileDir)) return true
+
   try {
     const { stdout, stderr } = await execFileAsync(hermesBin, ['gateway', 'status'], {
       timeout: 10000,
@@ -144,8 +196,13 @@ async function stopGatewayForProfile(hermesBin: string, profile: string, profile
   }
 }
 
-export async function startGatewayForProfile(hermesBin: string, profile: string, profileDir: string): Promise<void> {
-  if (requiresManagedGatewayRun()) {
+export async function startGatewayForProfile(
+  hermesBin: string,
+  profile: string,
+  profileDir: string,
+  opts: { managedRun?: boolean } = {},
+): Promise<void> {
+  if (opts.managedRun ?? shouldUseManagedGatewayRun()) {
     const result = startGatewayRunManaged(hermesBin, { profileDir })
     logger.info(
       '[gateway-autostart] gateway started via background run profile=%s home=%s pid=%s',
@@ -192,7 +249,7 @@ export async function restartGatewayForProfile(profile: string): Promise<{ runni
   await stopGatewayForProfile(hermesBin, profile, profileDir)
 
   try {
-    await startGatewayForProfile(hermesBin, profile, profileDir)
+    await startGatewayForProfile(hermesBin, profile, profileDir, { managedRun: shouldUseManagedGatewayRun() })
   } catch (err) {
     logger.error(err, '[gateway-autostart] Hermes gateway restart failed profile=%s home=%s', profile, profileDir)
     throw err
@@ -233,8 +290,8 @@ export async function ensureProfileGatewaysRunning(): Promise<void> {
 
     const profileDir = getProfileDir(profile)
     const status = gatewayStatuses?.get(profile)
-    const running = status !== undefined
-      ? gatewayStatusLooksRunning(status)
+    const running = status !== undefined && gatewayStatusLooksRunning(status)
+      ? true
       : await isGatewayRunningForProfile(hermesBin, profileDir)
     if (running) {
       logger.info('[gateway-autostart] gateway already running profile=%s home=%s status=%s', profile, profileDir, status || 'status-check')
@@ -242,7 +299,7 @@ export async function ensureProfileGatewaysRunning(): Promise<void> {
     }
 
     await clearApiServerForProfile(profileDir)
-    await startGatewayForProfile(hermesBin, profile, profileDir)
+    await startGatewayForProfile(hermesBin, profile, profileDir, { managedRun: shouldUseManagedGatewayRunForAutostart() })
     const ready = await waitForGatewayRunning(hermesBin, profile, profileDir)
     if (!ready) {
       logger.warn('[gateway-autostart] gateway start completed but did not report running within timeout profile=%s home=%s', profile, profileDir)

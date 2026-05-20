@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { NButton, NModal, NSpin, useMessage } from 'naive-ui'
-import multiavatar from '@multiavatar/multiavatar'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import {
   fetchProfileRuntimeStatuses,
   restartProfileGateway,
   restartProfileRuntime,
+  type HermesProfile,
+  type ProfileAvatar,
   type ProfileRuntimeStatus,
 } from '@/api/hermes/profiles'
+import ProfileAvatarView from '@/components/hermes/profiles/ProfileAvatar.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -17,18 +19,18 @@ const profilesStore = useProfilesStore()
 
 const activeName = computed(() => profilesStore.activeProfileName ?? '')
 const displayName = computed(() => activeName.value || 'default')
-const avatarSvg = computed(() => multiavatar(displayName.value))
+const activeProfile = computed(() => profilesStore.profiles.find(profile => profile.name === displayName.value))
 const runtimeStatuses = ref<ProfileRuntimeStatus[]>([])
 const runtimeLoading = ref(false)
 const showProfileModal = ref(false)
+const showAvatarModal = ref(false)
+const editingProfile = ref<HermesProfile | null>(null)
+const avatarSaving = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const gatewayRestarting = ref<Record<string, boolean>>({})
 const profileRestarting = ref<Record<string, boolean>>({})
 const profileSwitching = ref<Record<string, boolean>>({})
 const statusByProfile = computed(() => new Map(runtimeStatuses.value.map(status => [status.profile, status])))
-
-function avatarFor(name: string) {
-  return multiavatar(name || 'default')
-}
 
 async function loadRuntimeStatuses() {
   runtimeLoading.value = true
@@ -44,6 +46,73 @@ async function loadRuntimeStatuses() {
 function openProfileModal() {
   showProfileModal.value = true
   void loadRuntimeStatuses()
+}
+
+function openAvatarModal(profile: HermesProfile) {
+  editingProfile.value = profile
+  showAvatarModal.value = true
+}
+
+function randomSeed() {
+  return `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+async function saveAvatar(avatar: ProfileAvatar) {
+  if (!editingProfile.value) return
+  avatarSaving.value = true
+  try {
+    await profilesStore.updateAvatar(editingProfile.value.name, avatar)
+    message.success(t('profiles.avatar.saveSuccess'))
+    showAvatarModal.value = false
+  } catch (err: any) {
+    message.error(err?.message || t('profiles.avatar.saveFailed'))
+  } finally {
+    avatarSaving.value = false
+  }
+}
+
+async function handleRandomAvatar() {
+  await saveAvatar({ type: 'generated', seed: randomSeed() })
+}
+
+async function handleResetAvatar() {
+  if (!editingProfile.value) return
+  avatarSaving.value = true
+  try {
+    await profilesStore.deleteAvatar(editingProfile.value.name)
+    message.success(t('profiles.avatar.resetSuccess'))
+    showAvatarModal.value = false
+  } catch (err: any) {
+    message.error(err?.message || t('profiles.avatar.resetFailed'))
+  } finally {
+    avatarSaving.value = false
+  }
+}
+
+function triggerAvatarUpload() {
+  fileInputRef.value?.click()
+}
+
+async function handleAvatarFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    message.warning(t('profiles.avatar.invalidType'))
+    return
+  }
+  if (file.size > 1024 * 1024) {
+    message.warning(t('profiles.avatar.tooLarge'))
+    return
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
+  await saveAvatar({ type: 'image', dataUrl })
 }
 
 function gatewayStatusText(running?: boolean) {
@@ -113,7 +182,7 @@ onMounted(() => {
   <div class="profile-selector">
     <div class="selector-label">{{ t('sidebar.profiles') }}</div>
     <div class="profile-display" data-testid="profile-selector-select" @click="openProfileModal">
-      <span class="profile-avatar" v-html="avatarSvg" />
+      <ProfileAvatarView class="profile-avatar" :name="displayName" :avatar="activeProfile?.avatar" :size="24" />
       <span class="profile-name">{{ displayName }}</span>
     </div>
 
@@ -142,7 +211,7 @@ onMounted(() => {
             :class="{ active: profile.name === displayName }"
           >
             <div class="profile-runtime-main">
-              <span class="profile-runtime-avatar" v-html="avatarFor(profile.name)" />
+              <ProfileAvatarView class="profile-runtime-avatar" :name="profile.name" :avatar="profile.avatar" :size="34" />
               <div class="profile-runtime-info">
                 <div class="profile-runtime-name-row">
                   <span class="profile-runtime-name">{{ profile.name }}</span>
@@ -176,6 +245,13 @@ onMounted(() => {
               <NButton
                 size="small"
                 type="primary"
+                @click="openAvatarModal(profile)"
+              >
+                {{ t('profiles.avatar.customize') }}
+              </NButton>
+              <NButton
+                size="small"
+                type="primary"
                 :loading="gatewayRestarting[profile.name]"
                 @click="handleRestartGateway(profile.name)"
               >
@@ -202,6 +278,40 @@ onMounted(() => {
           </div>
         </div>
       </NSpin>
+    </NModal>
+
+    <NModal
+      v-model:show="showAvatarModal"
+      preset="card"
+      :title="t('profiles.avatar.title')"
+      :bordered="false"
+      :style="{ width: '420px', maxWidth: 'calc(100vw - 32px)' }"
+    >
+      <div v-if="editingProfile" class="avatar-editor">
+        <ProfileAvatarView :name="editingProfile.name" :avatar="editingProfile.avatar" :size="72" />
+        <div class="avatar-editor-meta">
+          <div class="avatar-editor-name">{{ editingProfile.name }}</div>
+          <div class="avatar-editor-hint">{{ t('profiles.avatar.hint') }}</div>
+        </div>
+        <input
+          ref="fileInputRef"
+          class="avatar-file-input"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          @change="handleAvatarFileChange"
+        >
+        <div class="avatar-editor-actions">
+          <NButton type="primary" :loading="avatarSaving" @click="triggerAvatarUpload">
+            {{ t('profiles.avatar.upload') }}
+          </NButton>
+          <NButton type="primary" :loading="avatarSaving" @click="handleRandomAvatar">
+            {{ t('profiles.avatar.random') }}
+          </NButton>
+          <NButton :loading="avatarSaving" @click="handleResetAvatar">
+            {{ t('profiles.avatar.reset') }}
+          </NButton>
+        </div>
+      </div>
     </NModal>
   </div>
 </template>
@@ -237,18 +347,7 @@ onMounted(() => {
 }
 
 .profile-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex: 0 0 auto;
   background: $bg-card;
-
-  :deep(svg) {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
 }
 
 .profile-name {
@@ -351,18 +450,7 @@ onMounted(() => {
 }
 
 .profile-runtime-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex: 0 0 auto;
   background: $bg-secondary;
-
-  :deep(svg) {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
 }
 
 .profile-runtime-info {
@@ -401,9 +489,9 @@ onMounted(() => {
 }
 
 .profile-runtime-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(88px, max-content));
-  justify-content: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
 
   :deep(.n-button) {
@@ -449,5 +537,71 @@ onMounted(() => {
 .runtime-detail {
   line-height: 1.4;
   word-break: break-word;
+}
+
+.avatar-editor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-editor-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.avatar-editor-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.avatar-editor-hint {
+  font-size: 12px;
+  color: $text-muted;
+  text-align: center;
+}
+
+.avatar-file-input {
+  display: none;
+}
+
+.avatar-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 520px) {
+  .profile-runtime-actions {
+    justify-content: flex-start;
+    gap: 5px;
+
+    :deep(.n-button) {
+      min-width: 0;
+      --n-height: 26px !important;
+      --n-font-size: 12px !important;
+      --n-padding: 0 8px !important;
+    }
+  }
+
+  .avatar-editor-actions {
+    gap: 6px;
+
+    :deep(.n-button) {
+      --n-height: 28px !important;
+      --n-font-size: 12px !important;
+      --n-padding: 0 9px !important;
+    }
+  }
 }
 </style>
