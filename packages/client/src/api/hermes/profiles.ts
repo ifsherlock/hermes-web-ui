@@ -4,6 +4,7 @@ export interface HermesProfile {
   name: string
   active: boolean
   model: string
+  gatewayStatus?: string
   alias: string
 }
 
@@ -17,6 +18,31 @@ export interface HermesProfileDetail {
   hasSoulMd: boolean
 }
 
+export interface ProfileRuntimeStatus {
+  profile: string
+  bridge: {
+    running: boolean
+    profile: string
+    mode?: string
+    reachable?: boolean
+    error?: string
+  }
+  gateway: {
+    profile: string
+    running: boolean
+    pid?: number
+    port?: number
+    host?: string
+    url?: string
+    error?: string
+    diagnostics?: {
+      health_url?: string
+      reason?: string
+      health_ok?: boolean
+    }
+  }
+}
+
 export async function fetchProfiles(): Promise<HermesProfile[]> {
   const res = await request<{ profiles: HermesProfile[] }>('/api/hermes/profiles')
   return res.profiles
@@ -25,6 +51,31 @@ export async function fetchProfiles(): Promise<HermesProfile[]> {
 export async function fetchProfileDetail(name: string): Promise<HermesProfileDetail> {
   const res = await request<{ profile: HermesProfileDetail }>(`/api/hermes/profiles/${encodeURIComponent(name)}`)
   return res.profile
+}
+
+export async function fetchProfileRuntimeStatus(name: string): Promise<ProfileRuntimeStatus> {
+  return request<ProfileRuntimeStatus>(`/api/hermes/profiles/${encodeURIComponent(name)}/runtime-status`)
+}
+
+export async function fetchProfileRuntimeStatuses(): Promise<ProfileRuntimeStatus[]> {
+  const res = await request<{ profiles: ProfileRuntimeStatus[] }>('/api/hermes/profiles/runtime-statuses')
+  return res.profiles
+}
+
+export async function restartProfileGateway(name: string): Promise<ProfileRuntimeStatus['gateway']> {
+  const res = await request<{ success: boolean; gateway: ProfileRuntimeStatus['gateway'] }>(
+    `/api/hermes/profiles/${encodeURIComponent(name)}/gateway/restart`,
+    { method: 'POST' },
+  )
+  return res.gateway
+}
+
+export async function restartProfileRuntime(name: string): Promise<ProfileRuntimeStatus> {
+  const res = await request<{ success: boolean; status: ProfileRuntimeStatus }>(
+    `/api/hermes/profiles/${encodeURIComponent(name)}/restart`,
+    { method: 'POST' },
+  )
+  return res.status
 }
 
 export interface CreateProfileResult {

@@ -695,6 +695,23 @@ export default {
     hasEnv: 'Has .env',
     hasSoulMd: 'Has soul.md',
     noProfiles: 'No profiles found. Create one to get started.',
+    runtime: {
+      activeProfile: 'Active: {name}',
+      bridgeWorker: 'Bridge worker',
+      gateway: 'Gateway',
+      active: 'Active',
+      activeTag: 'Active',
+      idle: 'Idle',
+      running: 'Running',
+      stopped: 'Stopped',
+      restartGateway: 'Restart Gateway',
+      restartProfile: 'Restart Profile',
+      switchProfile: 'Switch Profile',
+      gatewayRestarted: 'Gateway restarted: {name}',
+      gatewayRestartFailed: 'Failed to restart gateway',
+      profileRestarted: 'Profile restarted: {name}',
+      profileRestartFailed: 'Failed to restart profile',
+    },
   },
 
   // Logs

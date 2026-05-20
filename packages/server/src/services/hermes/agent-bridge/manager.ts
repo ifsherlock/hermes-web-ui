@@ -99,6 +99,7 @@ function agentRootFromHermesBin(): string | undefined {
     resolve(binDir, '..'),
     resolve(binDir, '..', '..'),
     resolve(binDir, '..', 'hermes-agent'),
+    resolve(binDir, '..', 'lib', 'hermes-agent'),
     resolve(binDir, '..', '..', 'hermes-agent'),
   ]
   const root = rootCandidates.find(candidate => existsSync(join(candidate, 'run_agent.py')))
@@ -113,6 +114,7 @@ function agentRootFromHermesBin(): string | undefined {
       const shebangRootCandidates = [
         resolve(pyDir, '..', '..'),
         resolve(pyDir, '..', '..', 'hermes-agent'),
+        resolve(pyDir, '..', '..', 'lib', 'hermes-agent'),
       ]
       return shebangRootCandidates.find(candidate => existsSync(join(candidate, 'run_agent.py')))
     }
@@ -155,6 +157,10 @@ function resolveAgentRoot(explicit?: string, hermesHome = detectHermesHome()): s
     agentRootFromHermesBin(),
     process.cwd(),
     join(process.cwd(), 'hermes-agent'),
+    '/usr/local/lib/hermes-agent',
+    '/usr/local/hermes-agent',
+    '/opt/hermes/hermes-agent',
+    '/opt/hermes-agent',
   ].filter((value): value is string => !!value && value.trim().length > 0)
   return candidates.find(candidate => existsSync(join(candidate, 'run_agent.py')))
 }

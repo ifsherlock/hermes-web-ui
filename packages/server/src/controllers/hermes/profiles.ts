@@ -5,6 +5,10 @@ import { tmpdir } from 'os'
 import * as hermesCli from '../../services/hermes/hermes-cli'
 import { SessionDeleter } from '../../services/hermes/session-deleter'
 import { AgentBridgeClient } from '../../services/hermes/agent-bridge'
+import {
+  getGatewayRuntimeStatusForProfile,
+  restartGatewayForProfile as restartGatewayRuntimeForProfile,
+} from '../../services/hermes/gateway-autostart'
 import { logger } from '../../services/logger'
 import { smartCloneCleanup } from '../../services/hermes/profile-credentials'
 import { detectHermesRootHome } from '../../services/hermes/hermes-path'
@@ -84,6 +88,10 @@ function deleteForbiddenProfileFromDisk(name: string): boolean {
   return true
 }
 
+function filterVisibleProfiles(profiles: HermesProfile[]): HermesProfile[] {
+  return profiles.filter(profile => !isForbiddenProfileName(profile.name))
+}
+
 async function useProfileWithFallback(name: string): Promise<string> {
   if (isForbiddenProfileName(name)) {
     throw new Error(`Profile name '${name}' is reserved and cannot be activated`)
@@ -97,6 +105,62 @@ async function useProfileWithFallback(name: string): Promise<string> {
     writeFileSync(join(base, 'active_profile'), `${name}\n`, 'utf-8')
     logger.warn(err, '[switchProfile] hermes profile use failed; wrote active_profile directly for existing profile "%s"', name)
     return `Switched to profile ${name}`
+  }
+}
+
+async function readBridgeWorkers(): Promise<{ reachable: boolean; workers: Record<string, boolean>; error?: string }> {
+  try {
+    const result = await new AgentBridgeClient({ timeoutMs: 5000 }).ping()
+    return {
+      reachable: true,
+      workers: ((result as any).workers || {}) as Record<string, boolean>,
+    }
+  } catch (err: any) {
+    return {
+      reachable: false,
+      workers: {},
+      error: err?.message || 'Bridge broker is not reachable',
+    }
+  }
+}
+
+function gatewayStatusLooksRunning(status?: string): boolean {
+  const normalized = String(status || '').trim().toLowerCase()
+  if (!normalized || normalized === '—') return false
+  if (normalized.includes('not running') || normalized === 'stopped' || normalized === 'stop') return false
+  return normalized.includes('running') || normalized === 'active'
+}
+
+async function buildRuntimeStatus(profile: HermesProfile | string, bridgeState?: Awaited<ReturnType<typeof readBridgeWorkers>>) {
+  const name = typeof profile === 'string' ? profile : profile.name
+  const bridge = bridgeState || await readBridgeWorkers()
+  let gateway: { running: boolean; profile: string; error?: string }
+  if (typeof profile !== 'string' && profile.gatewayStatus !== undefined) {
+    gateway = {
+      running: gatewayStatusLooksRunning(profile.gatewayStatus),
+      profile: name,
+    }
+  } else {
+    try {
+      gateway = await getGatewayRuntimeStatusForProfile(name)
+    } catch (err: any) {
+      gateway = {
+        running: false,
+        profile: name,
+        error: err?.message || 'Gateway status check failed',
+      }
+    }
+  }
+
+  return {
+    profile: name,
+    bridge: {
+      running: !!bridge.workers[name],
+      profile: name,
+      reachable: bridge.reachable,
+      error: bridge.reachable ? undefined : bridge.error,
+    },
+    gateway,
   }
 }
 
@@ -119,6 +183,8 @@ export async function list(ctx: any) {
     // CLI output may be stale, but the file is written by hermes profile use
     const { getActiveProfileName } = await import('../../services/hermes/hermes-profile')
     const activeProfileName = getActiveProfileName()
+
+    profiles = filterVisibleProfiles(profiles)
 
     // Check if CLI's active flag matches the file (warn if inconsistent)
     const cliActive = profiles.find(p => p.active)
@@ -205,6 +271,89 @@ export async function get(ctx: any) {
     ctx.body = { profile }
   } catch (err: any) {
     ctx.status = err.message.includes('not found') ? 404 : 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function runtimeStatus(ctx: any) {
+  const name = String(ctx.params.name || '').trim() || 'default'
+  if (isForbiddenProfileName(name)) {
+    ctx.status = 400
+    ctx.body = { error: `Profile name '${name}' is reserved` }
+    return
+  }
+  try {
+    const profiles = await listProfilesForStatus()
+    const profile = profiles.find(item => item.name === name)
+    ctx.body = await buildRuntimeStatus(profile || name)
+  } catch {
+    ctx.body = await buildRuntimeStatus(name)
+  }
+}
+
+export async function runtimeStatuses(ctx: any) {
+  try {
+    const profiles = await listProfilesForStatus()
+    const bridge = await readBridgeWorkers()
+    const statuses = await Promise.all(profiles.map(profile => buildRuntimeStatus(profile, bridge)))
+    ctx.body = { profiles: statuses }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+async function listProfilesForStatus(): Promise<HermesProfile[]> {
+  let profiles: HermesProfile[]
+  try {
+    profiles = await hermesCli.listProfiles()
+  } catch {
+    profiles = listProfilesFromDisk(getActiveProfileName())
+  }
+  return filterVisibleProfiles(profiles)
+}
+
+export async function restartGatewayForProfile(ctx: any) {
+  const name = String(ctx.params.name || '').trim() || 'default'
+  if (isForbiddenProfileName(name)) {
+    ctx.status = 400
+    ctx.body = { error: `Profile name '${name}' is reserved` }
+    return
+  }
+  try {
+    const gateway = await restartGatewayRuntimeForProfile(name)
+    try {
+      const result = await bridgeCleanupClient().destroyProfile(name)
+      logger.info('[profiles] destroyed bridge sessions after gateway restart profile=%s destroyed=%s', name, result.destroyed)
+    } catch (err) {
+      logger.warn(err, '[profiles] failed to destroy bridge sessions after gateway restart profile=%s', name)
+    }
+    ctx.body = { success: true, gateway }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function restartProfileRuntime(ctx: any) {
+  const name = String(ctx.params.name || '').trim() || 'default'
+  if (isForbiddenProfileName(name)) {
+    ctx.status = 400
+    ctx.body = { error: `Profile name '${name}' is reserved` }
+    return
+  }
+  try {
+    const result = await bridgeCleanupClient().destroyProfile(name)
+    logger.info('[profiles] destroyed bridge sessions after profile restart profile=%s destroyed=%s', name, result.destroyed)
+    const profiles = await listProfilesForStatus()
+    const profile = profiles.find(item => item.name === name)
+    ctx.body = {
+      success: true,
+      destroyed: result.destroyed,
+      status: await buildRuntimeStatus(profile || name),
+    }
+  } catch (err: any) {
+    ctx.status = 500
     ctx.body = { error: err.message }
   }
 }

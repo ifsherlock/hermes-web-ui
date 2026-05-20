@@ -48,6 +48,30 @@ describe('agent bridge manager command resolution', () => {
     })
   })
 
+  it('discovers hermes-agent from a global lib install next to the hermes command', async () => {
+    const installDir = join(tempDir, 'usr', 'local')
+    const binDir = join(installDir, 'bin')
+    const agentRoot = join(installDir, 'lib', 'hermes-agent')
+    const fakePython = join(binDir, 'python')
+    const fakeHermes = join(binDir, 'hermes')
+    const homeDir = join(tempDir, 'home')
+    mkdirSync(binDir, { recursive: true })
+    mkdirSync(agentRoot, { recursive: true })
+    mkdirSync(homeDir, { recursive: true })
+    writeFileSync(join(agentRoot, 'run_agent.py'), '')
+    writeFileSync(fakePython, '#!/bin/sh\n')
+    chmodSync(fakePython, 0o755)
+    writeFileSync(fakeHermes, `#!${fakePython}\n`)
+    chmodSync(fakeHermes, 0o755)
+    process.env.HERMES_HOME = homeDir
+    process.env.HERMES_BIN = fakeHermes
+
+    const { resolveAgentBridgeCommand } = await import('../../packages/server/src/services/hermes/agent-bridge/manager')
+    const command = resolveAgentBridgeCommand()
+
+    expect(command.agentRoot).toBe(agentRoot)
+  })
+
   it('falls back to system Python instead of uv when no source root exists', async () => {
     const homeDir = join(tempDir, 'home')
     const fakePython = join(tempDir, 'python3')

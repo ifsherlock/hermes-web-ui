@@ -102,6 +102,7 @@ def _candidate_agent_roots(raw: str | None = None) -> list[Path]:
         Path.home() / "hermes-agent",
         Path("/opt/hermes/hermes-agent"),
         Path("/opt/hermes-agent"),
+        Path("/usr/local/lib/hermes-agent"),
         Path("/usr/local/hermes-agent"),
     ])
     candidates.append(Path(DEFAULT_AGENT_ROOT).expanduser())

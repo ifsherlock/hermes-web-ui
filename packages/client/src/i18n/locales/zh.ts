@@ -687,6 +687,23 @@ export default {
     hasEnv: '有 .env',
     hasSoulMd: '有 soul.md',
     noProfiles: '暂无配置，创建一个开始吧。',
+    runtime: {
+      activeProfile: '当前：{name}',
+      bridgeWorker: '桥接状态',
+      gateway: '网关',
+      active: '活跃',
+      activeTag: '当前',
+      idle: '空闲',
+      running: '运行中',
+      stopped: '已停止',
+      restartGateway: '重启网关',
+      restartProfile: '重启配置',
+      switchProfile: '切换配置',
+      gatewayRestarted: '网关已重启：{name}',
+      gatewayRestartFailed: '重启网关失败',
+      profileRestarted: '配置已重启：{name}',
+      profileRestartFailed: '重启配置失败',
+    },
   },
 
   // 日志
