@@ -14,6 +14,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import locale
 import os
 import queue
 import shutil
@@ -1649,6 +1650,13 @@ def _tcp_endpoint_port(endpoint: str) -> int | None:
         return None
 
 
+def _platform_text_encoding() -> str:
+    getencoding = getattr(locale, "getencoding", None)
+    if callable(getencoding):
+        return getencoding() or "utf-8"
+    return locale.getpreferredencoding(False) or "utf-8"
+
+
 def _windows_listening_pids_on_port(port: int) -> list[int]:
     if os.name != "nt":
         return []
@@ -1658,12 +1666,15 @@ def _windows_listening_pids_on_port(port: int) -> list[int]:
             check=False,
             capture_output=True,
             text=True,
+            encoding=_platform_text_encoding(),
+            errors="ignore",
             timeout=5,
         )
     except Exception:
         return []
+    stdout = result.stdout or ""
     pids: set[int] = set()
-    for line in result.stdout.splitlines():
+    for line in stdout.splitlines():
         parts = line.strip().split()
         if len(parts) < 5:
             continue
