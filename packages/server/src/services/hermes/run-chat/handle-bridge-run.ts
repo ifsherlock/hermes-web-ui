@@ -135,6 +135,26 @@ export async function handleBridgeRun(
     emit,
     sessionMap,
     { model: resolvedModel, provider: resolvedProvider },
+    async (messages) => {
+      const estimate = await bridge.contextEstimate(
+        session_id,
+        messages,
+        fullInstructions,
+        profile,
+        { model: resolvedModel, provider: resolvedProvider },
+      )
+      bridgeLogger.info({
+        sessionId: session_id,
+        profile,
+        model: resolvedModel,
+        provider: resolvedProvider,
+        messages: estimate.message_count,
+        toolCount: estimate.tool_count,
+        systemPromptChars: estimate.system_prompt_chars,
+        fullContextTokens: estimate.token_count,
+      }, '[chat-run-socket] full context estimate')
+      return estimate.token_count
+    },
   )
   const bridgeHistory = history
 
@@ -315,9 +335,19 @@ async function applyBridgeChunkAsync(
     } else if (evType === 'bridge.compression.requested') {
       const bridgeHistory = await buildDbHistory(sessionId, { excludeLastUser: true })
       const bridgeUsage = estimateUsageTokensFromMessages(bridgeHistory)
-      const tokenCount = bridgeHistory.length > 0
-        ? bridgeUsage.inputTokens + bridgeUsage.outputTokens
-        : ev.approx_tokens
+      const messageOnlyTokens = bridgeUsage.inputTokens + bridgeUsage.outputTokens
+      const tokenCount = typeof ev.approx_tokens === 'number' && Number.isFinite(ev.approx_tokens) && ev.approx_tokens > 0
+        ? ev.approx_tokens
+        : messageOnlyTokens
+      bridgeLogger.info({
+        sessionId,
+        profile,
+        bridgeMessages: ev.message_count,
+        dbMessages: bridgeHistory.length,
+        messageOnlyTokens,
+        fullContextTokens: tokenCount,
+        source: typeof ev.approx_tokens === 'number' ? 'bridge' : 'message-only-fallback',
+      }, '[chat-run-socket] bridge compression token estimate')
       const payload = {
         event: 'compression.started',
         run_id: chunk.run_id,
@@ -334,6 +364,7 @@ async function applyBridgeChunkAsync(
             sessionId,
             profile,
             ev.messages as ChatMessage[],
+            typeof ev.approx_tokens === 'number' ? ev.approx_tokens : undefined,
           )
           state.bridgeCompressionResults = state.bridgeCompressionResults || {}
           state.bridgeCompressionResults[String(ev.request_id)] = compressed
@@ -357,7 +388,9 @@ async function applyBridgeChunkAsync(
         totalMessages: compressionResult?.beforeMessages ?? ev.message_count,
         resultMessages: compressionResult?.resultMessages ?? ev.result_messages,
         beforeTokens: compressionResult?.beforeTokens ?? ev.approx_tokens,
-        afterTokens: compressionResult?.afterTokens,
+        afterTokens: typeof ev.result_approx_tokens === 'number' && Number.isFinite(ev.result_approx_tokens) && ev.result_approx_tokens > 0
+          ? ev.result_approx_tokens
+          : compressionResult?.afterTokens,
         summaryTokens: compressionResult?.summaryTokens,
         verbatimCount: compressionResult?.verbatimCount,
         compressedStartIndex: compressionResult?.compressedStartIndex,

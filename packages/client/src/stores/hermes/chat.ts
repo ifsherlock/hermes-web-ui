@@ -69,6 +69,7 @@ export interface Session {
   messageCount?: number
   inputTokens?: number
   outputTokens?: number
+  contextTokens?: number
   endedAt?: number | null
   lastActiveAt?: number
   workspace?: string | null
@@ -529,6 +530,7 @@ export const useChatStore = defineStore('chat', () => {
           }
           if (data.inputTokens != null) activeSession.value!.inputTokens = data.inputTokens
           if (data.outputTokens != null) activeSession.value!.outputTokens = data.outputTokens
+          if ((data as any).contextTokens != null) activeSession.value!.contextTokens = (data as any).contextTokens
           if (data.messages?.length) {
             activeSession.value!.messages = mapHermesMessages(data.messages as any[])
           }
@@ -755,6 +757,7 @@ export const useChatStore = defineStore('chat', () => {
     if (action === 'usage' && target) {
       target.inputTokens = (evt as any).inputTokens
       target.outputTokens = (evt as any).outputTokens
+      if ((evt as any).contextTokens != null) target.contextTokens = (evt as any).contextTokens
     }
 
     if (action === 'destroy') {
@@ -1258,6 +1261,7 @@ export const useChatStore = defineStore('chat', () => {
                 if (target) {
                   target.inputTokens = (evt as any).inputTokens
                   target.outputTokens = (evt as any).outputTokens
+                  if ((evt as any).contextTokens != null) target.contextTokens = (evt as any).contextTokens
                 }
               }
               // Belt-and-suspenders: some providers may deliver the final
@@ -1367,6 +1371,7 @@ export const useChatStore = defineStore('chat', () => {
               if (target) {
                 target.inputTokens = (evt as any).inputTokens
                 target.outputTokens = (evt as any).outputTokens
+                if ((evt as any).contextTokens != null) target.contextTokens = (evt as any).contextTokens
               }
               break
             }
@@ -1689,6 +1694,7 @@ export const useChatStore = defineStore('chat', () => {
             if (target) {
               target.inputTokens = (evt as any).inputTokens
               target.outputTokens = (evt as any).outputTokens
+              if ((evt as any).contextTokens != null) target.contextTokens = (evt as any).contextTokens
             }
           }
           // Check if backend provided parsed content (from stringified array format)
@@ -1782,6 +1788,7 @@ export const useChatStore = defineStore('chat', () => {
           if (target) {
             target.inputTokens = (evt as any).inputTokens
             target.outputTokens = (evt as any).outputTokens
+            if ((evt as any).contextTokens != null) target.contextTokens = (evt as any).contextTokens
           }
           break
         }
