@@ -3,6 +3,7 @@ import type { Server as HttpServer } from 'http'
 import { getToken } from '../../../services/auth'
 import { logger } from '../../../services/logger'
 import { getDb } from '../../../db'
+import { normalizeMessageContentForStorage, normalizeMessageContentForStorageRole } from '../../../db/hermes/message-content'
 import { AgentClients, GROUP_CHAT_AGENT_SOCKET_SECRET } from './agent-clients'
 import { ContextEngine } from '../context-engine/compressor'
 import { SessionDeleter } from '../session-deleter'
@@ -32,6 +33,10 @@ interface ChatMessage {
 function contentToStorageString(content: unknown): string {
     if (typeof content === 'string') return content
     return JSON.stringify(content ?? '')
+}
+
+function messageContentForStorage(role: string | undefined, content: string): string {
+    return normalizeMessageContentForStorageRole(role, content)
 }
 
 function contentToText(content: unknown): string {
@@ -406,7 +411,7 @@ class ChatStorage {
                 reasoning_details = excluded.reasoning_details,
                 reasoning_content = excluded.reasoning_content`
         ).run(
-            msg.id, msg.roomId, msg.senderId, msg.senderName, msg.content, msg.timestamp,
+            msg.id, msg.roomId, msg.senderId, msg.senderName, messageContentForStorage(msg.role, msg.content), msg.timestamp,
             msg.role || 'user',
             msg.tool_call_id ?? null,
             toolCallsJson,
