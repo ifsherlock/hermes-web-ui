@@ -34,7 +34,7 @@ export interface ChatMessage {
     tool_call_id?: string | null
     tool_calls?: any[] | null
     tool_name?: string | null
-    finish_reason?: string | null
+    finish_reason?: 'streaming' | 'tool_calls' | 'error' | string | null
     reasoning?: string | null
     reasoning_details?: string | null
     reasoning_content?: string | null
