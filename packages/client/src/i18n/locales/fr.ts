@@ -1042,6 +1042,7 @@ jobTriggered: 'Job declenche',
     new_0_5_34_5: 'Corrige le comptage de compression avec cache du contexte fixe prompt/tools et totaux complets de tokens',
     new_0_5_34_6: 'Met en cache le contexte fixe par agent de chat de groupe et affiche la progression seulement au vrai démarrage de la compression',
     new_0_5_34_7: 'Synchronise les skills intégrées Web UI dans tous les profils et journalise le profil cible',
+    new_0_5_34_8: 'Si Kanban échoue sous Windows, mettez Hermes à niveau pour obtenir les derniers correctifs de migration de la base Kanban',
   },
 
   // Fichiers

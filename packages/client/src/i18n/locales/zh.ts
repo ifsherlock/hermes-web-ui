@@ -1264,6 +1264,7 @@ export default {
     new_0_5_34_5: '修复压缩用量统计：缓存固定 prompt/tool 上下文，并展示完整上下文 token 总量',
     new_0_5_34_6: '群聊 Agent 缓存各自固定上下文，仅在真正开始压缩时显示压缩进度',
     new_0_5_34_7: 'Web UI 内置 Skills 会同步注入到所有 Profile，并在日志中标明目标 Profile',
+    new_0_5_34_8: '如果 Windows 下看板功能异常，请升级 Hermes 以获取最新的看板数据库迁移修复',
 
   },
 }

@@ -1267,5 +1267,6 @@ export default {
     new_0_5_34_5: '修復壓縮用量統計：快取固定 prompt/tool 上下文，並顯示完整上下文 token 總量',
     new_0_5_34_6: '群聊 Agent 快取各自固定上下文，僅在真正開始壓縮時顯示壓縮進度',
     new_0_5_34_7: 'Web UI 內建 Skills 會同步注入到所有 Profile，並在日誌中標明目標 Profile',
+    new_0_5_34_8: '如果 Windows 下看板功能異常，請升級 Hermes 以取得最新的看板資料庫遷移修復',
   },
 }

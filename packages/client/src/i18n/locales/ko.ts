@@ -1042,6 +1042,7 @@ export default {
     new_0_5_34_5: '고정 prompt/tool 컨텍스트를 캐시하고 전체 컨텍스트 token 합계를 표시하도록 압축 사용량 수정',
     new_0_5_34_6: '그룹 채팅 Agent별 고정 컨텍스트를 캐시하고 실제 압축이 시작될 때만 진행 상태 표시',
     new_0_5_34_7: 'Web UI 내장 Skills를 모든 Profile에 동기화 주입하고 로그에 대상 Profile 기록',
+    new_0_5_34_8: 'Windows에서 Kanban 기능이 비정상이라면 최신 Kanban 데이터베이스 마이그레이션 수정이 포함된 Hermes로 업그레이드하세요',
   },
 
   // 파일

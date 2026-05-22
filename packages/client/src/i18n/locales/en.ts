@@ -1262,6 +1262,7 @@ export default {
     new_0_5_34_5: 'Fix compression usage accounting by caching fixed prompt/tool context and reporting full-context token totals',
     new_0_5_34_6: 'Cache fixed context per group-chat agent and only show compression progress when compression actually starts',
     new_0_5_34_7: 'Sync Web UI bundled skills into every Profile and log the target Profile for each injection',
+    new_0_5_34_8: 'If Kanban fails on Windows, upgrade Hermes to pick up the latest kanban database migration fixes',
 
   },
 }

@@ -1042,6 +1042,7 @@ jobTriggered: 'Job ausgelost',
     new_0_5_34_5: 'Komprimierungs-Nutzungszählung korrigiert, indem fixer prompt/tool-Kontext gecacht und vollständige Kontext-token gemeldet werden',
     new_0_5_34_6: 'Gruppenchat-Agents cachen ihren eigenen fixen Kontext und zeigen Komprimierungsfortschritt erst an, wenn die Komprimierung wirklich startet',
     new_0_5_34_7: 'Web-UI-gebündelte Skills werden in jedes Profile synchronisiert und das Ziel-Profile wird pro Injection protokolliert',
+    new_0_5_34_8: 'Wenn Kanban unter Windows fehlschlägt, aktualisieren Sie Hermes, um die neuesten Migration-Fixes für die Kanban-Datenbank zu erhalten',
   },
 
   // Dateien
