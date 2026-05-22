@@ -92,10 +92,16 @@ export async function bootstrap() {
     const skillInjector = new HermesSkillInjector()
     const injectionResult = await skillInjector.injectMissingSkills()
     if (injectionResult.injected.length > 0) {
-      console.log('[bootstrap] bundled skills injected:', injectionResult.injected.join(', '))
+      logger.info({
+        injected: [...new Set(injectionResult.injected)],
+        targetCount: injectionResult.targets.length,
+      }, '[bootstrap] bundled skills injected')
     }
     if (injectionResult.updated.length > 0) {
-      console.log('[bootstrap] bundled skills updated:', injectionResult.updated.join(', '))
+      logger.info({
+        updated: [...new Set(injectionResult.updated)],
+        targetCount: injectionResult.targets.length,
+      }, '[bootstrap] bundled skills updated')
     }
   } catch (err) {
     logger.warn(err, '[bootstrap] failed to inject bundled skills')

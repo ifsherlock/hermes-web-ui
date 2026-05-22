@@ -14,6 +14,7 @@ import { logger } from '../../services/logger'
 import { smartCloneCleanup } from '../../services/hermes/profile-credentials'
 import { detectHermesRootHome } from '../../services/hermes/hermes-path'
 import { getActiveProfileName } from '../../services/hermes/hermes-profile'
+import { HermesSkillInjector } from '../../services/hermes/skill-injector'
 import type { HermesProfile } from '../../services/hermes/hermes-cli'
 
 const bridgeCleanupClient = () => new AgentBridgeClient({ connectRetryMs: 0, timeoutMs: 5000 })
@@ -87,6 +88,24 @@ function profileExistsForManualSwitch(name: string): boolean {
   const base = detectHermesRootHome()
   if (!name || name === 'default') return true
   return existsSync(join(base, 'profiles', name, 'config.yaml')) || existsSync(join(base, 'profiles', name))
+}
+
+async function injectBundledSkillsForProfile(name: string): Promise<void> {
+  try {
+    const targetDir = HermesSkillInjector.resolveTargetDirForProfile(name)
+    const result = await new HermesSkillInjector(undefined, targetDir).injectMissingSkills()
+    const target = result.targets[0]
+    if (target && (target.injected.length > 0 || target.updated.length > 0)) {
+      logger.info({
+        profile: name,
+        targetDir,
+        injected: target.injected,
+        updated: target.updated,
+      }, '[profiles] synced bundled skills for profile')
+    }
+  } catch (err: any) {
+    logger.warn(err, '[profiles] failed to sync bundled skills for profile "%s"', name)
+  }
 }
 
 function deleteForbiddenProfileFromDisk(name: string): boolean {
@@ -352,6 +371,8 @@ export async function create(ctx: any) {
         logger.error(err, 'Smart clone cleanup failed for "%s"', name)
       }
     }
+
+    await injectBundledSkillsForProfile(name)
 
     ctx.body = {
       success: true,
@@ -624,6 +645,8 @@ export async function switchProfile(ctx: any) {
     } catch (err: any) {
       logger.error(err, 'Ensure config failed')
     }
+
+    await injectBundledSkillsForProfile(name)
 
     // TODO: re-enable pending session delete drain after confirming safety
     // const drainResult = await SessionDeleter.getInstance().drain(name)
