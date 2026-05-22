@@ -6,6 +6,17 @@ const getCompressionSnapshotMock = vi.fn()
 const getModelContextLengthMock = vi.fn()
 const calcAndUpdateUsageMock = vi.fn()
 const estimateUsageTokensFromMessagesMock = vi.fn()
+const updateMessageContextTokenUsageMock = vi.fn((sid: string, state: any, emit: any, messageTokens: number, usage?: { inputTokens: number; outputTokens: number }) => {
+  state.contextTokens = messageTokens
+  emit('usage.updated', {
+    event: 'usage.updated',
+    session_id: sid,
+    inputTokens: usage?.inputTokens ?? state.inputTokens ?? 0,
+    outputTokens: usage?.outputTokens ?? state.outputTokens ?? 0,
+    contextTokens: messageTokens,
+  })
+  return messageTokens
+})
 const compressorCompressMock = vi.fn()
 const readConfigYamlForProfileMock = vi.fn()
 const compressorConstructorMock = vi.fn()
@@ -55,6 +66,7 @@ vi.mock('../../packages/server/src/services/logger', () => ({
 vi.mock('../../packages/server/src/services/hermes/run-chat/usage', () => ({
   calcAndUpdateUsage: calcAndUpdateUsageMock,
   estimateUsageTokensFromMessages: estimateUsageTokensFromMessagesMock,
+  updateMessageContextTokenUsage: updateMessageContextTokenUsageMock,
 }))
 
 vi.mock('../../packages/server/src/services/hermes/run-chat/message-format', () => ({
@@ -69,6 +81,7 @@ describe('run chat compression trigger', () => {
     getModelContextLengthMock.mockReset()
     calcAndUpdateUsageMock.mockReset()
     estimateUsageTokensFromMessagesMock.mockReset()
+    updateMessageContextTokenUsageMock.mockClear()
     compressorCompressMock.mockReset()
     compressorConstructorMock.mockReset()
     readConfigYamlForProfileMock.mockReset()
@@ -189,13 +202,14 @@ describe('run chat compression trigger', () => {
       },
     })
 
+    const emit = vi.fn()
     const { buildCompressedHistory } = await import('../../packages/server/src/services/hermes/run-chat/compression')
     const history = await buildCompressedHistory(
       'session-1',
       'default',
       'http://upstream',
       undefined,
-      vi.fn(),
+      emit,
       new Map(),
       {},
       vi.fn(async () => 120_000),
@@ -203,6 +217,13 @@ describe('run chat compression trigger', () => {
 
     expect(history).toEqual([{ role: 'user', content: 'compressed by full context estimate' }])
     expect(compressorCompressMock).toHaveBeenCalledTimes(1)
+    expect(updateMessageContextTokenUsageMock).toHaveBeenCalledWith(
+      'session-1',
+      expect.any(Object),
+      emit,
+      1_000,
+      { inputTokens: 1_000, outputTokens: 0 },
+    )
   })
 
   it('emits full context token usage when the full estimate is under threshold', async () => {

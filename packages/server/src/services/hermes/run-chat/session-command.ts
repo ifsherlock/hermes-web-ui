@@ -5,7 +5,7 @@ import type { AgentBridgeClient } from '../agent-bridge'
 import { flushBridgePendingToDb } from './bridge-message'
 import { buildDbHistory, estimateSnapshotAwareHistoryUsage, forceCompressBridgeHistory, getOrCreateSession, replaceState } from './compression'
 import { handleAbort } from './abort'
-import { calcAndUpdateUsage } from './usage'
+import { calcAndUpdateUsage, contextTokensWithCachedOverhead, updateMessageContextTokenUsage } from './usage'
 import type { ContentBlock, QueuedRun, SessionState } from './types'
 
 type CommandName =
@@ -232,10 +232,11 @@ export async function handleSessionCommand(
       try {
         const history = await buildDbHistory(sessionId, { excludeLastUser: true })
         const usageEstimate = estimateSnapshotAwareHistoryUsage(sessionId, history)
+        const beforeContextTokens = contextTokensWithCachedOverhead(state, usageEstimate.tokenCount)
         emit('compression.started', {
           event: 'compression.started',
           message_count: usageEstimate.messageCount,
-          token_count: usageEstimate.tokenCount,
+          token_count: beforeContextTokens,
           source: 'command',
         })
         const result = await forceCompressBridgeHistory(
@@ -244,27 +245,32 @@ export async function handleSessionCommand(
           [],
         )
         state.bridgeCompressionResults = state.bridgeCompressionResults || {}
-        await calcAndUpdateUsage(sessionId, state, emit)
+        const usage = await calcAndUpdateUsage(sessionId, state, emit)
+        const afterContextTokens = contextTokensWithCachedOverhead(state, result.afterTokens)
         emit('compression.completed', {
           event: 'compression.completed',
           compressed: result.compressed,
           llmCompressed: result.llmCompressed,
           totalMessages: result.beforeMessages,
           resultMessages: result.resultMessages,
-          beforeTokens: result.beforeTokens,
+          beforeTokens: beforeContextTokens,
           afterTokens: result.afterTokens,
           summaryTokens: result.summaryTokens,
           verbatimCount: result.verbatimCount,
           compressedStartIndex: result.compressedStartIndex,
+          contextTokens: afterContextTokens,
           source: 'command',
         })
+        updateMessageContextTokenUsage(sessionId, state, emit, result.afterTokens, usage)
         emitCommand({
           action: 'compress',
-          message: `Compression completed: ${result.beforeMessages} -> ${result.resultMessages} messages, ${result.beforeTokens} -> ${result.afterTokens} tokens.`,
+          message: `Compression completed: ${result.beforeMessages} -> ${result.resultMessages} messages, ${beforeContextTokens} -> ${afterContextTokens} tokens.`,
           beforeMessages: result.beforeMessages,
           resultMessages: result.resultMessages,
-          beforeTokens: result.beforeTokens,
-          afterTokens: result.afterTokens,
+          beforeTokens: beforeContextTokens,
+          afterTokens: afterContextTokens,
+          messageBeforeTokens: result.beforeTokens,
+          messageAfterTokens: result.afterTokens,
           compressed: result.compressed,
         })
       } catch (err) {

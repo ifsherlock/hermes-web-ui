@@ -9,11 +9,26 @@ const updateSessionStatsMock = vi.fn()
 const updateUsageMock = vi.fn()
 const buildCompressedHistoryMock = vi.fn()
 const buildDbHistoryMock = vi.fn()
+const buildSnapshotAwareHistoryMock = vi.fn(async (_sessionId: string, _profile: string, history: any[]) => history)
 const pushStateMock = vi.fn()
 const replaceStateMock = vi.fn()
 const forceCompressBridgeHistoryMock = vi.fn()
 const calcAndUpdateUsageMock = vi.fn()
 const estimateUsageTokensFromMessagesMock = vi.fn()
+const updateContextTokenUsageMock = vi.fn((sid: string, state: any, emit: any, contextTokens: number, usage?: { inputTokens: number; outputTokens: number }) => {
+  state.contextTokens = contextTokens
+  emit('usage.updated', {
+    event: 'usage.updated',
+    session_id: sid,
+    inputTokens: usage?.inputTokens ?? state.inputTokens ?? 0,
+    outputTokens: usage?.outputTokens ?? state.outputTokens ?? 0,
+    contextTokens,
+  })
+  return contextTokens
+})
+const getCachedBridgeContextOverheadMock = vi.fn(() => undefined)
+const contextTokensWithCachedOverheadMock = vi.fn((_state: any, messageTokens: number) => messageTokens)
+const updateMessageContextTokenUsageMock = vi.fn((sid: string, state: any, emit: any, messageTokens: number, usage?: { inputTokens: number; outputTokens: number }) => updateContextTokenUsageMock(sid, state, emit, messageTokens, usage))
 const flushBridgePendingToDbMock = vi.fn()
 const ensureOpenBridgeAssistantMessageMock = vi.fn()
 const syncBridgeReasoningToMessageMock = vi.fn()
@@ -45,6 +60,7 @@ vi.mock('../../packages/server/src/services/logger', () => ({
 vi.mock('../../packages/server/src/services/hermes/run-chat/compression', () => ({
   buildCompressedHistory: buildCompressedHistoryMock,
   buildDbHistory: buildDbHistoryMock,
+  buildSnapshotAwareHistory: buildSnapshotAwareHistoryMock,
   pushState: pushStateMock,
   replaceState: replaceStateMock,
   forceCompressBridgeHistory: forceCompressBridgeHistoryMock,
@@ -53,6 +69,10 @@ vi.mock('../../packages/server/src/services/hermes/run-chat/compression', () => 
 vi.mock('../../packages/server/src/services/hermes/run-chat/usage', () => ({
   calcAndUpdateUsage: calcAndUpdateUsageMock,
   estimateUsageTokensFromMessages: estimateUsageTokensFromMessagesMock,
+  getCachedBridgeContextOverhead: getCachedBridgeContextOverheadMock,
+  contextTokensWithCachedOverhead: contextTokensWithCachedOverheadMock,
+  updateContextTokenUsage: updateContextTokenUsageMock,
+  updateMessageContextTokenUsage: updateMessageContextTokenUsageMock,
 }))
 
 vi.mock('../../packages/server/src/services/hermes/run-chat/bridge-message', () => ({
@@ -103,7 +123,11 @@ describe('bridge run final context usage', () => {
       { role: 'user', content: 'hello' },
       { role: 'assistant', content: 'done' },
     ])
+    buildSnapshotAwareHistoryMock.mockImplementation(async (_sessionId: string, _profile: string, history: any[]) => history)
     calcAndUpdateUsageMock.mockResolvedValue({ inputTokens: 11, outputTokens: 7 })
+    estimateUsageTokensFromMessagesMock.mockReturnValue({ inputTokens: 11, outputTokens: 7 })
+    getCachedBridgeContextOverheadMock.mockReturnValue(undefined)
+    contextTokensWithCachedOverheadMock.mockImplementation((_state: any, messageTokens: number) => messageTokens)
   })
 
   it('refreshes full context tokens when a bridge run completes', async () => {
@@ -158,6 +182,50 @@ describe('bridge run final context usage', () => {
       inputTokens: 11,
       outputTokens: 7,
       contextTokens: 12345,
+    }))
+  })
+
+  it('uses cached fixed context instead of bridge estimate when available', async () => {
+    const emit = vi.fn()
+    const nsp = makeNamespace(emit)
+    const socket = makeSocket()
+    const state = makeState()
+    state.bridgeContext = { fixedContextTokens: 20_000 }
+    const sessionMap = new Map([['session-1', state]])
+    getCachedBridgeContextOverheadMock.mockReturnValue(20_000)
+    updateMessageContextTokenUsageMock.mockImplementation((sid: string, targetState: any, targetEmit: any, messageTokens: number, usage?: { inputTokens: number; outputTokens: number }) => updateContextTokenUsageMock(sid, targetState, targetEmit, 20_000 + messageTokens, usage))
+    const bridge = {
+      chat: vi.fn().mockResolvedValue({ run_id: 'run-1', status: 'started' }),
+      contextEstimate: vi.fn(),
+      streamOutput: vi.fn(async function* () {
+        yield { run_id: 'run-1', done: true, status: 'completed', output: 'done' }
+      }),
+    } as any
+
+    const { handleBridgeRun } = await import('../../packages/server/src/services/hermes/run-chat/handle-bridge-run')
+    await handleBridgeRun(
+      nsp,
+      socket,
+      { input: 'hello', session_id: 'session-1' },
+      'default',
+      sessionMap,
+      bridge,
+      false,
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(bridge.contextEstimate).not.toHaveBeenCalled()
+    expect(updateMessageContextTokenUsageMock).toHaveBeenCalledWith(
+      'session-1',
+      state,
+      expect.any(Function),
+      18,
+      { inputTokens: 11, outputTokens: 7 },
+    )
+    expect(state.contextTokens).toBe(20_018)
+    expect(emit).toHaveBeenCalledWith('run.completed', expect.objectContaining({
+      contextTokens: 20_018,
     }))
   })
 

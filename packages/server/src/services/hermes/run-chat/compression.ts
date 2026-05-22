@@ -13,7 +13,7 @@ import { getModelContextLength } from '../model-context'
 import { readConfigYamlForProfile } from '../../config-helpers'
 import { logger } from '../../logger'
 import { bridgeLogger } from '../../logger'
-import { calcAndUpdateUsage, estimateUsageTokensFromMessages } from './usage'
+import { calcAndUpdateUsage, estimateUsageTokensFromMessages, updateMessageContextTokenUsage } from './usage'
 import { isAssistantMessageSendable } from './message-format'
 import type { ChatMessage, CompressionConfig as CompressorConfig } from '../../../lib/context-compressor'
 import type { SessionState, BridgeCompressionResult } from './types'
@@ -67,6 +67,23 @@ function buildSnapshotHistory(
     summaryMessage,
     ...history.slice(tailStart),
   ]
+}
+
+export async function buildSnapshotAwareHistory(
+  sessionId: string,
+  profile: string,
+  history: ChatMessage[],
+  modelContext: { model?: string | null; provider?: string | null } = {},
+): Promise<ChatMessage[]> {
+  const snapshot = getCompressionSnapshot(sessionId)
+  if (!snapshot) return history
+  const contextLength = getModelContextLength({
+    profile,
+    model: modelContext.model,
+    provider: modelContext.provider,
+  })
+  const compressionConfig = await getRunChatCompressionConfig(profile, contextLength)
+  return buildSnapshotHistory(snapshot, history, compressionConfig.compressor) || history
 }
 
 function clampRatio(value: unknown, fallback: number, min: number, max: number): number {
@@ -343,21 +360,26 @@ export async function compressHistory(
       provider: modelContext.provider || session?.provider,
     })
     const afterTokens = await calcAndUpdateUsage(sessionId, cState, emit)
-    const compressedMeta = {
+    const compressedAfterTokens = afterTokens.inputTokens + afterTokens.outputTokens
+    const compressedMeta: any = {
       event: 'compression.completed' as const,
       compressed: result.meta.compressed,
       llmCompressed: result.meta.llmCompressed,
       totalMessages: result.meta.totalMessages,
       resultMessages: result.messages.length,
       beforeTokens: totalTokens,
-      afterTokens: afterTokens.inputTokens + afterTokens.outputTokens,
+      afterTokens: compressedAfterTokens,
       summaryTokens: result.meta.summaryTokenEstimate,
       verbatimCount: result.meta.verbatimCount,
       compressedStartIndex: result.meta.compressedStartIndex,
     }
     replaceState(sessionMap, sessionId, 'compression.completed', compressedMeta)
     logger.info('[context-compress] AFTER  session=%s: %d messages, ~%d tokens (was %d)',
-      sessionId, result.messages.length, afterTokens.inputTokens + afterTokens.outputTokens, totalTokens)
+      sessionId, result.messages.length, compressedAfterTokens, totalTokens)
+    const compressedContextTokens = updateMessageContextTokenUsage(sessionId, cState, emit, compressedAfterTokens, afterTokens)
+    if (compressedContextTokens != null) {
+      compressedMeta.contextTokens = compressedContextTokens
+    }
     emit('compression.completed', compressedMeta)
 
     const compressed = result.messages.map(m => {

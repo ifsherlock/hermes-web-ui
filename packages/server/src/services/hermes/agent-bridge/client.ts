@@ -93,9 +93,16 @@ export interface AgentBridgeRunResult extends AgentBridgeResponse {
 export interface AgentBridgeContextEstimate extends AgentBridgeResponse {
   session_id: string
   token_count?: number | null
+  fixed_context_tokens?: number | null
+  system_prompt_tokens?: number | null
+  tool_tokens?: number | null
   message_count: number
   tool_count: number
+  tool_names?: string[]
   system_prompt_chars: number
+  profile?: string
+  model?: string
+  provider?: string
 }
 
 export interface AgentBridgeCommandResult extends AgentBridgeResponse {
