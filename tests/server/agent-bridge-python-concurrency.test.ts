@@ -309,6 +309,7 @@ broker = bridge.BridgeBroker("ipc:///tmp/unused.sock")
 profile_worker = FakeWorker(2)
 broker._workers["default"] = profile_worker
 broker._run_profile["run-session-a"] = "default"
+broker._running_run_profile["run-session-a"] = "default"
 broker._session_profile["session-a"] = "default"
 broker._approval_profile["approval-a"] = "default"
 broker._compression_profile["compression-a"] = "default"
@@ -318,6 +319,7 @@ assert destroy_profile_result == {"profile": "default", "destroyed": 2}
 assert profile_worker.stopped
 assert "default" not in broker._workers
 assert broker._run_profile == {}
+assert broker._running_run_profile == {}
 assert broker._session_profile == {}
 assert broker._approval_profile == {}
 assert broker._compression_profile == {}
@@ -327,6 +329,7 @@ worker_b = FakeWorker(3)
 broker._workers["a"] = worker_a
 broker._workers["b"] = worker_b
 broker._run_profile["run-a"] = "a"
+broker._running_run_profile["run-a"] = "a"
 broker._session_profile["session-b"] = "b"
 
 destroy_all_result = broker.handle({"action": "destroy_all"})
@@ -335,7 +338,36 @@ assert worker_a.stopped
 assert worker_b.stopped
 assert broker._workers == {}
 assert broker._run_profile == {}
+assert broker._running_run_profile == {}
 assert broker._session_profile == {}
+`)
+  })
+
+  it('builds broker ping metrics without calling profile workers', () => {
+    runPython(String.raw`
+${harness}
+
+class PingWorker:
+    running = True
+    pid = 12345
+    endpoint = "ipc:///tmp/worker.sock"
+    last_used_at = 12.5
+
+    def request(self, req):
+        raise AssertionError("broker ping must not forward to worker")
+
+broker = bridge.BridgeBroker("ipc:///tmp/broker.sock")
+broker._workers["default"] = PingWorker()
+broker._session_profile["session-a"] = "default"
+broker._running_run_profile["run-a"] = "default"
+
+resp = broker.handle({"action": "ping"})
+assert resp["workers"] == {"default": True}
+assert resp["worker_details"]["default"]["pid"] == 12345
+assert resp["active_sessions"] == 1
+assert resp["running_sessions"] == 1
+assert resp["sessions_by_profile"] == {"default": 1}
+assert resp["running_sessions_by_profile"] == {"default": 1}
 `)
   })
 
@@ -413,6 +445,7 @@ broker = bridge.BridgeBroker("ipc:///tmp/unused.sock")
 worker = FakeWorker()
 broker._workers["default"] = worker
 broker._run_profile["run-a"] = "default"
+broker._running_run_profile["run-a"] = "default"
 broker._session_profile["session-a"] = "default"
 broker._approval_profile["approval-a"] = "default"
 broker._compression_profile["compression-a"] = "default"
@@ -422,6 +455,7 @@ assert broker._stop.is_set()
 assert worker.stopped
 assert broker._workers == {}
 assert broker._run_profile == {}
+assert broker._running_run_profile == {}
 assert broker._session_profile == {}
 assert broker._approval_profile == {}
 assert broker._compression_profile == {}

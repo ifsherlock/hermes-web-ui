@@ -2072,6 +2072,7 @@ class BridgeBroker:
         self.hermes_home = hermes_home
         self._workers: dict[str, WorkerProcess] = {}
         self._run_profile: dict[str, str] = {}
+        self._running_run_profile: dict[str, str] = {}
         self._session_profile: dict[str, str] = {}
         self._approval_profile: dict[str, str] = {}
         self._compression_profile: dict[str, str] = {}
@@ -2115,6 +2116,10 @@ class BridgeBroker:
         with self._lock:
             if run_id:
                 self._run_profile[run_id] = profile
+                if resp.get("status") == "running":
+                    self._running_run_profile[run_id] = profile
+                else:
+                    self._running_run_profile.pop(run_id, None)
             if session_id:
                 self._session_profile[session_id] = profile
             for event in resp.get("events") or []:
@@ -2135,6 +2140,7 @@ class BridgeBroker:
             workers = list(self._workers.values())
             self._workers.clear()
             self._run_profile.clear()
+            self._running_run_profile.clear()
             self._session_profile.clear()
             self._approval_profile.clear()
             self._compression_profile.clear()
@@ -2169,7 +2175,11 @@ class BridgeBroker:
                 sessions_by_profile: dict[str, int] = {}
                 for profile in self._session_profile.values():
                     sessions_by_profile[profile] = sessions_by_profile.get(profile, 0) + 1
+                running_sessions_by_profile: dict[str, int] = {}
+                for profile in self._running_run_profile.values():
+                    running_sessions_by_profile[profile] = running_sessions_by_profile.get(profile, 0) + 1
                 active_sessions = len(self._session_profile)
+                running_sessions = len(self._running_run_profile)
             return {
                 "pong": True,
                 "time": time.time(),
@@ -2181,7 +2191,9 @@ class BridgeBroker:
                 "workers": workers,
                 "worker_details": worker_details,
                 "active_sessions": active_sessions,
+                "running_sessions": running_sessions,
                 "sessions_by_profile": sessions_by_profile,
+                "running_sessions_by_profile": running_sessions_by_profile,
             }
 
         if action == "worker_ping":
@@ -2236,6 +2248,7 @@ class BridgeBroker:
                 workers = list(self._workers.values())
                 self._workers.clear()
                 self._run_profile.clear()
+                self._running_run_profile.clear()
                 self._session_profile.clear()
                 self._approval_profile.clear()
                 self._compression_profile.clear()
@@ -2256,6 +2269,7 @@ class BridgeBroker:
             with self._lock:
                 worker = self._workers.pop(profile, None)
                 self._run_profile = {key: value for key, value in self._run_profile.items() if value != profile}
+                self._running_run_profile = {key: value for key, value in self._running_run_profile.items() if value != profile}
                 self._session_profile = {key: value for key, value in self._session_profile.items() if value != profile}
                 self._approval_profile = {key: value for key, value in self._approval_profile.items() if value != profile}
                 self._compression_profile = {key: value for key, value in self._compression_profile.items() if value != profile}
