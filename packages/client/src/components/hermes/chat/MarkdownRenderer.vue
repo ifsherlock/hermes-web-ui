@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { NDrawer, NDrawerContent, NSpin, useMessage } from 'naive-ui'
 import type MarkdownIt from 'markdown-it'
 import MarkdownItConstructor from 'markdown-it'
+import katex from 'katex'
 import markdownItKatex from '@vscode/markdown-it-katex'
 import { handleCodeBlockCopyClick, renderHighlightedCodeBlock } from './highlight'
 import { repairNestedMarkdownFences } from './markdownFenceRepair'
@@ -43,6 +44,7 @@ const md: MarkdownIt = new MarkdownItConstructor({
 })
 
 md.use(markdownItKatex, {
+  katex,
   throwOnError: false,
 })
 
