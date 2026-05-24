@@ -18,7 +18,12 @@ const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
 const { openSessionSearch } = useSessionSearch();
-const selectedKey = computed(() => route.name as string);
+const selectedKey = computed(() => {
+  if (route.name === "hermes.session") return "hermes.chat";
+  if (route.name === "hermes.historySession") return "hermes.history";
+  if (route.name === "hermes.groupChatRoom") return "hermes.groupChat";
+  return route.name as string;
+});
 const isSuperAdmin = computed(() => isStoredSuperAdmin());
 const logoPath = '/logo.png';
 
