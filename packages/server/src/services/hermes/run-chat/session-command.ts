@@ -14,6 +14,7 @@ type CommandName =
   | 'status'
   | 'abort'
   | 'queue'
+  | 'plan'
   | 'clear'
   | 'title'
   | 'compress'
@@ -34,6 +35,7 @@ interface SessionCommandContext {
   profile: string
   model?: string
   instructions?: string
+  queueId?: string
   runQueuedItem: (socket: Socket, sessionId: string, next: QueuedRun, fallbackProfile?: string) => void
 }
 
@@ -42,6 +44,7 @@ const COMMAND_ALIASES: Record<string, CommandName> = {
   status: 'status',
   abort: 'abort',
   queue: 'queue',
+  plan: 'plan',
   clear: 'clear',
   title: 'title',
   compress: 'compress',
@@ -74,7 +77,9 @@ export async function handleSessionCommand(
   const state = getOrCreateSession(ctx.sessionMap, sessionId)
   ctx.socket.join(`session:${sessionId}`)
   ensureCommandSession(sessionId, ctx)
-  persistCommandMessage(sessionId, state, `/${command.rawName}${command.args ? ` ${command.args}` : ''}`)
+  if (command.name !== 'plan') {
+    persistCommandMessage(sessionId, state, `/${command.rawName}${command.args ? ` ${command.args}` : ''}`)
+  }
 
   const emitCommand = (payload: Record<string, unknown>) => {
     const message = typeof payload.message === 'string' ? payload.message : ''
@@ -179,6 +184,74 @@ export async function handleSessionCommand(
         message: `Queued message. Queue length: ${state.queue.length}.`,
         queueLength: state.queue.length,
       })
+      return
+    }
+
+    case 'plan': {
+      const bridgeCommand = `plan${command.args ? ` ${command.args}` : ''}`
+      let result
+      try {
+        result = await ctx.bridge.command(sessionId, bridgeCommand, ctx.profile)
+      } catch (err) {
+        emitCommand({
+          ok: false,
+          action: 'plan',
+          terminal: !state.isWorking,
+          message: `Plan command failed: ${err instanceof Error ? err.message : String(err)}`,
+        })
+        return
+      }
+
+      if (!result.handled || !result.message) {
+        emitCommand({
+          ok: false,
+          action: 'plan',
+          terminal: !state.isWorking,
+          message: result.message || 'Plan command is not available.',
+        })
+        return
+      }
+
+      const queueId = ctx.queueId || `queue_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+      const displayCommand = `/${bridgeCommand}`
+      const next: QueuedRun = {
+        queue_id: queueId,
+        input: result.message,
+        displayInput: displayCommand,
+        displayRole: 'command',
+        storageMessage: displayCommand,
+        model: ctx.model,
+        instructions: ctx.instructions,
+        profile: ctx.profile,
+        source: 'cli',
+        originSocketId: ctx.socket.id,
+      }
+
+      if (state.isWorking) {
+        state.queue.push(next)
+        emitToSession(ctx.nsp, ctx.socket, sessionId, 'run.queued', {
+          event: 'run.queued',
+          session_id: sessionId,
+          queue_length: state.queue.length,
+          queued_messages: state.queue.map(item => ({
+            id: item.queue_id,
+            role: typeof item.displayInput === 'string' && item.displayInput.trim().startsWith('/') ? 'command' : 'user',
+            content: item.displayInput === null
+              ? (item.storageMessage || '')
+              : contentBlocksToString(item.displayInput ?? item.input),
+            timestamp: Math.floor(Date.now() / 1000),
+            queued: true,
+          })),
+        })
+        return
+      }
+
+      emitCommand({
+        action: 'plan',
+        terminal: false,
+        started: true,
+      })
+      ctx.runQueuedItem(ctx.socket, sessionId, next, ctx.profile)
       return
     }
 

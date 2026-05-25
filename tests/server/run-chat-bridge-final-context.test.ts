@@ -299,6 +299,66 @@ describe('bridge run final context usage', () => {
     }))
   })
 
+  it('persists the visible plan command instead of the expanded skill prompt', async () => {
+    const emit = vi.fn()
+    const nsp = makeNamespace(emit)
+    const socket = makeSocket()
+    const state = makeState()
+    const sessionMap = new Map([['session-1', state]])
+    const bridge = {
+      chat: vi.fn().mockResolvedValue({ run_id: 'run-1', status: 'started' }),
+      contextEstimate: vi.fn().mockResolvedValue({
+        token_count: 12345,
+        message_count: 2,
+        tool_count: 4,
+        system_prompt_chars: 13,
+      }),
+      streamOutput: vi.fn(async function* () {
+        yield { run_id: 'run-1', done: true, status: 'completed', output: 'planned' }
+      }),
+    } as any
+
+    const { handleBridgeRun } = await import('../../packages/server/src/services/hermes/run-chat/handle-bridge-run')
+    await handleBridgeRun(
+      nsp,
+      socket,
+      {
+        input: '[IMPORTANT: expanded plan skill prompt]',
+        display_input: '/plan build the feature',
+        display_role: 'command',
+        storage_message: '/plan build the feature',
+        session_id: 'session-1',
+      },
+      'default',
+      sessionMap,
+      bridge,
+      false,
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(state.messages.find((message: any) => message.role === 'command')).toEqual(expect.objectContaining({
+      role: 'command',
+      content: '/plan build the feature',
+    }))
+    expect(addMessageMock).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'command',
+      content: '/plan build the feature',
+    }))
+    expect(addMessageMock).not.toHaveBeenCalledWith(expect.objectContaining({
+      role: 'user',
+      content: '[IMPORTANT: expanded plan skill prompt]',
+    }))
+    expect(bridge.chat).toHaveBeenCalledWith(
+      'session-1',
+      '[IMPORTANT: expanded plan skill prompt]',
+      expect.any(Array),
+      expect.any(String),
+      'default',
+      expect.objectContaining({ storage_message: '/plan build the feature' }),
+    )
+  })
+
   it('refreshes full context tokens when a bridge run fails', async () => {
     const emit = vi.fn()
     const nsp = makeNamespace(emit)

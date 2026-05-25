@@ -967,12 +967,14 @@ export const useChatStore = defineStore('chat', () => {
       const timestamp = typeof peer?.timestamp === 'number' && Number.isFinite(peer.timestamp)
         ? Math.round(peer.timestamp * 1000)
         : Date.now()
+      const role = peer?.role === 'command' ? 'command' : 'user'
       return [{
         id: messageId,
-        role: 'user' as const,
+        role,
         content,
         timestamp,
         queued: true,
+        systemType: role === 'command' ? 'command' as const : undefined,
       }]
     })
   }
@@ -1028,11 +1030,12 @@ export const useChatStore = defineStore('chat', () => {
     enqueueUserMessage(sessionId, {
       ...(existing || {}),
       id: messageId,
-      role: 'user',
+      role: peer?.role === 'command' ? 'command' : 'user',
       content,
       timestamp: existing?.timestamp || timestamp,
       attachments: existing?.attachments,
       queued: true,
+      systemType: peer?.role === 'command' ? 'command' : existing?.systemType,
     })
   }
 
@@ -1091,6 +1094,22 @@ export const useChatStore = defineStore('chat', () => {
     if (clarifyId && current.clarifyId !== clarifyId) return
     pendingClarifies.value.delete(sid)
     pendingClarifies.value = new Map(pendingClarifies.value)
+  }
+
+  function clearPendingInteractions(sessionId: string) {
+    let changed = false
+    if (pendingApprovals.value.has(sessionId)) {
+      pendingApprovals.value.delete(sessionId)
+      changed = true
+    }
+    if (pendingClarifies.value.has(sessionId)) {
+      pendingClarifies.value.delete(sessionId)
+      changed = true
+    }
+    if (changed) {
+      pendingApprovals.value = new Map(pendingApprovals.value)
+      pendingClarifies.value = new Map(pendingClarifies.value)
+    }
   }
 
   function respondToClarify(response: string) {
@@ -1169,8 +1188,9 @@ export const useChatStore = defineStore('chat', () => {
       : false
     const isBridgeSlashCommand = content.trim().startsWith('/')
     const isBridgeCompressCommand = isBridgeSlashCommand && /^\/compress(?:\s|$)/i.test(content.trim())
+    const isBridgePlanCommand = isBridgeSlashCommand && /^\/plan(?:\s|$)/i.test(content.trim())
     const wasLiveBeforeSend = isSessionLive(sid)
-    const shouldQueue = wasLiveBeforeSend && !isBridgeSlashCommand
+    const shouldQueue = wasLiveBeforeSend && (!isBridgeSlashCommand || isBridgePlanCommand)
 
     const userMsg: Message = {
       id: uid(),
@@ -1449,6 +1469,7 @@ export const useChatStore = defineStore('chat', () => {
 
             case 'abort.completed': {
               setAbortState({ aborting: false, synced: (evt as any).synced ?? false })
+              clearPendingInteractions(sid)
               if ((evt as any).queue_length > 0) {
                 queueLengths.value.set(sid, (evt as any).queue_length)
                 setAbortState(null)
@@ -1798,7 +1819,7 @@ export const useChatStore = defineStore('chat', () => {
         { onReconnectResume: applyReconnectResume },
       )
 
-      if (!isBridgeSlashCommand || isBridgeCompressCommand) {
+      if (!isBridgeSlashCommand || isBridgeCompressCommand || isBridgePlanCommand) {
         streamStates.value.set(sid, ctrl)
       }
     } catch (err: any) {
@@ -1920,6 +1941,7 @@ export const useChatStore = defineStore('chat', () => {
 
         case 'abort.completed': {
           setAbortState({ aborting: false, synced: (evt as any).synced ?? false })
+          clearPendingInteractions(sid)
           if ((evt as any).queue_length > 0) {
             queueLengths.value.set(sid, (evt as any).queue_length)
             setAbortState(null)
@@ -2286,10 +2308,11 @@ export const useChatStore = defineStore('chat', () => {
 
     const message: Message = {
       id: messageId || uid(),
-      role: 'user',
+      role: peer?.role === 'command' ? 'command' : 'user',
       content,
       timestamp,
       queued: !!peer?.queued,
+      systemType: peer?.role === 'command' ? 'command' : undefined,
     }
     if (peer?.queued) {
       enqueueUserMessage(sid, message)
@@ -2307,6 +2330,7 @@ export const useChatStore = defineStore('chat', () => {
     const sid = activeSessionId.value
     if (!sid) return
     if (isAborting.value) return
+    clearPendingInteractions(sid)
     const ctrl = streamStates.value.get(sid)
     if (ctrl) {
       setAbortState({ aborting: true, synced: null })

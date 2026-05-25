@@ -99,6 +99,9 @@ export class ChatRunSocket {
 
     socket.on('run', async (data: {
       input: string | ContentBlock[]
+      display_input?: string | ContentBlock[] | null
+      display_role?: 'user' | 'command'
+      storage_message?: string
       session_id?: string
       model?: string
       instructions?: string
@@ -133,6 +136,7 @@ export class ChatRunSocket {
               profile: runProfile,
               model: data.model,
               instructions: data.instructions,
+              queueId: data.queue_id,
               runQueuedItem: this.runQueuedItem.bind(this),
             })
           } catch (err) {
@@ -268,6 +272,9 @@ export class ChatRunSocket {
     socket: Socket,
     data: {
       input: string | ContentBlock[]
+      display_input?: string | ContentBlock[] | null
+      display_role?: 'user' | 'command'
+      storage_message?: string
       session_id?: string
       model?: string
       provider?: string
@@ -358,8 +365,12 @@ export class ChatRunSocket {
   }
 
   private runQueuedItem(socket: Socket, sessionId: string, next: QueuedRun, fallbackProfile = 'default') {
+    const skipUserMessage = next.displayInput === null
     void this.handleRun(socket, {
       input: next.input,
+      display_input: next.displayInput,
+      display_role: next.displayRole,
+      storage_message: next.storageMessage,
       session_id: sessionId,
       model: next.model,
       provider: next.provider,
@@ -368,7 +379,7 @@ export class ChatRunSocket {
       source: next.source,
       queue_id: next.queue_id,
       peerExcludeSocketId: next.originSocketId,
-    }, next.profile || fallbackProfile, true)
+    }, next.profile || fallbackProfile, skipUserMessage)
   }
 
   // --- Helpers ---
@@ -384,8 +395,10 @@ export class ChatRunSocket {
   private serializeQueuedMessages(queue: QueuedRun[]) {
     return queue.map(item => ({
       id: item.queue_id,
-      role: 'user',
-      content: contentBlocksToString(item.input),
+      role: item.displayRole || (typeof item.displayInput === 'string' && item.displayInput.trim().startsWith('/') ? 'command' : 'user'),
+      content: item.displayInput === null
+        ? (item.storageMessage || '')
+        : contentBlocksToString(item.displayInput ?? item.input),
       timestamp: Math.floor(Date.now() / 1000),
       queued: true,
     }))

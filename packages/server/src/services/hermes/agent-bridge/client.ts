@@ -109,7 +109,12 @@ export interface AgentBridgeCommandResult extends AgentBridgeResponse {
   session_id: string
   command: string
   handled: boolean
+  type?: string
   message?: string
+  output?: string
+  notice?: string
+  loaded?: string[]
+  missing?: string[]
   new_session_id?: string
   history?: unknown[]
   retry?: boolean
@@ -405,11 +410,12 @@ export class AgentBridgeClient {
     })
   }
 
-  command(sessionId: string, command: string): Promise<AgentBridgeCommandResult> {
+  command(sessionId: string, command: string, profile?: string): Promise<AgentBridgeCommandResult> {
     return this.request<AgentBridgeCommandResult>({
       action: 'command',
       session_id: sessionId,
       command,
+      ...(profile ? { profile } : {}),
     })
   }
 

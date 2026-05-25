@@ -1470,6 +1470,80 @@ class AgentPool:
         with session.lock:
             return {"session_id": session_id, "history": copy.deepcopy(session.history)}
 
+    def dispatch_command(self, session_id: str, command: str, profile: str | None = None) -> dict[str, Any]:
+        raw = str(command or "").strip()
+        if raw.startswith("/"):
+            raw = raw[1:].strip()
+        if not raw:
+            raise ValueError("command is required")
+
+        parts = raw.split(maxsplit=1)
+        name = parts[0].lstrip("/").strip().lower()
+        arg = parts[1] if len(parts) > 1 else ""
+
+        with _profile_env(profile):
+            try:
+                try:
+                    from agent.skill_bundles import (
+                        build_bundle_invocation_message,
+                        resolve_bundle_command_key,
+                    )
+
+                    bundle_key = resolve_bundle_command_key(name)
+                    if bundle_key:
+                        bundle_result = build_bundle_invocation_message(
+                            bundle_key,
+                            arg,
+                            task_id=session_id,
+                        )
+                        if bundle_result:
+                            message, loaded_names, missing_names = bundle_result
+                            return {
+                                "session_id": session_id,
+                                "command": name,
+                                "handled": True,
+                                "type": "bundle",
+                                "message": message,
+                                "loaded": loaded_names,
+                                "missing": missing_names,
+                            }
+                except ImportError:
+                    pass
+
+                from agent.skill_commands import (
+                    build_skill_invocation_message,
+                    resolve_skill_command_key,
+                )
+
+                key = resolve_skill_command_key(name)
+                if key:
+                    message = build_skill_invocation_message(
+                        key,
+                        arg,
+                        task_id=session_id,
+                        runtime_note=(
+                            "If you need user clarification, call the clarify tool. "
+                            "Do not output raw JSON question/choices payloads as the final response."
+                        ),
+                    )
+                    if message:
+                        return {
+                            "session_id": session_id,
+                            "command": name,
+                            "handled": True,
+                            "type": "skill",
+                            "message": message,
+                        }
+            except Exception as exc:
+                raise RuntimeError(f"skill command dispatch failed: {exc}") from exc
+
+        return {
+            "session_id": session_id,
+            "command": name,
+            "handled": False,
+            "message": f"not a supported bridge command: /{name}",
+        }
+
     def get_result(self, run_id: str) -> dict[str, Any]:
         with self._lock:
             record = self._runs.get(run_id)
@@ -1700,6 +1774,16 @@ class BridgeServer:
 
         if action == "get_history":
             return self.pool.get_history(str(req.get("session_id") or ""))
+
+        if action == "command":
+            session_id = str(req.get("session_id") or "").strip()
+            if not session_id:
+                raise ValueError("session_id is required")
+            return self.pool.dispatch_command(
+                session_id,
+                str(req.get("command") or ""),
+                req.get("profile"),
+            )
 
         if action == "destroy":
             return self.pool.destroy(str(req.get("session_id") or ""))
@@ -2275,7 +2359,7 @@ class BridgeBroker:
             profile = self._profile_for_run(str(req.get("run_id") or ""))
             return self._forward(profile, req)
 
-        if action in {"interrupt", "steer", "get_history", "destroy"}:
+        if action in {"interrupt", "steer", "command", "get_history", "destroy"}:
             session_id = str(req.get("session_id") or "")
             profile = self._profile_for_session(session_id, req.get("profile"))
             resp = self._forward(profile, req)
