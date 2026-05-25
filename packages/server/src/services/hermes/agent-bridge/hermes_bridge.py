@@ -426,9 +426,20 @@ def _set_worker_profile_env(profile: str | None) -> None:
     profile_home = _profile_home(profile)
     os.environ["HERMES_HOME"] = str(profile_home)
     os.environ["HERMES_AGENT_BRIDGE_WORKER_PROFILE"] = profile or "default"
+    _refresh_worker_profile_env()
+
+
+def _refresh_worker_profile_env() -> None:
+    """Overlay the current worker profile .env/config before creating a new agent."""
+    profile = _worker_profile()
+    if not profile:
+        return
+    profile_home = _profile_home(profile)
+    os.environ["HERMES_HOME"] = str(profile_home)
     values = _read_dotenv(profile_home / ".env")
     for key, value in values.items():
         os.environ[key] = value
+    _refresh_terminal_env()
 
 
 @contextmanager
@@ -443,6 +454,71 @@ def _profile_env(profile: str | None):
     finally:
         _restore_profile_dotenv(env_snapshot)
         _restore_profile_env(original)
+
+
+def _refresh_terminal_env() -> None:
+    """Bridge current worker HERMES_HOME/config.yaml terminal config to TERMINAL_* env vars.
+
+    Worker startup first overlays the profile .env, then this function lets
+    terminal config.yaml values override the matching terminal environment vars.
+    """
+    hermes_home = os.environ.get("HERMES_HOME", "")
+    if not hermes_home:
+        return
+    config_path = Path(hermes_home) / "config.yaml"
+    if not config_path.exists():
+        return
+    try:
+        import yaml
+        with open(config_path, encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+        terminal_cfg = cfg.get("terminal", {})
+        if not isinstance(terminal_cfg, dict):
+            return
+        TERMINAL_ENV_MAP = {
+            "backend": "TERMINAL_ENV",
+            "cwd": "TERMINAL_CWD",
+            "timeout": "TERMINAL_TIMEOUT",
+            "lifetime_seconds": "TERMINAL_LIFETIME_SECONDS",
+            "ssh_host": "TERMINAL_SSH_HOST",
+            "ssh_user": "TERMINAL_SSH_USER",
+            "ssh_port": "TERMINAL_SSH_PORT",
+            "ssh_key": "TERMINAL_SSH_KEY",
+            "docker_image": "TERMINAL_DOCKER_IMAGE",
+            "docker_forward_env": "TERMINAL_DOCKER_FORWARD_ENV",
+            "singularity_image": "TERMINAL_SINGULARITY_IMAGE",
+            "modal_image": "TERMINAL_MODAL_IMAGE",
+            "daytona_image": "TERMINAL_DAYTONA_IMAGE",
+            "vercel_runtime": "TERMINAL_VERCEL_RUNTIME",
+            "container_cpu": "TERMINAL_CONTAINER_CPU",
+            "container_memory": "TERMINAL_CONTAINER_MEMORY",
+            "container_disk": "TERMINAL_CONTAINER_DISK",
+            "container_persistent": "TERMINAL_CONTAINER_PERSISTENT",
+            "docker_volumes": "TERMINAL_DOCKER_VOLUMES",
+            "docker_env": "TERMINAL_DOCKER_ENV",
+            "docker_mount_cwd_to_workspace": "TERMINAL_DOCKER_MOUNT_CWD_TO_WORKSPACE",
+            "docker_run_as_host_user": "TERMINAL_DOCKER_RUN_AS_HOST_USER",
+            "sandbox_dir": "TERMINAL_SANDBOX_DIR",
+            "persistent_shell": "TERMINAL_PERSISTENT_SHELL",
+            "modal_mode": "TERMINAL_MODAL_MODE",
+        }
+        for cfg_key, env_var in TERMINAL_ENV_MAP.items():
+            if cfg_key in terminal_cfg:
+                val = terminal_cfg[cfg_key]
+                if cfg_key == "cwd" and str(val) in {".", "auto", "cwd"}:
+                    continue
+                if cfg_key == "cwd" and isinstance(val, str):
+                    val = os.path.expanduser(val)
+                if isinstance(val, (list, dict)):
+                    os.environ[env_var] = json.dumps(val)
+                else:
+                    os.environ[env_var] = str(val)
+    except Exception:
+        print(
+            f"[hermes-bridge] Failed to refresh terminal env from {config_path}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def _resolve_model(cfg: dict[str, Any]) -> str:
@@ -637,6 +713,7 @@ class AgentPool:
             from run_agent import AIAgent
 
             with _profile_env(profile):
+                _refresh_worker_profile_env()
                 cfg = _load_cfg()
                 resolved_model = requested_model or _resolve_model(cfg)
                 runtime = _resolve_runtime(resolved_model, requested_provider or None)
