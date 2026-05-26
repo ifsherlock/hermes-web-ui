@@ -85,6 +85,15 @@ export interface Session {
   workspace?: string | null
 }
 
+interface CompressionState {
+  compressing: boolean
+  messageCount: number
+  beforeTokens: number
+  afterTokens: number
+  compressed: boolean | null
+  error?: string
+}
+
 function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
@@ -272,6 +281,8 @@ function mapHermesSession(s: SessionSummary): Session {
     model: s.model,
     provider: s.provider || (s as any).billing_provider || '',
     messageCount: s.message_count,
+    inputTokens: s.input_tokens,
+    outputTokens: s.output_tokens,
     endedAt: s.ended_at != null ? Math.round(s.ended_at * 1000) : null,
     lastActiveAt: s.last_active != null ? Math.round(s.last_active * 1000) : undefined,
     workspace: s.workspace || null,
@@ -405,18 +416,20 @@ export const useChatStore = defineStore('chat', () => {
   const isLoadingMessages = ref(false)
   const isRunActive = computed(() => isStreaming.value)
 
-  // Compression state
-  const compressionState = ref<{
-    compressing: boolean
-    messageCount: number
-    beforeTokens: number
-    afterTokens: number
-    compressed: boolean | null
-    error?: string
-  } | null>(null)
+  // Compression state is scoped per session because sockets can stay joined to
+  // background sessions while another chat is active.
+  const compressionStates = ref<Map<string, CompressionState>>(new Map())
+  const compressionState = computed<CompressionState | null>(() => {
+    const sid = activeSessionId.value
+    return sid ? compressionStates.value.get(sid) || null : null
+  })
 
-  function setCompressionState(state: typeof compressionState.value) {
-    compressionState.value = state
+  function setCompressionState(sessionId: string | null | undefined, state: CompressionState | null) {
+    if (!sessionId) return
+    const next = new Map(compressionStates.value)
+    if (state) next.set(sessionId, state)
+    else next.delete(sessionId)
+    compressionStates.value = next
   }
 
   const abortState = ref<{
@@ -438,11 +451,12 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function clearActiveSession() {
+    const sid = activeSessionId.value
     activeSessionId.value = null
     activeSession.value = null
     focusMessageId.value = null
     setAbortState(null)
-    setCompressionState(null)
+    setCompressionState(sid, null)
     removeItem(storageKey())
   }
 
@@ -453,10 +467,14 @@ export const useChatStore = defineStore('chat', () => {
       const fresh = list.map(mapHermesSession)
       // Preserve already-loaded messages for sessions that are still present,
       // so we don't blow away the active session's messages on refresh.
-      const msgsByIdBefore = new Map(sessions.value.map(s => [s.id, s.messages]))
+      const runtimeByIdBefore = new Map(sessions.value.map(s => [s.id, {
+        messages: s.messages,
+        contextTokens: s.contextTokens,
+      }]))
       for (const s of fresh) {
-        const prev = msgsByIdBefore.get(s.id)
-        if (prev && prev.length) s.messages = prev
+        const prev = runtimeByIdBefore.get(s.id)
+        if (prev?.messages?.length) s.messages = prev.messages
+        if (prev?.contextTokens != null) s.contextTokens = prev.contextTokens
       }
       sessions.value = fresh
 
@@ -594,6 +612,7 @@ export const useChatStore = defineStore('chat', () => {
           } else if (!data.isWorking) {
             setAbortState(null)
           }
+          if (!data.isWorking) setCompressionState(sessionId, null)
           if (data.inputTokens != null) target.inputTokens = data.inputTokens
           if (data.outputTokens != null) target.outputTokens = data.outputTokens
           if ((data as any).contextTokens != null) target.contextTokens = (data as any).contextTokens
@@ -613,7 +632,7 @@ export const useChatStore = defineStore('chat', () => {
             for (const evt of data.events) {
               const e = evt.data as any
               if (e.event === 'compression.started') {
-                setCompressionState({
+                setCompressionState(sessionId, {
                   compressing: true,
                   messageCount: e.message_count || 0,
                   beforeTokens: e.token_count || 0,
@@ -622,7 +641,7 @@ export const useChatStore = defineStore('chat', () => {
                 })
               } else if (e.event === 'compression.completed') {
                 const afterTokens = e.contextTokens || e.afterTokens || 0
-                setCompressionState({
+                setCompressionState(sessionId, {
                   compressing: false,
                   messageCount: e.totalMessages || 0,
                   beforeTokens: e.beforeTokens || 0,
@@ -1385,6 +1404,7 @@ export const useChatStore = defineStore('chat', () => {
         } else if (!data.isWorking) {
           setAbortState(null)
         }
+        if (!data.isWorking) setCompressionState(sid, null)
 
         if (data.inputTokens != null) target.inputTokens = data.inputTokens
         if (data.outputTokens != null) target.outputTokens = data.outputTokens
@@ -1407,7 +1427,7 @@ export const useChatStore = defineStore('chat', () => {
             const e = evt.data as RunEvent
             switch (e.event) {
               case 'compression.started':
-                setCompressionState({
+                setCompressionState(sid, {
                   compressing: true,
                   messageCount: (e as any).message_count || 0,
                   beforeTokens: (e as any).token_count || 0,
@@ -1417,7 +1437,7 @@ export const useChatStore = defineStore('chat', () => {
                 break
               case 'compression.completed': {
                 const afterTokens = (e as any).contextTokens || (e as any).afterTokens || 0
-                setCompressionState({
+                setCompressionState(sid, {
                   compressing: false,
                   messageCount: (e as any).totalMessages || 0,
                   beforeTokens: (e as any).beforeTokens || 0,
@@ -1474,7 +1494,7 @@ export const useChatStore = defineStore('chat', () => {
             case 'run.started':
               clearAgentEventMessages(sid)
               setAbortState(null)
-              setCompressionState(null)
+              setCompressionState(sid, null)
               runProducedAssistantText = false
               runHadToolActivity = false
               closeStreamingAssistant()
@@ -1502,7 +1522,7 @@ export const useChatStore = defineStore('chat', () => {
             }
 
             case 'compression.started': {
-              setCompressionState({
+              setCompressionState(sid, {
                 compressing: true,
                 messageCount: (evt as any).message_count || 0,
                 beforeTokens: (evt as any).token_count || 0,
@@ -1514,7 +1534,7 @@ export const useChatStore = defineStore('chat', () => {
 
             case 'compression.completed': {
               const afterTokens = (evt as any).contextTokens || (evt as any).afterTokens || 0
-              setCompressionState({
+              setCompressionState(sid, {
                 compressing: false,
                 messageCount: (evt as any).totalMessages || 0,
                 beforeTokens: (evt as any).beforeTokens || 0,
@@ -1528,8 +1548,9 @@ export const useChatStore = defineStore('chat', () => {
               }
               // Auto-clear after 5s
               setTimeout(() => {
-                if (compressionState.value && !compressionState.value.compressing) {
-                  setCompressionState(null)
+                const state = compressionStates.value.get(sid)
+                if (state && !state.compressing) {
+                  setCompressionState(sid, null)
                 }
               }, 5000)
               break
@@ -1966,7 +1987,7 @@ export const useChatStore = defineStore('chat', () => {
         case 'run.started':
           clearAgentEventMessages(sid)
           setAbortState(null)
-          setCompressionState(null)
+          setCompressionState(sid, null)
           runProducedAssistantText = false
           runHadToolActivity = false
           closeStreamingAssistant()
@@ -1979,7 +2000,7 @@ export const useChatStore = defineStore('chat', () => {
           break
 
         case 'compression.started': {
-          setCompressionState({
+          setCompressionState(sid, {
             compressing: true,
             messageCount: (evt as any).message_count || 0,
             beforeTokens: (evt as any).token_count || 0,
@@ -1991,7 +2012,7 @@ export const useChatStore = defineStore('chat', () => {
 
         case 'compression.completed': {
           const afterTokens = (evt as any).contextTokens || (evt as any).afterTokens || 0
-          setCompressionState({
+          setCompressionState(sid, {
             compressing: false,
             messageCount: (evt as any).totalMessages || 0,
             beforeTokens: (evt as any).beforeTokens || 0,
@@ -2004,8 +2025,9 @@ export const useChatStore = defineStore('chat', () => {
             if (target) target.contextTokens = (evt as any).contextTokens
           }
           setTimeout(() => {
-            if (compressionState.value && !compressionState.value.compressing) {
-              setCompressionState(null)
+            const state = compressionStates.value.get(sid)
+            if (state && !state.compressing) {
+              setCompressionState(sid, null)
             }
           }, 5000)
           break
@@ -2461,6 +2483,7 @@ export const useChatStore = defineStore('chat', () => {
             } else if (!data.isWorking) {
               setAbortState(null)
             }
+            if (!data.isWorking) setCompressionState(sid, null)
             if (data.messages?.length && activeSession.value) {
               activeSession.value.messages = mapHermesMessages(data.messages as any[])
             }

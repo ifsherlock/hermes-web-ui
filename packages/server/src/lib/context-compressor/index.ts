@@ -79,6 +79,7 @@ export interface SummarizerOptions {
   profile?: string
   model?: string | null
   provider?: string | null
+  workerKey?: string
 }
 
 // ─── Token counting ─────────────────────────────────────
@@ -454,6 +455,7 @@ export async function callSummarizer(
 
   const bridge = new AgentBridgeClient({ timeoutMs: timeoutMs + 15_000 })
   const sessionId = `compress_${Date.now().toString(36)}_${randomUUID().replace(/-/g, '').slice(0, 12)}`
+  const workerKey = options.workerKey || `${profile}:compression:${sessionId}`
 
   try {
     const result = await bridge.request<AgentBridgeRunResult>({
@@ -462,6 +464,7 @@ export async function callSummarizer(
       message: prompt,
       conversation_history: convHistory,
       profile,
+      worker_key: workerKey,
       source: 'api_server',
       wait: true,
       timeout: Math.ceil(timeoutMs / 1000),
@@ -482,7 +485,7 @@ export async function callSummarizer(
     if (!output) throw new Error('Empty summarization response')
     return output
   } finally {
-    await bridge.destroy(sessionId, profile).catch(() => undefined)
+    await bridge.destroy(sessionId, profile, workerKey).catch(() => undefined)
   }
 }
 

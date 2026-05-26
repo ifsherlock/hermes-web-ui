@@ -153,6 +153,42 @@ describe('ChatContextCompressor', () => {
     expect(saveCompressionSnapshotMock).toHaveBeenCalledWith('s1', 'compressed summary', 6, 10)
   })
 
+  it('routes summarization through the provided worker key and destroys only the temporary agent session', async () => {
+    const { ChatContextCompressor } = await import('../../packages/server/src/lib/context-compressor')
+    const compressor = new ChatContextCompressor({
+      config: { headMessageCount: 0, tailMessageCount: 1, summaryBudget: 1000 },
+    })
+    const messages = [
+      { role: 'user', content: 'old context' },
+      { role: 'assistant', content: 'old response' },
+      { role: 'user', content: 'tail' },
+    ]
+    getCompressionSnapshotMock.mockReturnValue(null)
+    bridgeRequestMock.mockResolvedValue({
+      status: 'completed',
+      result: { final_response: 'compressed summary' },
+    })
+
+    await compressor.compress(messages, 'http://upstream', undefined, 's1', {
+      profile: 'default',
+      workerKey: 'default:compression:s1',
+    })
+
+    expect(bridgeRequestMock).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'chat',
+      profile: 'default',
+      worker_key: 'default:compression:s1',
+      wait: true,
+    }), expect.any(Object))
+    const compressSessionId = bridgeRequestMock.mock.calls[0][0].session_id
+    expect(String(compressSessionId)).toMatch(/^compress_/)
+    expect(bridgeDestroyMock).toHaveBeenCalledWith(
+      compressSessionId,
+      'default',
+      'default:compression:s1',
+    )
+  })
+
   it('does not pre-prune tool results before sending them to the summarizer', async () => {
     const { ChatContextCompressor } = await import('../../packages/server/src/lib/context-compressor')
     const compressor = new ChatContextCompressor({
