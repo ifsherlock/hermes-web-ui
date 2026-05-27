@@ -19,6 +19,7 @@ import json
 import locale
 import os
 import queue
+import re
 import signal
 import shutil
 import socket
@@ -47,6 +48,7 @@ OPENROUTER_ATTRIBUTION_ENV = {
     "title": "HERMES_OPENROUTER_APP_TITLE",
     "categories": "HERMES_OPENROUTER_APP_CATEGORIES",
 }
+_SURROGATE_RE = re.compile("[\ud800-\udfff]")
 
 
 def _bridge_platform() -> str:
@@ -263,6 +265,25 @@ def _jsonable(value: Any) -> Any:
         if isinstance(value, (list, tuple)):
             return [_jsonable(v) for v in value]
         return str(value)
+
+
+def _sanitize_surrogates(value: Any) -> Any:
+    if isinstance(value, str):
+        return _SURROGATE_RE.sub("\ufffd", value)
+    if isinstance(value, dict):
+        return {_sanitize_surrogates(k): _sanitize_surrogates(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_surrogates(v) for v in value]
+    return value
+
+
+def _json_default(value: Any) -> str:
+    return _sanitize_surrogates(str(value))
+
+
+def _json_line_bytes(value: Any) -> bytes:
+    payload = json.dumps(_sanitize_surrogates(value), ensure_ascii=False, default=_json_default) + "\n"
+    return payload.encode("utf-8")
 
 
 def _agent_root() -> Path | None:
@@ -2419,7 +2440,7 @@ def _connect_bridge_socket(endpoint: str, timeout: float) -> socket.socket:
 def _send_bridge_request(endpoint: str, req: dict[str, Any], timeout: float) -> dict[str, Any]:
     sock = _connect_bridge_socket(endpoint, timeout)
     try:
-        sock.sendall((json.dumps(req, ensure_ascii=False, default=str) + "\n").encode("utf-8"))
+        sock.sendall(_json_line_bytes(req))
         chunks: list[bytes] = []
         while True:
             chunk = sock.recv(65536)
@@ -2574,8 +2595,7 @@ def _read_json_request(conn: socket.socket) -> dict[str, Any]:
 
 
 def _write_json_response(conn: socket.socket, resp: dict[str, Any]) -> None:
-    payload = json.dumps(resp, ensure_ascii=False, default=str) + "\n"
-    conn.sendall(payload.encode("utf-8"))
+    conn.sendall(_json_line_bytes(resp))
 
 
 class BridgeBroker:
