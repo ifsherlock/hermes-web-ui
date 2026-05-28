@@ -14,6 +14,7 @@ const { t } = useI18n();
 const { isDark } = useTheme();
 const { toolTraceVisible } = useToolTraceVisibility();
 const listRef = ref<InstanceType<typeof VirtualMessageList> | null>(null);
+const pendingBottomSessionId = ref<string | null>(null);
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -115,6 +116,7 @@ watch(
   () => chatStore.activeSessionId,
   (id) => {
     if (!id) return;
+    pendingBottomSessionId.value = id;
     if (chatStore.focusMessageId) {
       scrollToMessage(chatStore.focusMessageId);
       return;
@@ -122,6 +124,20 @@ watch(
     scrollToBottom();
   },
   { immediate: true },
+);
+
+watch(
+  () => [chatStore.activeSessionId, chatStore.messages.length] as const,
+  ([id, length]) => {
+    if (!id || pendingBottomSessionId.value !== id || length === 0) return;
+    pendingBottomSessionId.value = null;
+    if (chatStore.focusMessageId) {
+      scrollToMessage(chatStore.focusMessageId);
+      return;
+    }
+    scrollToBottom();
+  },
+  { flush: "post" },
 );
 
 watch(

@@ -39,6 +39,8 @@ const heightVersion = ref(0);
 const measuredHeights = new Map<string, number>();
 const observedElements = new Map<string, HTMLElement>();
 const observers = new Map<string, ResizeObserver>();
+let keepBottomUntil = 0;
+let bottomFrame: number | null = null;
 
 const messageKeys = computed(() => props.messages.map(messageKey));
 
@@ -58,9 +60,10 @@ function setMeasuredHeight(key: string, height: number) {
   const oldHeight = itemHeight(key);
   if (oldHeight === height) return;
 
+  const el = scrollerRef.value;
+  const shouldKeepBottom = !!el && (Date.now() < keepBottomUntil || isNearBottom(64));
   const index = messageKeys.value.indexOf(key);
-  if (index >= 0) {
-    const el = scrollerRef.value;
+  if (index >= 0 && !shouldKeepBottom) {
     const rowTop = layout.value.offsets[index] || 0;
     const delta = height - oldHeight;
     if (el && rowTop < scrollTop.value && delta !== 0) {
@@ -71,6 +74,7 @@ function setMeasuredHeight(key: string, height: number) {
 
   measuredHeights.set(key, height);
   heightVersion.value += 1;
+  if (shouldKeepBottom) scheduleScrollToBottom(2);
 }
 
 const layout = computed(() => {
@@ -167,12 +171,32 @@ function isNearBottom(threshold = 200): boolean {
 }
 
 function scrollToBottom() {
+  keepBottomUntil = Date.now() + 700;
   nextTick(() => {
-    const el = scrollerRef.value;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    syncViewport();
+    scheduleScrollToBottom(3);
   });
+}
+
+function setScrollToBottomNow() {
+  const el = scrollerRef.value;
+  if (!el) return;
+  el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+  syncViewport();
+}
+
+function scheduleScrollToBottom(frames = 1) {
+  if (bottomFrame != null) cancelAnimationFrame(bottomFrame);
+
+  const step = (remaining: number) => {
+    setScrollToBottomNow();
+    if (remaining <= 1) {
+      bottomFrame = null;
+      return;
+    }
+    bottomFrame = requestAnimationFrame(() => step(remaining - 1));
+  };
+
+  bottomFrame = requestAnimationFrame(() => step(frames));
 }
 
 function scrollToMessage(messageId: string) {
@@ -237,6 +261,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (bottomFrame != null) cancelAnimationFrame(bottomFrame);
   resizeObserver?.disconnect();
   for (const observer of observers.values()) observer.disconnect();
   observers.clear();
