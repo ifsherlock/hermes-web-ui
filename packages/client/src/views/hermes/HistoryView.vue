@@ -42,6 +42,7 @@ const hermesSessionsLoaded = ref(false)
 const historySessionId = ref<string | null>(null)
 const historySession = ref<Session | null>(null)
 const showOutline = ref(false)
+const historyMessageListRef = ref<InstanceType<typeof HistoryMessageList> | null>(null)
 const isBatchMode = ref(false)
 const isBatchDeleting = ref(false)
 const showBatchDeleteConfirm = ref(false)
@@ -51,6 +52,10 @@ const showContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 let hermesSessionsRequestId = 0
+
+function handleOutlineNavigate(target: { messageId: string; anchorId: string }) {
+  historyMessageListRef.value?.scrollToAnchor(target.messageId, target.anchorId)
+}
 
 async function loadHermesSessions() {
   const requestId = ++hermesSessionsRequestId
@@ -759,9 +764,13 @@ function handleBatchDeleteConfirm() {
 
       <div class="history-content-wrapper">
         <div class="history-main-content">
-          <HistoryMessageList :session="historySession" />
+          <HistoryMessageList ref="historyMessageListRef" :session="historySession" />
         </div>
-        <OutlinePanel v-if="showOutline && historySession" :messages="historySession.messages || []" />
+        <OutlinePanel
+          v-if="showOutline && historySession"
+          :messages="historySession.messages || []"
+          @navigate="handleOutlineNavigate"
+        />
       </div>
     </div>
   </div>

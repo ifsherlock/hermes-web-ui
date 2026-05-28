@@ -96,6 +96,10 @@ function scrollToMessage(messageId: string) {
   listRef.value?.scrollToMessage(messageId);
 }
 
+function scrollToAnchor(messageId: string, anchorId: string) {
+  listRef.value?.scrollToAnchor(messageId, anchorId);
+}
+
 async function handleTopReach() {
   const session = chatStore.activeSession;
   if (!session?.hasMoreBefore || session.isLoadingOlderMessages) return;
@@ -155,6 +159,12 @@ watch(currentToolCalls, () => {
   }
   if (!isNearBottom()) return;
   scrollToBottom();
+});
+
+defineExpose({
+  scrollToBottom,
+  scrollToMessage,
+  scrollToAnchor,
 });
 </script>
 

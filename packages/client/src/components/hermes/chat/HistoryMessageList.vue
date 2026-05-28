@@ -41,6 +41,10 @@ function scrollToMessage(messageId: string) {
   listRef.value?.scrollToMessage(messageId);
 }
 
+function scrollToAnchor(messageId: string, anchorId: string) {
+  listRef.value?.scrollToAnchor(messageId, anchorId);
+}
+
 // Scroll to bottom on session switch
 watch(
   () => activeSession.value?.id,
@@ -81,6 +85,12 @@ watch(
     scrollToBottom();
   },
 );
+
+defineExpose({
+  scrollToBottom,
+  scrollToMessage,
+  scrollToAnchor,
+});
 </script>
 
 <template>

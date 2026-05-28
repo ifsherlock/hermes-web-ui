@@ -50,6 +50,29 @@ function itemHeight(key: string): number {
   return measuredHeights.get(key) || props.estimatedItemHeight;
 }
 
+function measuredRowHeight(el: HTMLElement): number {
+  return Math.ceil(el.getBoundingClientRect().height || props.estimatedItemHeight);
+}
+
+function setMeasuredHeight(key: string, height: number) {
+  const oldHeight = itemHeight(key);
+  if (oldHeight === height) return;
+
+  const index = messageKeys.value.indexOf(key);
+  if (index >= 0) {
+    const el = scrollerRef.value;
+    const rowTop = layout.value.offsets[index] || 0;
+    const delta = height - oldHeight;
+    if (el && rowTop < scrollTop.value && delta !== 0) {
+      el.scrollTop = Math.max(0, el.scrollTop + delta);
+      syncViewport();
+    }
+  }
+
+  measuredHeights.set(key, height);
+  heightVersion.value += 1;
+}
+
 const layout = computed(() => {
   heightVersion.value;
   const offsets: number[] = [];
@@ -115,18 +138,11 @@ function setItemRef(key: string, el: Element | ComponentPublicInstance | null) {
 
   observedElements.set(key, el);
   if (typeof ResizeObserver === "undefined") {
-    const height = Math.ceil(el.getBoundingClientRect().height || props.estimatedItemHeight);
-    measuredHeights.set(key, height);
-    heightVersion.value += 1;
+    setMeasuredHeight(key, measuredRowHeight(el));
     return;
   }
 
-  const observer = new ResizeObserver(entries => {
-    const height = Math.ceil(entries[0]?.contentRect.height || props.estimatedItemHeight);
-    if (measuredHeights.get(key) === height) return;
-    measuredHeights.set(key, height);
-    heightVersion.value += 1;
-  });
+  const observer = new ResizeObserver(() => setMeasuredHeight(key, measuredRowHeight(el)));
   observer.observe(el);
   observers.set(key, observer);
 }
@@ -170,6 +186,23 @@ function scrollToMessage(messageId: string) {
     syncViewport();
     nextTick(() => {
       document.getElementById(`message-${messageId}`)?.scrollIntoView({ block: "center" });
+    });
+  });
+}
+
+function scrollToAnchor(messageId: string, anchorId: string) {
+  const index = props.messages.findIndex(message => String(message.id) === messageId);
+  if (index < 0) return;
+
+  nextTick(() => {
+    const el = scrollerRef.value;
+    if (!el) return;
+    el.scrollTop = Math.max(0, (layout.value.offsets[index] || 0) - 24);
+    syncViewport();
+    nextTick(() => {
+      const target = document.getElementById(anchorId) || document.getElementById(`message-${messageId}`);
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      syncViewport();
     });
   });
 }
@@ -218,6 +251,13 @@ watch(messageKeys, keys => {
     observers.delete(key);
     observedElements.delete(key);
   }
+  let droppedHeights = false;
+  for (const key of [...measuredHeights.keys()]) {
+    if (activeKeys.has(key)) continue;
+    measuredHeights.delete(key);
+    droppedHeights = true;
+  }
+  if (droppedHeights) heightVersion.value += 1;
   nextTick(syncViewport);
 });
 
@@ -225,6 +265,7 @@ defineExpose({
   isNearBottom,
   scrollToBottom,
   scrollToMessage,
+  scrollToAnchor,
   captureScrollPosition,
   restoreScrollPosition,
 });
