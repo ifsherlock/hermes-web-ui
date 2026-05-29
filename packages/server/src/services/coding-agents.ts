@@ -2,7 +2,7 @@ import { execFile } from 'child_process'
 import { existsSync, realpathSync } from 'fs'
 import { mkdir, readFile, stat, writeFile } from 'fs/promises'
 import { homedir } from 'os'
-import { delimiter, dirname, join } from 'path'
+import { delimiter, dirname, extname, join } from 'path'
 import { promisify } from 'util'
 import { getWebUiHome } from '../config'
 import { registerClaudeCodeProxyTarget, type ApiMode } from './claude-code-proxy'
@@ -12,9 +12,6 @@ import { getModelContextLength } from './hermes/model-context'
 
 const execFileAsync = promisify(execFile)
 const LAUNCH_API_MODES = new Set<ApiMode>(['chat_completions', 'codex_responses', 'anthropic_messages'])
-const CLAUDE_PROXY_HAIKU_MODEL = 'claude-haiku-4-5'
-const CLAUDE_PROXY_SONNET_MODEL = 'claude-sonnet-4-6'
-const CLAUDE_PROXY_OPUS_MODEL = 'claude-opus-4-7'
 const CODING_AGENT_HOME_DIR = 'coding-agent'
 const CODEX_MODEL_CATALOG_FILE = 'codex-model-catalog.json'
 const CODEX_CATALOG_BASE_INSTRUCTIONS = 'You are Codex, a coding agent. Be precise, safe, and helpful.'
@@ -167,12 +164,15 @@ function getNpmBin() {
 }
 
 function normalizeScopeSegment(value: string | undefined, fallback: string, label: string): string {
-  const segment = String(value || '').trim() || fallback
+  // Replace invalid filename characters with underscores
+  // Windows invalid chars: < > : " / \ | ? *
+  // Additional problematic chars: control characters
+  const sanitizedValue = String(value || '').trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+  const segment = sanitizedValue || fallback
+
   if (
     segment === '.' ||
     segment === '..' ||
-    segment.includes('/') ||
-    segment.includes('\\') ||
     segment.includes('\0')
   ) {
     const err = new Error(`Invalid ${label}`)
@@ -309,6 +309,10 @@ function powerShellQuote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`
 }
 
+function cmdQuote(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`
+}
+
 function buildLaunchShellCommand(input: {
   workspaceDir: string
   env: Record<string, string>
@@ -357,11 +361,11 @@ function isDockerRuntime(): boolean {
 
 async function openNativeTerminal(shellCommand: string): Promise<string> {
   if (process.platform === 'win32') {
+    const escapedCommand = shellCommand.replace(/"/g, '""').replace(/\$/g, '`$')
     await execFileAsync('powershell.exe', [
       '-NoProfile',
       '-Command',
-      "Start-Process -FilePath powershell.exe -ArgumentList @('-NoExit', '-Command', $args[0])",
-      shellCommand,
+      `Start-Process -FilePath powershell.exe -ArgumentList @('-NoExit', '-Command', "${escapedCommand}")`,
     ], {
       encoding: 'utf-8',
       timeout: 8000,
@@ -508,6 +512,34 @@ async function findCommandPaths(command: string, env: NodeJS.ProcessEnv): Promis
   }
 }
 
+function windowsCommandNeedsShell(command: string): boolean {
+  const extension = extname(command).toLowerCase()
+  return extension === '.cmd' || extension === '.bat'
+}
+
+async function resolveCommandForExecution(command: string, env: NodeJS.ProcessEnv): Promise<string> {
+  if (process.platform !== 'win32') return command
+  const paths = await findCommandPaths(command, env)
+  // On Windows, prioritize paths with .cmd or .bat extensions since where may return
+  // both the unix-style script (without extension) and the Windows shim (.cmd)
+  const windowsPath = paths.find(path => windowsCommandNeedsShell(path))
+  return windowsPath || paths[0] || command
+}
+
+function commandExecution(command: string, args: string[]): { command: string; args: string[] } {
+  if (process.platform === 'win32' && windowsCommandNeedsShell(command)) {
+    // For CMD /C, the command and args need to be passed as a single string
+    // The command path should be quoted if it contains spaces, but args are joined directly
+    const commandArg = / /.test(command) ? `"${command}"` : command
+    const argsString = args.map(arg => / /.test(arg) ? `"${arg}"` : arg).join(' ')
+    return {
+      command: 'cmd.exe',
+      args: ['/d', '/s', '/c', `${commandArg} ${argsString}`],
+    }
+  }
+  return { command, args }
+}
+
 function packageParts(packageName: string): string[] {
   return packageName.split('/').filter(Boolean)
 }
@@ -601,11 +633,14 @@ export function getCodingAgentConfigFileDefinitions(id: string): CodingAgentConf
 
 export async function getCodingAgentStatus(definition: CodingAgentDefinition): Promise<CodingAgentToolStatus> {
   try {
-    const { stdout, stderr } = await execFileAsync(definition.command, ['--version'], {
+    const env = await commandEnv()
+    const resolvedCommand = await resolveCommandForExecution(definition.command, env)
+    const execution = commandExecution(resolvedCommand, ['--version'])
+    const { stdout, stderr } = await execFileAsync(execution.command, execution.args, {
       encoding: 'utf-8',
       timeout: 8000,
       windowsHide: true,
-      env: await commandEnv(),
+      env,
     })
     const rawVersion = `${stdout || ''}${stderr || ''}`.trim()
     return {
@@ -864,16 +899,21 @@ export async function prepareCodingAgentLaunch(id: string, input: CodingAgentLau
       : null
     const claudeBaseUrl = proxyTarget?.baseUrl || baseUrl
     const claudeApiKey = proxyTarget?.token || apiKey
+    const modelName = displayNameForModel(model)
     const settings = {
+      model,
       env: {
         ...(claudeApiKey ? { ANTHROPIC_API_KEY: claudeApiKey } : {}),
         ...(claudeBaseUrl ? { ANTHROPIC_BASE_URL: claudeBaseUrl } : {}),
-        ANTHROPIC_DEFAULT_HAIKU_MODEL: CLAUDE_PROXY_HAIKU_MODEL,
-        ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: model,
-        ANTHROPIC_DEFAULT_SONNET_MODEL: CLAUDE_PROXY_SONNET_MODEL,
-        ANTHROPIC_DEFAULT_SONNET_MODEL_NAME: model,
-        ANTHROPIC_DEFAULT_OPUS_MODEL: CLAUDE_PROXY_OPUS_MODEL,
-        ANTHROPIC_DEFAULT_OPUS_MODEL_NAME: model,
+        ANTHROPIC_MODEL: model,
+        ANTHROPIC_CUSTOM_MODEL_OPTION: model,
+        ANTHROPIC_CUSTOM_MODEL_OPTION_NAME: modelName,
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: model,
+        ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: modelName,
+        ANTHROPIC_DEFAULT_SONNET_MODEL: model,
+        ANTHROPIC_DEFAULT_SONNET_MODEL_NAME: modelName,
+        ANTHROPIC_DEFAULT_OPUS_MODEL: model,
+        ANTHROPIC_DEFAULT_OPUS_MODEL_NAME: modelName,
       },
     }
     await writeScopedFile('settings', `${JSON.stringify(settings, null, 2)}\n`)
