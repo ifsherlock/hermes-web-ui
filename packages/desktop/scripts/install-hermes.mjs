@@ -63,6 +63,8 @@ if (r.status !== 0) {
 const hermesBin = TARGET_OS === 'win32'
   ? resolve(PY_DIR, 'Scripts', 'hermes.exe')
   : resolve(PY_DIR, 'bin', 'hermes')
+const hermesCheckCommand = TARGET_OS === 'win32' ? pyBin : hermesBin
+const hermesCheckArgs = TARGET_OS === 'win32' ? ['-m', 'hermes_cli.main', '--version'] : ['--version']
 
 if (!existsSync(hermesBin)) {
   console.error(`hermes binary not found at ${hermesBin} after install`)
@@ -137,7 +139,7 @@ if (TARGET_OS === 'win32') {
 
 console.log(`✓ hermes installed at ${hermesBin} (relocatable launcher)`)
 
-r = spawnSync(hermesBin, ['--version'], { stdio: 'inherit' })
+r = spawnSync(hermesCheckCommand, hermesCheckArgs, { stdio: 'inherit' })
 if (r.status !== 0) {
   console.error('hermes --version failed')
   process.exit(r.status ?? 1)
