@@ -29,6 +29,7 @@ extraResources:
     to: "build"
     filter:
       - "icon.png"
+      - "icon.ico"
       - "trayTemplate.png"
   - from: "../.."
     to: "webui"
@@ -60,13 +61,13 @@ mac:
   hardenedRuntime: true
   gatekeeperAssess: false
   notarize: true
-  artifactName: "${productName}-${version}-${arch}.${ext}"
+  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
 
 win:
   target:
     - target: nsis
       arch: [x64]
-  artifactName: "${productName}-${version}-${arch}.${ext}"
+  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
 
 linux:
   icon: build/icons
@@ -76,9 +77,10 @@ linux:
     - target: deb
       arch: [x64]   # fpm has no arm64 binary; deb only on x64
   category: Development
-  artifactName: "${productName}-${version}-${arch}.${ext}"
+  artifactName: "Hermes.Studio-${version}-${arch}.${ext}"
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
+  include: build/installer.nsh

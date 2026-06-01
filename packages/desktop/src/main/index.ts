@@ -1,12 +1,13 @@
 import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage } from 'electron'
 import { join } from 'node:path'
 import { startWebUiServer, stopWebUiServer, getToken } from './webui-server'
-import { desktopIcon, desktopTrayTemplateIcon, hermesBinExists, hermesBin } from './paths'
+import { desktopIcon, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin } from './paths'
 import { checkForDesktopUpdates, initAutoUpdater } from './updater'
 import { t } from './desktop-i18n'
 
 const PORT = Number(process.env.HERMES_DESKTOP_PORT) || 8748
 const START_HIDDEN = process.argv.includes('--hidden')
+const QUIT_EXISTING = process.argv.includes('--quit')
 
 let mainWindow: BrowserWindow | null = null
 let serverUrl: string | null = null
@@ -90,10 +91,14 @@ function updateTrayMenu() {
 
 function createTray() {
   if (tray) return
-  const source = process.platform === 'darwin' ? desktopTrayTemplateIcon() : desktopIcon()
+  const source = process.platform === 'darwin'
+    ? desktopTrayTemplateIcon()
+    : process.platform === 'win32'
+      ? desktopWindowsTrayIcon()
+      : desktopIcon()
   const icon = nativeImage.createFromPath(source).resize({
-    width: process.platform === 'darwin' ? 18 : 16,
-    height: process.platform === 'darwin' ? 18 : 16,
+    width: process.platform === 'darwin' ? 18 : process.platform === 'win32' ? 20 : 16,
+    height: process.platform === 'darwin' ? 18 : process.platform === 'win32' ? 20 : 16,
     quality: 'best',
   })
   if (process.platform === 'darwin') {
@@ -205,11 +210,20 @@ const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
+    if (argv.includes('--quit')) {
+      quitApp()
+      return
+    }
     showMainWindow()
   })
 
   app.whenReady().then(() => {
+    if (QUIT_EXISTING) {
+      quitApp()
+      return
+    }
+
     // Drop the default File/Edit/View/Window menu on Windows/Linux. The web
     // UI provides its own in-page controls, so the native menu bar is just
     // visual clutter. macOS keeps a menu (system requirement) but Electron's
