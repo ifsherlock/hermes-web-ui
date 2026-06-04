@@ -181,12 +181,12 @@ export default {
   sidebar: {
     chat: 'Chat',
     search: 'Search',
-    apiRelay: 'API Relay',
     history: 'History',
     jobs: 'Jobs',
     kanban: 'Kanban',
     models: 'Models',
     profiles: 'Profiles',
+    agentProfile: 'Agent',
     skills: 'Skills',
     plugins: 'Plugins',
     mcp: 'MCP',

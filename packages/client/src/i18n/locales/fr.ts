@@ -181,11 +181,11 @@ export default {
   sidebar: {
     chat: 'Discussion',
     search: 'Rechercher',
-    apiRelay: 'API Relay',
     history: 'Historique',
     jobs: 'Taches planifiees',
     models: 'Modeles',
     profiles: 'Profils',
+    agentProfile: 'Agent',
     plugins: 'Plugins',
     mcp: 'MCP',
     skills: 'Competences',

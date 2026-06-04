@@ -14,34 +14,6 @@ export interface ProviderPreset {
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
-    label: 'Codex-apikey.fun',
-    value: 'fun-codex',
-    builtin: true,
-    base_url: 'https://api.apikey.fun/v1',
-    api_mode: 'codex_responses',
-    models: [
-      'gpt-5.5',
-      'gpt-5.4',
-      'gpt-5.4-mini',
-      'gpt-5.3-codex',
-      'gpt-5.3-codex-spark',
-    ],
-  },
-  {
-    label: 'Claude-apikey.fun',
-    value: 'fun-claude',
-    builtin: true,
-    base_url: 'https://api.apikey.fun',
-    api_mode: "anthropic_messages",
-    models: [
-      'claude-opus-4-8',
-      'claude-opus-4-7',
-      'claude-opus-4-6',
-      'claude-sonnet-4-6',
-      'claude-haiku-4-5'
-    ],
-  },
-  {
     label: 'LM Studio',
     value: 'lmstudio',
     builtin: true,

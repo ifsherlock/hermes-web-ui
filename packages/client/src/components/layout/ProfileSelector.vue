@@ -204,7 +204,7 @@ onMounted(() => {
 
 <template>
   <div class="profile-selector">
-    <div class="selector-label">{{ t('sidebar.profiles') }}</div>
+    <div class="selector-label">{{ t('sidebar.agentProfile') }}</div>
     <div class="profile-display" data-testid="profile-selector-select" @click="openProfileModal">
       <ProfileAvatarView class="profile-avatar" :name="displayName" :avatar="activeProfile?.avatar" :size="24" />
       <span class="profile-name">{{ displayName }}</span>
@@ -220,7 +220,7 @@ onMounted(() => {
       <template #header>
         <div class="profile-modal-header">
           <div class="profile-popover-title">
-            <span class="profile-popover-name">{{ t('sidebar.profiles') }}</span>
+            <span class="profile-popover-name">{{ t('sidebar.agentProfile') }}</span>
             <span class="profile-popover-subtitle">{{ t('profiles.runtime.activeProfile', { name: displayName }) }}</span>
           </div>
         </div>

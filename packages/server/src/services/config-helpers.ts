@@ -8,8 +8,6 @@ import { safeFileStore } from './safe-file-store'
 
 // --- Provider env var mapping (from hermes providers.py HERMES_OVERLAYS + config.py) ---
 export const PROVIDER_ENV_MAP: Record<string, { api_key_env: string; base_url_env: string }> = {
-  'fun-codex': { api_key_env: '', base_url_env: '' },
-  'fun-claude': { api_key_env: '', base_url_env: '' },
   lmstudio: { api_key_env: 'LM_API_KEY', base_url_env: 'LM_BASE_URL' },
   openrouter: { api_key_env: 'OPENROUTER_API_KEY', base_url_env: 'OPENROUTER_BASE_URL' },
   'glm-coding-plan': { api_key_env: '', base_url_env: '' },

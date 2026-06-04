@@ -107,12 +107,12 @@ export default {
   sidebar: {
     chat: 'Чат',
     search: 'Поиск',
-    apiRelay: 'Ретранслятор API',
     history: 'История',
     jobs: 'Задачи',
     kanban: 'Канбан',
     models: 'Модели',
     profiles: 'Пользователи',
+    agentProfile: 'Agent',
     plugins: 'Плагины',
     skills: 'Навыки',
     memory: 'Память',

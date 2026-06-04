@@ -181,11 +181,11 @@ export default {
   sidebar: {
     chat: 'チャット',
     search: '検索',
-    apiRelay: 'APIリレー',
     history: '履歴',
     jobs: 'ジョブ',
     models: 'モデル',
     profiles: 'プロファイル',
+    agentProfile: 'Agent',
     plugins: 'プラグイン',
     mcp: 'MCP',
     skills: 'スキル',

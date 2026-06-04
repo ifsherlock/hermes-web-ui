@@ -181,12 +181,12 @@ export default {
   sidebar: {
     chat: '对话',
     search: '搜索',
-    apiRelay: '中转站',
     history: '历史',
     jobs: '任务',
     kanban: '看板',
     models: '模型',
     profiles: '用户',
+    agentProfile: '\u667a\u80fd\u4f53',
     plugins: '插件',
     mcp: 'MCP',
     skills: '技能',
