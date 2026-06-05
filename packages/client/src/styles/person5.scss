@@ -8156,7 +8156,7 @@ html.person5 .sidebar-nav > .nav-group-system {
 }
 
 html.person5 .p5-sidebar-controls {
-  margin-top: 0 !important;
+  margin-top: -50px !important;
 }
 
 html.person5 .p5-control-model .p5-submenu-scroll {
@@ -8216,5 +8216,9 @@ html.person5 .p5-control-model .p5-submenu-more {
   html.person5 .p5-control-model .p5-submenu-more {
     margin-left: auto !important;
     margin-right: auto !important;
+  }
+
+  html.person5 .p5-sidebar-controls {
+    margin-top: -24px !important;
   }
 }
