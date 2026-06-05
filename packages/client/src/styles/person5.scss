@@ -4931,14 +4931,14 @@ html.person5 .nav-group:not(.nav-group-conversation) .p5-seven-stripe::after,
 html.person5 .p5-control-label-main .p5-seven-stripe::after,
 html.person5 .p5-logout-strip .p5-seven-stripe::after {
   position: absolute;
-  right: 8px;
-  top: 11px;
+  left: 126px;
+  top: 8px;
   width: 44px;
   height: 4px;
   content: "";
   background: var(--p5-white);
   transform: rotate(133deg);
-  transform-origin: right center;
+  transform-origin: left center;
 }
 
 html.person5 .p5-logout-strip {
