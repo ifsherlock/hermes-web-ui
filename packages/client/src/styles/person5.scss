@@ -7840,10 +7840,24 @@ html.p5-login-active .p5-login-view .login-btn {
 }
 
 /* PERSON5 critical chat fix: keep the message area from consuming the composer. */
+html.person5 .chat-view {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+html.person5 .chat-panel {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
 html.person5 .chat-main {
   display: flex !important;
   flex-direction: column !important;
   min-height: 0 !important;
+  height: 100% !important;
 }
 
 html.person5 .chat-content-wrapper {
@@ -7862,7 +7876,9 @@ html.person5 .chat-input-area {
   z-index: 40 !important;
   display: block !important;
   flex: 0 0 auto !important;
-  min-height: 118px !important;
+  min-height: 136px !important;
+  margin-top: 0 !important;
+  margin-bottom: 28px !important;
   visibility: visible !important;
   opacity: 1 !important;
   overflow: visible !important;
@@ -7871,4 +7887,56 @@ html.person5 .chat-input-area {
 html.person5 .chat-input-area .input-wrapper {
   display: flex !important;
   min-height: 76px !important;
+}
+
+html.person5 .chat-input-area .input-top-bar {
+  min-height: 28px !important;
+  flex: 0 0 auto !important;
+}
+
+html.person5 .chat-input-area .input-textarea {
+  min-height: 54px !important;
+}
+
+/* Lift the PERSON5 session drawer tag above the white stage line. */
+html.person5 .chat-panel > .p5-session-handle {
+  top: 84px !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle.open {
+  top: 84px !important;
+}
+
+/* Keep collapsed sidebar controls away from the lower scrollbar/collapse hit area. */
+html.person5 .sidebar.collapsed .p5-collapsed-rail {
+  bottom: 150px !important;
+  align-items: center !important;
+}
+
+html.person5 .sidebar.collapsed .collapse-btn {
+  bottom: 28px !important;
+}
+
+html.person5 .sidebar.collapsed .collapse-btn::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  top: -18px;
+  height: 18px;
+  pointer-events: auto;
+}
+
+html.person5 .sidebar.collapsed .p5-collapsed-agent,
+html.person5 .sidebar.collapsed .p5-collapsed-quick-actions,
+html.person5 .sidebar.collapsed .p5-collapsed-agent-actions {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  justify-items: center !important;
+  align-items: center !important;
+}
+
+html.person5 .sidebar.collapsed .p5-collapsed-agent-button {
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
