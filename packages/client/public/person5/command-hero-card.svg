@@ -12,6 +12,7 @@
     </filter>
   </defs>
 
+  <g transform="translate(38 12.5) scale(.9)">
   <g filter="url(#hardShadow)">
     <path d="M44 116 128 42 236 50 280 18 602 30 706 118 615 194 355 214 208 190 108 220 68 168 8 174Z" fill="#050505"/>
     <path d="M2 126 122 38 210 58 278 10 604 25 742 118 606 210 352 220 204 196 92 232 58 171Z" fill="#f5f1e6"/>
@@ -41,4 +42,5 @@
   <path d="M74 152 190 139 174 153 332 136" fill="none" stroke="#f5f1e6" stroke-width="8" stroke-linecap="square"/>
   <path d="M350 55 586 51 616 70" fill="none" stroke="#050505" stroke-width="13" stroke-linecap="square"/>
   <path d="M350 55 586 51 616 70" fill="none" stroke="#f5f1e6" stroke-width="6" stroke-linecap="square"/>
+  </g>
 </svg>
