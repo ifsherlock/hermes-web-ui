@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, h, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { NButton, NModal, useMessage } from "naive-ui";
@@ -46,6 +46,20 @@ const { record: collapsedGroups, persist: persistCollapsedGroups } = usePersiste
 
 type SidebarGroupKey = "Conversation" | "Agent" | "Monitoring" | "Tools" | "System";
 type Person5ControlKey = "profile" | "model";
+
+const P5StripBorder = () => h(
+  'svg',
+  {
+    class: 'p5-strip-border',
+    viewBox: '0 0 760 150',
+    'aria-hidden': 'true',
+  },
+  [
+    h('polygon', { points: '72,8 742,8 724,134 34,134 82,76 56,18', fill: '#050505', stroke: 'none' }),
+    h('polyline', { points: '72,8 742,8 724,134 34,134 82,76 56,18 72,8', fill: 'none', stroke: '#fff8ec', 'stroke-width': '4', 'stroke-linejoin': 'miter' }),
+    h('polyline', { points: '82,18 728,18 712,124 56,124 96,76 76,30 82,18', fill: 'none', stroke: '#fff8ec', 'stroke-width': '2.5', 'stroke-linejoin': 'miter' }),
+  ],
+);
 
 const person5GroupLabels: Record<SidebarGroupKey, string> = {
   Conversation: "作战会议室",
@@ -316,12 +330,14 @@ onMounted(() => {
       <div class="nav-group nav-group-agent" :class="{ expanded: !isGroupCollapsed('agent') }">
         <div class="nav-group-label" @click="toggleGroup('agent')">
           <template v-if="isPerson5">
+            <P5StripBorder />
             <span class="p5-menu-stars" aria-hidden="true"></span>
             <span class="p5-notch-stars" aria-hidden="true">
               <span class="p5-star p5-star-red p5-star-large"></span>
               <span class="p5-star p5-star-white p5-star-large"></span>
               <span class="p5-star p5-star-red p5-star-small"></span>
               <span class="p5-star p5-star-white p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-tiny"></span>
             </span>
             <span class="p5-z-stripe" aria-hidden="true"></span>
             <span class="p5-seven-stripe" aria-hidden="true"></span>
@@ -430,12 +446,14 @@ onMounted(() => {
       <div class="nav-group nav-group-monitoring" :class="{ expanded: !isGroupCollapsed('monitoring') }">
         <div class="nav-group-label" @click="toggleGroup('monitoring')">
           <template v-if="isPerson5">
+            <P5StripBorder />
             <span class="p5-menu-stars" aria-hidden="true"></span>
             <span class="p5-notch-stars" aria-hidden="true">
               <span class="p5-star p5-star-red p5-star-large"></span>
               <span class="p5-star p5-star-white p5-star-large"></span>
               <span class="p5-star p5-star-red p5-star-small"></span>
               <span class="p5-star p5-star-white p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-tiny"></span>
             </span>
             <span class="p5-z-stripe" aria-hidden="true"></span>
             <span class="p5-seven-stripe" aria-hidden="true"></span>
@@ -498,12 +516,14 @@ onMounted(() => {
       <div class="nav-group nav-group-tools" :class="{ expanded: !isGroupCollapsed('tools') }">
         <div class="nav-group-label" @click="toggleGroup('tools')">
           <template v-if="isPerson5">
+            <P5StripBorder />
             <span class="p5-menu-stars" aria-hidden="true"></span>
             <span class="p5-notch-stars" aria-hidden="true">
               <span class="p5-star p5-star-red p5-star-large"></span>
               <span class="p5-star p5-star-white p5-star-large"></span>
               <span class="p5-star p5-star-red p5-star-small"></span>
               <span class="p5-star p5-star-white p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-tiny"></span>
             </span>
             <span class="p5-z-stripe" aria-hidden="true"></span>
             <span class="p5-seven-stripe" aria-hidden="true"></span>
@@ -554,12 +574,14 @@ onMounted(() => {
       <div class="nav-group nav-group-system" :class="{ expanded: !isGroupCollapsed('system') }">
         <div class="nav-group-label" @click="toggleGroup('system')">
           <template v-if="isPerson5">
+            <P5StripBorder />
             <span class="p5-menu-stars" aria-hidden="true"></span>
             <span class="p5-notch-stars" aria-hidden="true">
               <span class="p5-star p5-star-red p5-star-large"></span>
               <span class="p5-star p5-star-white p5-star-large"></span>
               <span class="p5-star p5-star-red p5-star-small"></span>
               <span class="p5-star p5-star-white p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-tiny"></span>
             </span>
             <span class="p5-z-stripe" aria-hidden="true"></span>
             <span class="p5-seven-stripe" aria-hidden="true"></span>
@@ -606,11 +628,13 @@ onMounted(() => {
       <template v-if="isPerson5">
         <div class="nav-group p5-control-group p5-control-profile" :class="{ expanded: !isP5ControlCollapsed('profile') }">
           <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('profile')">
+            <P5StripBorder />
             <span class="p5-notch-stars" aria-hidden="true">
               <span class="p5-star p5-star-red p5-star-large"></span>
               <span class="p5-star p5-star-white p5-star-large"></span>
               <span class="p5-star p5-star-red p5-star-small"></span>
               <span class="p5-star p5-star-white p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-tiny"></span>
             </span>
             <span class="p5-z-stripe" aria-hidden="true"></span>
             <span class="p5-seven-stripe" aria-hidden="true"></span>
@@ -657,11 +681,13 @@ onMounted(() => {
 
         <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">
           <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('model')">
+            <P5StripBorder />
             <span class="p5-notch-stars" aria-hidden="true">
               <span class="p5-star p5-star-red p5-star-large"></span>
               <span class="p5-star p5-star-white p5-star-large"></span>
               <span class="p5-star p5-star-red p5-star-small"></span>
               <span class="p5-star p5-star-white p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-tiny"></span>
             </span>
             <span class="p5-z-stripe" aria-hidden="true"></span>
             <span class="p5-seven-stripe" aria-hidden="true"></span>
@@ -721,6 +747,18 @@ onMounted(() => {
 
     <div class="sidebar-footer">
       <button class="nav-item logout-item" :class="{ 'p5-logout-strip': isPerson5 }" @click="handleLogout">
+        <P5StripBorder v-if="isPerson5" />
+        <template v-if="isPerson5">
+          <span class="p5-notch-stars" aria-hidden="true">
+            <span class="p5-star p5-star-red p5-star-large"></span>
+            <span class="p5-star p5-star-white p5-star-large"></span>
+            <span class="p5-star p5-star-red p5-star-small"></span>
+            <span class="p5-star p5-star-white p5-star-small"></span>
+            <span class="p5-star p5-star-white p5-star-tiny"></span>
+          </span>
+          <span class="p5-z-stripe" aria-hidden="true"></span>
+          <span class="p5-seven-stripe" aria-hidden="true"></span>
+        </template>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
           <polyline points="16 17 21 12 16 7" />

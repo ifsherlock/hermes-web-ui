@@ -4663,3 +4663,311 @@ html.person5 .nav-group-conversation .p5-menu-char {
     padding-bottom: 14px;
   }
 }
+
+/* PERSON5 menu strip demo migration: ordinary strips use the approved demo geometry. */
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label,
+html.person5 .p5-control-label-main,
+html.person5 .p5-logout-strip {
+  width: min(690px, calc(100% - 22px));
+  min-height: 132px;
+  margin-left: 18px;
+  padding: 30px 84px 26px 174px !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  transform: none !important;
+  filter: drop-shadow(13px 12px 0 #050505);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label > *,
+html.person5 .p5-control-label-main > *,
+html.person5 .p5-logout-strip > * {
+  transform: none;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label > *:not(.p5-strip-border),
+html.person5 .p5-control-label-main > *:not(.p5-strip-border),
+html.person5 .p5-logout-strip > *:not(.p5-strip-border) {
+  position: relative;
+  z-index: 2;
+}
+
+html.person5 .p5-strip-border {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label::before,
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label::after,
+html.person5 .p5-control-label-main::before,
+html.person5 .p5-control-label-main::after,
+html.person5 .p5-logout-strip::before,
+html.person5 .p5-logout-strip::after {
+  display: none !important;
+  content: none !important;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-copy,
+html.person5 .p5-control-label-main .p5-menu-copy {
+  position: absolute !important;
+  left: 174px;
+  top: 26px;
+  display: block;
+  transform: rotate(-2deg);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-title,
+html.person5 .p5-control-label-main .p5-menu-title {
+  gap: 6px;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-char,
+html.person5 .p5-control-label-main .p5-menu-char {
+  min-width: 44px;
+  min-height: 58px;
+  padding: 0 8px 5px;
+  color: var(--p5-white);
+  background: var(--p5-black);
+  border: 3px solid var(--p5-white);
+  box-shadow: 4px 4px 0 var(--p5-black), -2px -2px 0 rgba(255, 255, 255, 0.5);
+  font-size: clamp(30px, 1.75vw, 38px);
+  line-height: 1;
+  text-shadow:
+    3px 0 0 var(--p5-black),
+    -3px 0 0 var(--p5-black),
+    0 3px 0 var(--p5-black),
+    0 -3px 0 var(--p5-black);
+  transform: skewX(-8deg);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-hot,
+html.person5 .p5-control-label-main .p5-menu-hot {
+  color: var(--p5-white);
+  background: var(--p5-red);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-subtitle,
+html.person5 .p5-control-label-main .p5-menu-subtitle {
+  position: absolute !important;
+  left: 96px;
+  top: 64px;
+  padding: 0 14px 3px;
+  color: rgba(246, 241, 230, 0.72);
+  background: rgba(0, 0, 0, 0.86);
+  border-top: 2px solid rgba(255, 255, 255, 0.7);
+  font-size: clamp(16px, 1vw, 22px);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-notch-stars,
+html.person5 .p5-control-label-main .p5-notch-stars,
+html.person5 .p5-logout-strip .p5-notch-stars {
+  left: -8px;
+  top: 18px;
+  width: 112px;
+  height: 96px;
+  transform: none;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star,
+html.person5 .p5-control-label-main .p5-star,
+html.person5 .p5-logout-strip .p5-star {
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 56%, 79% 91%, 50% 70%, 21% 91%, 32% 56%, 2% 35%, 39% 35%);
+  transform: rotate(var(--rot));
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star::before,
+html.person5 .p5-control-label-main .p5-star::before,
+html.person5 .p5-logout-strip .p5-star::before {
+  position: absolute;
+  inset: var(--stroke);
+  content: "";
+  clip-path: inherit;
+  background: var(--fill);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star-red.p5-star-large,
+html.person5 .p5-control-label-main .p5-star-red.p5-star-large,
+html.person5 .p5-logout-strip .p5-star-red.p5-star-large {
+  --size: 50px;
+  --rot: -12deg;
+  --stroke: 5px;
+  --fill: var(--p5-red);
+  left: 6px;
+  top: 18px;
+  background: var(--p5-line);
+  filter: drop-shadow(4px 4px 0 var(--p5-black));
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star-white.p5-star-large,
+html.person5 .p5-control-label-main .p5-star-white.p5-star-large,
+html.person5 .p5-logout-strip .p5-star-white.p5-star-large {
+  --size: 43px;
+  --rot: 21deg;
+  --stroke: 4px;
+  --fill: var(--p5-black);
+  left: 44px;
+  top: 35px;
+  background: var(--p5-line);
+  filter: drop-shadow(3px 3px 0 var(--p5-black));
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star-white.p5-star-large::after,
+html.person5 .p5-control-label-main .p5-star-white.p5-star-large::after,
+html.person5 .p5-logout-strip .p5-star-white.p5-star-large::after {
+  position: absolute;
+  inset: 10px;
+  content: "";
+  clip-path: inherit;
+  background: var(--p5-white);
+  transform: rotate(8deg);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star-red.p5-star-small,
+html.person5 .p5-control-label-main .p5-star-red.p5-star-small,
+html.person5 .p5-logout-strip .p5-star-red.p5-star-small {
+  --size: 16px;
+  --rot: -26deg;
+  --stroke: 0;
+  --fill: var(--p5-red);
+  left: -2px;
+  top: 73px;
+  background: var(--p5-red);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star-white.p5-star-small,
+html.person5 .p5-control-label-main .p5-star-white.p5-star-small,
+html.person5 .p5-logout-strip .p5-star-white.p5-star-small {
+  --size: 17px;
+  --rot: 15deg;
+  --stroke: 3px;
+  --fill: var(--p5-white);
+  left: 63px;
+  top: 5px;
+  background: var(--p5-black);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-star-tiny,
+html.person5 .p5-control-label-main .p5-star-tiny,
+html.person5 .p5-logout-strip .p5-star-tiny {
+  --size: 12px;
+  --rot: -8deg;
+  --stroke: 2px;
+  --fill: var(--p5-white);
+  left: 32px;
+  top: 2px;
+  background: var(--p5-black);
+  opacity: 0.86;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-z-stripe,
+html.person5 .p5-control-label-main .p5-z-stripe,
+html.person5 .p5-logout-strip .p5-z-stripe {
+  left: 80px;
+  bottom: 25px;
+  width: 310px;
+  height: 38px;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-z-stripe::before,
+html.person5 .p5-control-label-main .p5-z-stripe::before,
+html.person5 .p5-logout-strip .p5-z-stripe::before {
+  background: none !important;
+  clip-path: none !important;
+  border: 0;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-z-stripe::after,
+html.person5 .p5-control-label-main .p5-z-stripe::after,
+html.person5 .p5-logout-strip .p5-z-stripe::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--p5-red);
+  clip-path: polygon(0 70%, 37% 38%, 31% 70%, 100% 24%, 100% 42%, 38% 86%, 44% 55%, 0 86%);
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-seven-stripe,
+html.person5 .p5-control-label-main .p5-seven-stripe,
+html.person5 .p5-logout-strip .p5-seven-stripe {
+  right: 30px;
+  top: 18px;
+  width: 136px;
+  height: 50px;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-seven-stripe::before,
+html.person5 .p5-control-label-main .p5-seven-stripe::before,
+html.person5 .p5-logout-strip .p5-seven-stripe::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--p5-white);
+  border: 0 !important;
+  clip-path: polygon(0 28%, 89% 14%, 92% 22%, 25% 74%, 20% 66%, 76% 22%, 1% 36%);
+}
+
+html.person5 .p5-logout-strip {
+  min-height: 92px;
+  padding: 25px 82px 24px 140px !important;
+}
+
+html.person5 .p5-logout-strip .p5-strip-border {
+  transform: scaleY(0.72);
+  transform-origin: center;
+}
+
+@media (max-width: 2200px) {
+  html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label,
+  html.person5 .p5-control-label-main,
+  html.person5 .p5-logout-strip {
+    width: min(600px, calc(100% - 16px));
+    min-height: 116px;
+    margin-left: 14px;
+    padding: 24px 70px 22px 142px !important;
+  }
+
+  html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-copy,
+  html.person5 .p5-control-label-main .p5-menu-copy {
+    left: 142px;
+    top: 22px;
+  }
+
+  html.person5 .nav-group:not(.nav-group-conversation) .p5-notch-stars,
+  html.person5 .p5-control-label-main .p5-notch-stars,
+  html.person5 .p5-logout-strip .p5-notch-stars {
+    left: -10px;
+    top: 12px;
+    transform: scale(0.9);
+    transform-origin: left top;
+  }
+
+  html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-char,
+  html.person5 .p5-control-label-main .p5-menu-char {
+    min-width: 38px;
+    min-height: 50px;
+    font-size: clamp(26px, 1.55vw, 34px);
+  }
+
+  html.person5 .nav-group:not(.nav-group-conversation) .p5-z-stripe,
+  html.person5 .p5-control-label-main .p5-z-stripe,
+  html.person5 .p5-logout-strip .p5-z-stripe {
+    left: 66px;
+    bottom: 20px;
+    width: 260px;
+  }
+
+  html.person5 .p5-logout-strip {
+    min-height: 82px;
+    padding-left: 116px !important;
+  }
+}
