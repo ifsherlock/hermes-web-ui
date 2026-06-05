@@ -48,43 +48,24 @@
       filter: drop-shadow(13px 12px 0 rgba(0, 0, 0, 0.95));
     }
 
-    .p5-strip::before,
-    .p5-strip::after,
+    .p5-border-svg {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: visible;
+    }
+
     .p5-strip-core {
       position: absolute;
       inset: 0;
-      content: "";
-      clip-path: polygon(0 50%, 42px 0, 100% 0, 96.5% 100%, 42px 100%);
-      transform: skewX(-4deg);
-      transform-origin: left center;
-    }
-
-    .p5-strip::before {
-      background: var(--p5-line);
-      inset: 0;
-      z-index: 1;
-    }
-
-    .p5-strip::after {
-      background: var(--p5-black);
-      inset: 7px 8px 7px 8px;
       z-index: 2;
-    }
-
-    .p5-strip-core {
-      inset: 14px 18px 14px 18px;
-      z-index: 3;
-      background:
-        linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 18%),
-        var(--p5-black);
-      outline: 3px solid var(--p5-line);
-      outline-offset: -8px;
+      pointer-events: none;
     }
 
     .p5-notch-stars {
       position: absolute;
-      left: -78px;
-      top: 20px;
+      left: -82px;
+      top: 18px;
       z-index: 6;
       width: 112px;
       height: 96px;
@@ -108,43 +89,54 @@
     }
 
     .p5-star-red-large {
-      --size: 52px;
+      --size: 50px;
       --rot: -12deg;
       --stroke: 5px;
       --fill: var(--p5-red);
-      left: 8px;
-      top: 16px;
+      left: 6px;
+      top: 18px;
       background: var(--p5-line);
+      filter: drop-shadow(4px 4px 0 var(--p5-black));
     }
 
     .p5-star-white-large {
-      --size: 46px;
-      --rot: 22deg;
-      --stroke: 5px;
+      --size: 43px;
+      --rot: 21deg;
+      --stroke: 6px;
       --fill: var(--p5-white);
-      left: 48px;
-      top: 28px;
+      left: 44px;
+      top: 35px;
       background: var(--p5-black);
       filter: drop-shadow(2px 2px 0 var(--p5-line));
     }
 
+    .p5-star-white-large::after {
+      position: absolute;
+      inset: 13px;
+      content: "";
+      clip-path: inherit;
+      background: transparent;
+      border: 3px solid var(--p5-black);
+      transform: rotate(8deg);
+    }
+
     .p5-star-red-small {
-      --size: 18px;
+      --size: 16px;
       --rot: -26deg;
       --stroke: 0;
       --fill: var(--p5-red);
-      left: 3px;
-      top: 66px;
+      left: -2px;
+      top: 73px;
       background: var(--p5-red);
     }
 
     .p5-star-white-small {
-      --size: 18px;
+      --size: 17px;
       --rot: 15deg;
       --stroke: 3px;
       --fill: var(--p5-white);
-      left: 68px;
-      top: 4px;
+      left: 63px;
+      top: 5px;
       background: var(--p5-black);
     }
 
@@ -156,23 +148,23 @@
     }
 
     .p5-z-line {
-      left: 78px;
-      bottom: 28px;
-      width: 300px;
+      left: 80px;
+      bottom: 25px;
+      width: 310px;
       height: 38px;
     }
 
     .p5-seven-line {
-      right: 76px;
-      top: 26px;
+      right: 68px;
+      top: 24px;
       width: 140px;
       height: 40px;
     }
 
     .p5-copy {
       position: absolute;
-      left: 230px;
-      top: 28px;
+      left: 218px;
+      top: 27px;
       z-index: 7;
       transform: rotate(-2deg);
       color: var(--p5-white);
@@ -181,7 +173,7 @@
     .p5-title {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       white-space: nowrap;
     }
 
@@ -217,9 +209,19 @@
       text-shadow: none;
     }
 
+    .p5-char.red-ink {
+      color: var(--p5-red);
+      background: var(--p5-black);
+      border-color: var(--p5-white);
+      -webkit-text-stroke: 1.4px var(--p5-white);
+      text-shadow:
+        2px 2px 0 var(--p5-black),
+        4px 4px 0 rgba(0, 0, 0, 0.75);
+    }
+
     .p5-subtitle {
       position: absolute;
-      left: 90px;
+      left: 96px;
       top: 64px;
       padding: 0 14px 3px;
       color: var(--p5-gray);
@@ -237,6 +239,11 @@
 <body>
   <main class="demo-stage">
     <section class="p5-strip" aria-label="PERSON5 功能条样式 demo">
+      <svg class="p5-border-svg" viewBox="0 0 760 150" aria-hidden="true">
+        <polygon points="58,8 742,8 724,134 58,134 90,76" fill="#050505" stroke="none" />
+        <polyline points="58,8 742,8 724,134 58,134 90,76 58,8" fill="none" stroke="#fff8ec" stroke-width="4" stroke-linejoin="miter" />
+        <polyline points="70,17 728,17 713,124 72,124 103,76 70,17" fill="none" stroke="#fff8ec" stroke-width="2.5" stroke-linejoin="miter" />
+      </svg>
       <div class="p5-strip-core"></div>
 
       <div class="p5-notch-stars" aria-hidden="true">
@@ -258,7 +265,7 @@
         <div class="p5-title">
           <span class="p5-char hot">心</span>
           <span class="p5-char paper">之</span>
-          <span class="p5-char">怪</span>
+          <span class="p5-char red-ink">怪</span>
           <span class="p5-char">盗</span>
           <span class="p5-char hot">团</span>
         </div>
