@@ -48,19 +48,66 @@ const { record: collapsedGroups, persist: persistCollapsedGroups } = usePersiste
 type SidebarGroupKey = "Conversation" | "Agent" | "Monitoring" | "Tools" | "System";
 type Person5ControlKey = "profile" | "model";
 
-const P5StripBorder = () => h(
-  'svg',
-  {
-    class: 'p5-strip-border',
-    viewBox: '0 0 760 150',
-    'aria-hidden': 'true',
-  },
-  [
-    h('polygon', { points: '72,8 742,8 724,134 34,134 82,76 56,18', fill: '#050505', stroke: 'none' }),
-    h('polyline', { points: '72,8 742,8 724,134 34,134 82,76 56,18 72,8', fill: 'none', stroke: '#fff8ec', 'stroke-width': '4', 'stroke-linejoin': 'miter' }),
-    h('polyline', { points: '82,18 728,18 712,124 56,124 96,76 76,30 82,18', fill: 'none', stroke: '#fff8ec', 'stroke-width': '2.5', 'stroke-linejoin': 'miter' }),
-  ],
-);
+const P5MenuStrip = (props: { title: string; subtitle?: string; hot?: string }) => {
+  const chars = titleChars(props.title, props.hot);
+  const charWidth = 54;
+  const gap = 6;
+  const titleWidth = chars.length * charWidth + Math.max(0, chars.length - 1) * gap;
+  const titleStart = 218 + (5 - chars.length) * 18;
+  const subtitleWidth = Math.max(160, (props.subtitle?.length || 0) * 22 + 34);
+
+  return h(
+    'svg',
+    {
+      class: 'p5-menu-strip-svg',
+      viewBox: '0 0 760 150',
+      'aria-hidden': 'true',
+    },
+    [
+      h('polygon', { points: '72,8 742,8 724,134 34,134 82,76 56,18', fill: '#050505' }),
+      h('polyline', { points: '72,8 742,8 724,134 34,134 82,76 56,18 72,8', fill: 'none', stroke: '#fff8ec', 'stroke-width': '4', 'stroke-linejoin': 'miter' }),
+      h('polyline', { points: '82,18 728,18 712,124 56,124 96,76 76,30 82,18', fill: 'none', stroke: '#fff8ec', 'stroke-width': '2.5', 'stroke-linejoin': 'miter' }),
+      h('g', { class: 'p5-strip-svg-stars' }, [
+        h('path', { d: 'M31 18 L37 38 L58 38 L41 50 L48 71 L31 58 L14 71 L21 50 L4 38 L25 38 Z', fill: '#d6001c', stroke: '#fff8ec', 'stroke-width': '5', transform: 'translate(8 18) rotate(-12 31 44)' }),
+        h('path', { d: 'M21.5 0 L26.3 15 L42 15 L29.3 24 L34.1 39 L21.5 30 L8.9 39 L13.7 24 L1 15 L16.7 15 Z', fill: '#050505', stroke: '#fff8ec', 'stroke-width': '4', transform: 'translate(48 35) rotate(21 21.5 19.5)' }),
+        h('path', { d: 'M21.5 0 L26.3 15 L42 15 L29.3 24 L34.1 39 L21.5 30 L8.9 39 L13.7 24 L1 15 L16.7 15 Z', fill: '#fff8ec', transform: 'translate(58 45) scale(.55) rotate(29 21.5 19.5)' }),
+        h('path', { d: 'M8 0 L10 5 L16 5 L11 9 L13 15 L8 11 L3 15 L5 9 L0 5 L6 5 Z', fill: '#d6001c', transform: 'translate(0 73) rotate(-26 8 8)' }),
+        h('path', { d: 'M8.5 0 L10.5 5.5 L17 5.5 L11.8 9.5 L13.8 16 L8.5 12 L3.2 16 L5.2 9.5 L0 5.5 L6.5 5.5 Z', fill: '#fff8ec', stroke: '#050505', 'stroke-width': '3', transform: 'translate(63 5) rotate(15 8.5 8)' }),
+        h('path', { d: 'M6 0 L7.4 4 L12 4 L8.3 6.8 L9.8 11.5 L6 8.7 L2.2 11.5 L3.7 6.8 L0 4 L4.6 4 Z', fill: '#fff8ec', stroke: '#050505', 'stroke-width': '2', opacity: '.86', transform: 'translate(32 2) rotate(-8 6 6)' }),
+      ]),
+      h('polyline', { points: '5 14 126 7 96 39', fill: 'none', stroke: '#fff8ec', 'stroke-width': '4', 'stroke-linecap': 'square', 'stroke-linejoin': 'miter', transform: 'translate(594 18)' }),
+      h('polyline', { points: '0 30 112 18 92 30 300 12', fill: 'none', stroke: '#d6001c', 'stroke-width': '7', 'stroke-linecap': 'square', 'stroke-linejoin': 'miter', transform: 'translate(80 87)' }),
+      h('g', { transform: `translate(${titleStart} 27) rotate(-2)` }, [
+        h('g', { transform: 'skewX(-8)' }, chars.map((part, index) => h('rect', {
+          x: index * (charWidth + gap),
+          y: 0,
+          width: charWidth,
+          height: 58,
+          fill: part.hot ? '#d6001c' : '#050505',
+          stroke: '#fff8ec',
+          'stroke-width': '3',
+        }))),
+        ...chars.map((part, index) => h('text', {
+          class: 'p5-menu-strip-char',
+          x: index * (charWidth + gap) + charWidth / 2,
+          y: 31,
+          transform: 'skewX(-8)',
+          fill: '#fff8ec',
+          stroke: '#050505',
+          'stroke-width': '7',
+          'paint-order': 'stroke',
+          'stroke-linejoin': 'round',
+          'dominant-baseline': 'central',
+          'text-anchor': 'middle',
+        }, part.text)),
+        props.subtitle ? h('g', { transform: `translate(${Math.max(96, titleWidth * 0.33)} 64)` }, [
+          h('polygon', { points: `-6 0 ${subtitleWidth} -8 ${subtitleWidth + 8} 28 2 31`, fill: 'rgba(0,0,0,.86)', stroke: 'rgba(255,255,255,.7)', 'stroke-width': '2' }),
+          h('text', { class: 'p5-menu-strip-subtitle', x: 14, y: 20 }, props.subtitle),
+        ]) : null,
+      ]),
+    ],
+  );
+};
 
 const person5GroupLabels: Record<SidebarGroupKey, string> = {
   Conversation: "作战会议室",
@@ -114,12 +161,6 @@ const p5ModelItems = computed(() => activeProfileModels.value.flatMap(group => {
     label: appStore.displayModelName(model, group.provider),
   }));
 }));
-const p5SelectedModelLabel = computed(() => (
-  appStore.selectedModel
-    ? appStore.displayModelName(appStore.selectedModel, appStore.selectedProvider)
-    : "未选择"
-));
-
 function groupLabel(key: SidebarGroupKey) {
   if (isPerson5.value) {
     return person5GroupLabels[key];
@@ -135,11 +176,6 @@ function groupTitleChars(key: SidebarGroupKey) {
   const title = person5GroupLabels[key];
   const hot = person5GroupMeta[key].hot;
   return titleChars(title, hot);
-}
-
-function controlTitleChars(key: Person5ControlKey) {
-  const meta = person5ControlMeta[key];
-  return titleChars(meta.title, meta.hot);
 }
 
 function titleChars(title: string, hot?: string) {
@@ -410,31 +446,7 @@ onMounted(() => {
       <div class="nav-group nav-group-agent" :class="{ expanded: !isGroupCollapsed('agent') }">
         <div class="nav-group-label" @click="toggleGroup('agent')">
           <template v-if="isPerson5">
-            <P5StripBorder />
-            <span class="p5-menu-stars" aria-hidden="true"></span>
-            <span class="p5-notch-stars" aria-hidden="true">
-              <span class="p5-star p5-star-red p5-star-large"></span>
-              <span class="p5-star p5-star-white p5-star-large"></span>
-              <span class="p5-star p5-star-red p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-tiny"></span>
-            </span>
-            <span class="p5-z-stripe" aria-hidden="true"></span>
-            <span class="p5-seven-stripe" aria-hidden="true"></span>
-            <span class="p5-menu-copy">
-              <span class="p5-menu-full">{{ groupLabel("Agent") }}</span>
-              <span class="p5-menu-title">
-                <span
-                  v-for="(part, index) in groupTitleChars('Agent')"
-                  :key="`agent-${part.text}-${index}`"
-                  class="p5-menu-char"
-                  :class="{ 'p5-menu-hot': part.hot }"
-                >
-                  {{ part.text }}
-                </span>
-              </span>
-              <span class="p5-menu-subtitle">{{ groupSubtitle("Agent") }}</span>
-            </span>
+            <P5MenuStrip :title="groupLabel('Agent')" :subtitle="groupSubtitle('Agent')" :hot="person5GroupMeta.Agent.hot" />
           </template>
           <span v-else>{{ groupLabel("Agent") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('agent') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -524,33 +536,9 @@ onMounted(() => {
 
       <!-- Monitoring -->
       <div class="nav-group nav-group-monitoring" :class="{ expanded: !isGroupCollapsed('monitoring') }">
-        <div class="nav-group-label" @click="toggleGroup('monitoring')">
+        <div class="nav-group-label p5-strip-shift" @click="toggleGroup('monitoring')">
           <template v-if="isPerson5">
-            <P5StripBorder />
-            <span class="p5-menu-stars" aria-hidden="true"></span>
-            <span class="p5-notch-stars" aria-hidden="true">
-              <span class="p5-star p5-star-red p5-star-large"></span>
-              <span class="p5-star p5-star-white p5-star-large"></span>
-              <span class="p5-star p5-star-red p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-tiny"></span>
-            </span>
-            <span class="p5-z-stripe" aria-hidden="true"></span>
-            <span class="p5-seven-stripe" aria-hidden="true"></span>
-            <span class="p5-menu-copy">
-              <span class="p5-menu-full">{{ groupLabel("Monitoring") }}</span>
-              <span class="p5-menu-title">
-                <span
-                  v-for="(part, index) in groupTitleChars('Monitoring')"
-                  :key="`monitoring-${part.text}-${index}`"
-                  class="p5-menu-char"
-                  :class="{ 'p5-menu-hot': part.hot }"
-                >
-                  {{ part.text }}
-                </span>
-              </span>
-              <span class="p5-menu-subtitle">{{ groupSubtitle("Monitoring") }}</span>
-            </span>
+            <P5MenuStrip :title="groupLabel('Monitoring')" :subtitle="groupSubtitle('Monitoring')" :hot="person5GroupMeta.Monitoring.hot" />
           </template>
           <span v-else>{{ groupLabel("Monitoring") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('monitoring') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -596,31 +584,7 @@ onMounted(() => {
       <div class="nav-group nav-group-tools" :class="{ expanded: !isGroupCollapsed('tools') }">
         <div class="nav-group-label" @click="toggleGroup('tools')">
           <template v-if="isPerson5">
-            <P5StripBorder />
-            <span class="p5-menu-stars" aria-hidden="true"></span>
-            <span class="p5-notch-stars" aria-hidden="true">
-              <span class="p5-star p5-star-red p5-star-large"></span>
-              <span class="p5-star p5-star-white p5-star-large"></span>
-              <span class="p5-star p5-star-red p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-tiny"></span>
-            </span>
-            <span class="p5-z-stripe" aria-hidden="true"></span>
-            <span class="p5-seven-stripe" aria-hidden="true"></span>
-            <span class="p5-menu-copy">
-              <span class="p5-menu-full">{{ groupLabel("Tools") }}</span>
-              <span class="p5-menu-title">
-                <span
-                  v-for="(part, index) in groupTitleChars('Tools')"
-                  :key="`tools-${part.text}-${index}`"
-                  class="p5-menu-char"
-                  :class="{ 'p5-menu-hot': part.hot }"
-                >
-                  {{ part.text }}
-                </span>
-              </span>
-              <span class="p5-menu-subtitle">{{ groupSubtitle("Tools") }}</span>
-            </span>
+            <P5MenuStrip :title="groupLabel('Tools')" :subtitle="groupSubtitle('Tools')" :hot="person5GroupMeta.Tools.hot" />
           </template>
           <span v-else>{{ groupLabel("Tools") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('tools') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -652,33 +616,9 @@ onMounted(() => {
 
       <!-- System -->
       <div class="nav-group nav-group-system" :class="{ expanded: !isGroupCollapsed('system') }">
-        <div class="nav-group-label" @click="toggleGroup('system')">
+        <div class="nav-group-label p5-strip-shift" @click="toggleGroup('system')">
           <template v-if="isPerson5">
-            <P5StripBorder />
-            <span class="p5-menu-stars" aria-hidden="true"></span>
-            <span class="p5-notch-stars" aria-hidden="true">
-              <span class="p5-star p5-star-red p5-star-large"></span>
-              <span class="p5-star p5-star-white p5-star-large"></span>
-              <span class="p5-star p5-star-red p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-tiny"></span>
-            </span>
-            <span class="p5-z-stripe" aria-hidden="true"></span>
-            <span class="p5-seven-stripe" aria-hidden="true"></span>
-            <span class="p5-menu-copy">
-              <span class="p5-menu-full">{{ groupLabel("System") }}</span>
-              <span class="p5-menu-title">
-                <span
-                  v-for="(part, index) in groupTitleChars('System')"
-                  :key="`system-${part.text}-${index}`"
-                  class="p5-menu-char"
-                  :class="{ 'p5-menu-hot': part.hot }"
-                >
-                  {{ part.text }}
-                </span>
-              </span>
-              <span class="p5-menu-subtitle">{{ groupSubtitle("System") }}</span>
-            </span>
+            <P5MenuStrip :title="groupLabel('System')" :subtitle="groupSubtitle('System')" :hot="person5GroupMeta.System.hot" />
           </template>
           <span v-else>{{ groupLabel("System") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('system') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -708,30 +648,7 @@ onMounted(() => {
       <template v-if="isPerson5">
         <div class="nav-group p5-control-group p5-control-profile" :class="{ expanded: !isP5ControlCollapsed('profile') }">
           <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('profile')">
-            <P5StripBorder />
-            <span class="p5-notch-stars" aria-hidden="true">
-              <span class="p5-star p5-star-red p5-star-large"></span>
-              <span class="p5-star p5-star-white p5-star-large"></span>
-              <span class="p5-star p5-star-red p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-tiny"></span>
-            </span>
-            <span class="p5-z-stripe" aria-hidden="true"></span>
-            <span class="p5-seven-stripe" aria-hidden="true"></span>
-            <span class="p5-menu-copy">
-              <span class="p5-menu-title">
-                <span
-                  v-for="(part, index) in controlTitleChars('profile')"
-                  :key="`profile-control-${part.text}-${index}`"
-                  class="p5-menu-char"
-                  :class="{ 'p5-menu-hot': part.hot }"
-                >
-                  {{ part.text }}
-                </span>
-              </span>
-              <span class="p5-menu-subtitle">{{ person5ControlMeta.profile.subtitle }}</span>
-              <span class="p5-current-value">{{ activeProfileName }}</span>
-            </span>
+            <P5MenuStrip :title="person5ControlMeta.profile.title" :subtitle="person5ControlMeta.profile.subtitle" :hot="person5ControlMeta.profile.hot" />
             <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('profile') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -805,31 +722,8 @@ onMounted(() => {
         </div>
 
         <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">
-          <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('model')">
-            <P5StripBorder />
-            <span class="p5-notch-stars" aria-hidden="true">
-              <span class="p5-star p5-star-red p5-star-large"></span>
-              <span class="p5-star p5-star-white p5-star-large"></span>
-              <span class="p5-star p5-star-red p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-small"></span>
-              <span class="p5-star p5-star-white p5-star-tiny"></span>
-            </span>
-            <span class="p5-z-stripe" aria-hidden="true"></span>
-            <span class="p5-seven-stripe" aria-hidden="true"></span>
-            <span class="p5-menu-copy">
-              <span class="p5-menu-title">
-                <span
-                  v-for="(part, index) in controlTitleChars('model')"
-                  :key="`model-control-${part.text}-${index}`"
-                  class="p5-menu-char"
-                  :class="{ 'p5-menu-hot': part.hot }"
-                >
-                  {{ part.text }}
-                </span>
-              </span>
-              <span class="p5-menu-subtitle">{{ person5ControlMeta.model.subtitle }}</span>
-              <span class="p5-current-value">{{ p5SelectedModelLabel }}</span>
-            </span>
+          <button class="nav-group-label p5-control-label-main p5-strip-shift" type="button" @click="toggleP5Control('model')">
+            <P5MenuStrip :title="person5ControlMeta.model.title" :subtitle="person5ControlMeta.model.subtitle" :hot="person5ControlMeta.model.hot" />
             <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('model') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -872,18 +766,7 @@ onMounted(() => {
 
     <div class="sidebar-footer">
       <button class="nav-item logout-item" :class="{ 'p5-logout-strip': isPerson5 }" @click="handleLogout">
-        <P5StripBorder v-if="isPerson5" />
-        <template v-if="isPerson5">
-          <span class="p5-notch-stars" aria-hidden="true">
-            <span class="p5-star p5-star-red p5-star-large"></span>
-            <span class="p5-star p5-star-white p5-star-large"></span>
-            <span class="p5-star p5-star-red p5-star-small"></span>
-            <span class="p5-star p5-star-white p5-star-small"></span>
-            <span class="p5-star p5-star-white p5-star-tiny"></span>
-          </span>
-          <span class="p5-z-stripe" aria-hidden="true"></span>
-          <span class="p5-seven-stripe" aria-hidden="true"></span>
-        </template>
+        <P5MenuStrip v-if="isPerson5" :title="t('sidebar.logout')" />
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
           <polyline points="16 17 21 12 16 7" />

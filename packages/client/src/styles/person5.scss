@@ -5311,10 +5311,163 @@ html.person5 .nav-group-conversation .p5-hero-card-media {
   transform-origin: left center !important;
 }
 
+html.person5 .sidebar {
+  --p5-primary-pair-gap: 8px;
+  --p5-primary-group-gap: calc(var(--p5-primary-pair-gap) * 2);
+  width: calc(var(--p5-sidebar-wide) - 20px) !important;
+  min-width: calc(var(--p5-sidebar-wide) - 20px) !important;
+  max-width: calc(var(--p5-sidebar-wide) - 20px) !important;
+  overflow-x: hidden !important;
+  box-shadow:
+    inset -5px 0 0 #050505,
+    inset -8px 0 0 var(--p5-white),
+    inset -12px 0 0 var(--p5-red),
+    inset -16px 0 0 #050505 !important;
+}
+
 html.person5 .sidebar-nav {
-  gap: 9px !important;
+  gap: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 html.person5 .sidebar-nav .nav-group {
   margin-bottom: 0 !important;
+}
+
+html.person5 .sidebar-nav > .nav-group-conversation {
+  margin-bottom: var(--p5-primary-pair-gap) !important;
+}
+
+html.person5 .sidebar-nav > .nav-group-agent,
+html.person5 .sidebar-nav > .nav-group-tools {
+  margin-bottom: var(--p5-primary-pair-gap) !important;
+}
+
+html.person5 .sidebar-nav > .nav-group-monitoring {
+  margin-bottom: calc(var(--p5-primary-group-gap) * 2) !important;
+}
+
+html.person5 .sidebar-nav {
+  margin-bottom: var(--p5-primary-group-gap) !important;
+}
+
+html.person5 .p5-sidebar-controls {
+  gap: var(--p5-primary-pair-gap) !important;
+  margin-top: 0 !important;
+}
+
+html.person5 .p5-sidebar-controls .p5-control-group {
+  margin-bottom: 0 !important;
+}
+
+html.person5 .sidebar::-webkit-scrollbar:horizontal,
+html.person5 .sidebar-nav::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0 !important;
+}
+
+/* PERSON5 SVG primary strip migration.
+   The approved demo owns the geometry, stars, borders, Z line and 7 line here. */
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg),
+html.person5 .p5-control-label-main:has(.p5-menu-strip-svg),
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) {
+  width: min(690px, calc(100% - 22px)) !important;
+  min-height: 0 !important;
+  height: auto !important;
+  aspect-ratio: 760 / 150 !important;
+  margin-left: 18px !important;
+  padding: 0 !important;
+  color: var(--p5-white) !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  transform: none !important;
+  filter: drop-shadow(13px 12px 0 #050505) !important;
+  overflow: visible !important;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg)::before,
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg)::after,
+html.person5 .p5-control-label-main:has(.p5-menu-strip-svg)::before,
+html.person5 .p5-control-label-main:has(.p5-menu-strip-svg)::after,
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg)::before,
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg)::after {
+  display: none !important;
+}
+
+html.person5 .p5-menu-strip-svg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+
+html.person5 .p5-menu-strip-char {
+  font-family: "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-size: 38px;
+  font-weight: 950;
+}
+
+html.person5 .p5-menu-strip-subtitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 800;
+  fill: #a8a39a;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg) .nav-group-arrow,
+html.person5 .p5-control-label-main:has(.p5-menu-strip-svg) .nav-group-arrow {
+  z-index: 2 !important;
+  right: 72px !important;
+  color: var(--p5-white) !important;
+  filter: drop-shadow(2px 2px 0 #050505) !important;
+}
+
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) > svg:not(.p5-menu-strip-svg),
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) > span {
+  display: none !important;
+}
+
+html.person5 .sidebar.collapsed .p5-menu-strip-svg {
+  display: none !important;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label.p5-strip-shift:has(.p5-menu-strip-svg),
+html.person5 .p5-control-label-main.p5-strip-shift:has(.p5-menu-strip-svg) {
+  margin-left: 18px !important;
+  transform: translateX(-16px) !important;
+}
+
+@media (max-width: 2200px) {
+  html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg),
+  html.person5 .p5-control-label-main:has(.p5-menu-strip-svg),
+  html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) {
+    width: min(650px, calc(100% - 18px)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg),
+  html.person5 .p5-control-label-main:has(.p5-menu-strip-svg),
+  html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) {
+    width: min(340px, calc(100% - 26px)) !important;
+    margin-left: 10px !important;
+  }
+
+  html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label.p5-strip-shift:has(.p5-menu-strip-svg),
+  html.person5 .p5-control-label-main.p5-strip-shift:has(.p5-menu-strip-svg) {
+    margin-left: 10px !important;
+    transform: translateX(-8px) !important;
+  }
+
+  html.person5 .p5-menu-strip-char {
+    font-size: 36px;
+  }
 }
