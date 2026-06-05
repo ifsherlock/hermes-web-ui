@@ -4768,6 +4768,7 @@ html.person5 .p5-control-label-main .p5-menu-subtitle {
 html.person5 .nav-group:not(.nav-group-conversation) .p5-notch-stars,
 html.person5 .p5-control-label-main .p5-notch-stars,
 html.person5 .p5-logout-strip .p5-notch-stars {
+  position: absolute !important;
   left: -8px;
   top: 18px;
   width: 112px;
@@ -4872,6 +4873,7 @@ html.person5 .p5-logout-strip .p5-star-tiny {
 html.person5 .nav-group:not(.nav-group-conversation) .p5-z-stripe,
 html.person5 .p5-control-label-main .p5-z-stripe,
 html.person5 .p5-logout-strip .p5-z-stripe {
+  position: absolute !important;
   left: 80px;
   bottom: 25px;
   width: 310px;
@@ -4899,21 +4901,44 @@ html.person5 .p5-logout-strip .p5-z-stripe::after {
 html.person5 .nav-group:not(.nav-group-conversation) .p5-seven-stripe,
 html.person5 .p5-control-label-main .p5-seven-stripe,
 html.person5 .p5-logout-strip .p5-seven-stripe {
+  position: absolute !important;
   right: 30px;
   top: 18px;
   width: 136px;
   height: 50px;
+  background: transparent !important;
+  clip-path: none !important;
+  transform: none !important;
 }
 
 html.person5 .nav-group:not(.nav-group-conversation) .p5-seven-stripe::before,
 html.person5 .p5-control-label-main .p5-seven-stripe::before,
 html.person5 .p5-logout-strip .p5-seven-stripe::before {
   position: absolute;
-  inset: 0;
+  left: 5px;
+  top: 12px;
+  width: 121px;
+  height: 4px;
   content: "";
   background: var(--p5-white);
   border: 0 !important;
-  clip-path: polygon(0 28%, 89% 14%, 92% 22%, 25% 74%, 20% 66%, 76% 22%, 1% 36%);
+  clip-path: none !important;
+  transform: rotate(-3.5deg);
+  transform-origin: left center;
+}
+
+html.person5 .nav-group:not(.nav-group-conversation) .p5-seven-stripe::after,
+html.person5 .p5-control-label-main .p5-seven-stripe::after,
+html.person5 .p5-logout-strip .p5-seven-stripe::after {
+  position: absolute;
+  right: 8px;
+  top: 11px;
+  width: 44px;
+  height: 4px;
+  content: "";
+  background: var(--p5-white);
+  transform: rotate(133deg);
+  transform-origin: right center;
 }
 
 html.person5 .p5-logout-strip {
