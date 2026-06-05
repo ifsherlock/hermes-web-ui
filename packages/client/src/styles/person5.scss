@@ -5040,28 +5040,15 @@ html.person5 .p5-submenu-scroll,
 html.person5 .p5-control-group .p5-submenu-scroll {
   width: min(310px, calc(100% - 128px)) !important;
   max-height: calc((92px * 4) + 54px) !important;
-  margin: 14px auto 0 !important;
   padding: 14px 12px 20px !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
 }
 
 html.person5 .nav-group-agent .p5-limited-submenu {
-  margin-right: auto !important;
-  margin-left: auto !important;
+  margin-left: 118px !important;
 }
 
 html.person5 .p5-control-group .p5-submenu-scroll {
-  margin-right: auto !important;
-  margin-left: auto !important;
-}
-
-html.person5 .p5-limited-submenu::-webkit-scrollbar,
-html.person5 .p5-submenu-scroll::-webkit-scrollbar,
-html.person5 .p5-control-group .p5-submenu-scroll::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+  margin-left: 118px !important;
 }
 
 html.person5 .p5-profile-item .profile-avatar-view,
@@ -5119,8 +5106,8 @@ html.person5 .p5-control-group .p5-submenu-more {
   html.person5 .p5-submenu-scroll,
   html.person5 .p5-control-group .p5-submenu-scroll {
     width: min(300px, calc(100% - 48px)) !important;
-    margin-right: auto !important;
-    margin-left: auto !important;
+    margin-left: 24px !important;
+    margin-right: 12px !important;
   }
 
   html.person5 .nav-group-items:not(.collapsed) .nav-item:not(.logout-item),
