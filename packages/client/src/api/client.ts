@@ -1,16 +1,20 @@
 import router from '@/router'
 
 const DEFAULT_BASE_URL = ''
+const SERVER_URL_KEY = 'hermes_server_url'
 
-function isDesktopShell(): boolean {
-  return typeof window !== 'undefined' &&
-    (window as typeof window & { hermesDesktop?: { isDesktop?: boolean } }).hermesDesktop?.isDesktop === true
+function normalizeServerUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `http://${trimmed}`
+  return withProtocol.replace(/\/+$/, '')
 }
 
 function getBaseUrl(): string {
   if (import.meta.env.VITE_HERMES_PREVIEW === '1') return DEFAULT_BASE_URL
-  if (isDesktopShell()) return DEFAULT_BASE_URL
-  return localStorage.getItem('hermes_server_url') || DEFAULT_BASE_URL
+  return localStorage.getItem(SERVER_URL_KEY) || DEFAULT_BASE_URL
 }
 
 export function getApiKey(): string {
@@ -18,7 +22,12 @@ export function getApiKey(): string {
 }
 
 export function setServerUrl(url: string) {
-  localStorage.setItem('hermes_server_url', url)
+  const normalized = normalizeServerUrl(url)
+  if (normalized) {
+    localStorage.setItem(SERVER_URL_KEY, normalized)
+  } else {
+    localStorage.removeItem(SERVER_URL_KEY)
+  }
 }
 
 export function setApiKey(key: string) {
@@ -150,4 +159,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
 export function getBaseUrlValue(): string {
   return getBaseUrl()
+}
+
+export function getServerUrlValue(): string {
+  return localStorage.getItem(SERVER_URL_KEY) || DEFAULT_BASE_URL
+}
+
+export function normalizeServerUrlValue(url: string): string {
+  return normalizeServerUrl(url)
 }

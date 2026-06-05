@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { NSwitch, NSelect, useMessage } from 'naive-ui'
+import { ref } from 'vue'
+import { NSwitch, NSelect, NInput, NButton, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/hermes/settings'
 import { useTheme, type BrightnessMode, type ThemeStyle } from '@/composables/useTheme'
+import { getServerUrlValue, normalizeServerUrlValue, setServerUrl } from '@/api/client'
 import SettingRow from './SettingRow.vue'
 
 const settingsStore = useSettingsStore()
 const message = useMessage()
 const { t } = useI18n()
 const { brightness, style, setBrightness, setStyle } = useTheme()
+const serverUrl = ref(getServerUrlValue())
 
 const themeOptions = [
   { label: t('settings.display.themeLight'), value: 'light' },
@@ -42,6 +45,19 @@ function handleStyleChange(val: string) {
   setStyle(next)
   save({ style: next })
 }
+
+function handleServerUrlSave() {
+  const normalized = normalizeServerUrlValue(serverUrl.value)
+  setServerUrl(normalized)
+  serverUrl.value = normalized
+  message.success(normalized ? `服务器地址已设置为 ${normalized}` : '已恢复为当前页面同源服务器')
+}
+
+function handleServerUrlReset() {
+  serverUrl.value = ''
+  setServerUrl('')
+  message.success('已恢复为当前页面同源服务器')
+}
 </script>
 
 <template>
@@ -51,6 +67,20 @@ function handleStyleChange(val: string) {
     </SettingRow>
     <SettingRow label="界面风格" hint="切换整体视觉风格，可从 PERSON5 怪盗风格切回默认界面。">
       <NSelect :value="style" :options="styleOptions" size="small" :consistent-menu-width="false" class="input-md" @update:value="handleStyleChange" />
+    </SettingRow>
+    <SettingRow label="服务器地址" hint="Windows exe 或跨设备访问时填写 Web UI 后端地址；留空表示使用当前页面同源服务器。">
+      <div class="server-url-control">
+        <NInput
+          v-model:value="serverUrl"
+          size="small"
+          clearable
+          placeholder="例如 http://10.10.10.189:6060"
+          class="input-lg"
+          @keyup.enter="handleServerUrlSave"
+        />
+        <NButton size="small" type="primary" @click="handleServerUrlSave">保存</NButton>
+        <NButton size="small" secondary @click="handleServerUrlReset">清空</NButton>
+      </div>
     </SettingRow>
     <SettingRow :label="t('settings.display.streaming')" :hint="t('settings.display.streamingHint')">
       <NSwitch :value="settingsStore.display.streaming" @update:value="v => save({ streaming: v })" />
@@ -81,5 +111,29 @@ function handleStyleChange(val: string) {
 
 .settings-section {
   margin-top: 16px;
+}
+
+.server-url-control {
+  display: flex;
+  width: min(560px, 100%);
+  align-items: center;
+  gap: 8px;
+}
+
+.server-url-control .input-lg {
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+@media (max-width: 720px) {
+  .server-url-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .server-url-control .input-lg {
+    width: 100%;
+    min-width: 0;
+  }
 }
 </style>

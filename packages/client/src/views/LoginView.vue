@@ -2,7 +2,13 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { setApiKey, hasApiKey } from "@/api/client";
+import {
+  getServerUrlValue,
+  hasApiKey,
+  normalizeServerUrlValue,
+  setApiKey,
+  setServerUrl,
+} from "@/api/client";
 import { fetchAuthStatus, loginWithPassword } from "@/api/auth";
 import { useTheme } from "@/composables/useTheme";
 
@@ -12,6 +18,7 @@ const { isPerson5 } = useTheme();
 
 const username = ref("");
 const password = ref("");
+const serverUrl = ref(getServerUrlValue());
 const loading = ref(false);
 const errorMsg = ref("");
 const showLockResetHint = ref(false);
@@ -52,6 +59,10 @@ async function handlePasswordLogin() {
     errorMsg.value = t("login.credentialsRequired");
     return;
   }
+
+  const normalizedServerUrl = normalizeServerUrlValue(serverUrl.value);
+  setServerUrl(normalizedServerUrl);
+  serverUrl.value = normalizedServerUrl;
 
   loading.value = true;
   errorMsg.value = "";
@@ -109,6 +120,18 @@ async function handlePasswordLogin() {
       <p class="login-desc">{{ usePerson5Login || isPerson5 ? "输入暗号，进入作战频道。" : t("login.description") }}</p>
 
       <form class="login-form" @submit.prevent="handleLogin">
+        <label class="login-server-field">
+          <span class="login-server-label">服务器地址</span>
+          <input
+            v-model="serverUrl"
+            type="text"
+            class="login-input"
+            placeholder="留空使用当前地址，例：http://10.10.10.189:6060"
+            autocomplete="url"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </label>
         <input
           v-model="username"
           type="text"
@@ -202,6 +225,19 @@ async function handlePasswordLogin() {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.login-server-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.login-server-label {
+  color: $text-secondary;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .login-input {
@@ -515,7 +551,8 @@ async function handlePasswordLogin() {
 }
 
 :global(html.person5) .p5-login-view .login-desc,
-:global(html.person5) .p5-login-view .login-default-hint {
+:global(html.person5) .p5-login-view .login-default-hint,
+:global(html.person5) .p5-login-view .login-server-label {
   color: #fff7e8 !important;
   text-shadow: 2px 2px 0 #050505;
 }
