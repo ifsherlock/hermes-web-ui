@@ -16,6 +16,7 @@ const isDark = savedBrightness === 'dark' || (savedBrightness === 'system' && pr
 
 // Resolve style
 const isComic = savedStyle === 'comic'
+const isPerson5 = savedStyle === 'person5'
 
 // Apply classes to prevent FOUC
 if (isDark) {
@@ -23,6 +24,9 @@ if (isDark) {
 }
 if (isComic) {
   document.documentElement.classList.add('comic')
+}
+if (isPerson5) {
+  document.documentElement.classList.add('person5')
 }
 
 // Read token from URL BEFORE router initializes (hash router strips params)

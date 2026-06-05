@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, h, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { NButton, NModal, useMessage } from "naive-ui";
 import { useAppStore } from "@/stores/hermes/app";
+import { useProfilesStore } from "@/stores/hermes/profiles";
+import { restartProfileGateway, restartProfileRuntime } from "@/api/hermes/profiles";
+import ProfileAvatarView from "@/components/hermes/profiles/ProfileAvatar.vue";
 import ModelSelector from "./ModelSelector.vue";
 import ProfileSelector from "./ProfileSelector.vue";
 import LanguageSwitch from "./LanguageSwitch.vue";
 import ThemeSwitch from "./ThemeSwitch.vue";
 import { useSessionSearch } from '@/composables/useSessionSearch'
 import { usePersistentRecord } from '@/composables/usePersistentRecord'
+import { useTheme } from '@/composables/useTheme'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import { changelog } from "@/data/changelog";
 import { isStoredSuperAdmin } from "@/api/client";
@@ -19,6 +23,8 @@ const message = useMessage();
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
+const profilesStore = useProfilesStore();
+const { isPerson5 } = useTheme();
 const { openSessionSearch } = useSessionSearch();
 const selectedKey = computed(() => {
   if (route.name === "hermes.session") return "hermes.chat";
@@ -40,18 +46,403 @@ const logoPath = '/logo.png';
 const { record: collapsedGroups, persist: persistCollapsedGroups } = usePersistentRecord('hermes.sidebar.collapsedGroups');
 
 type SidebarGroupKey = "Conversation" | "Agent" | "Monitoring" | "Tools" | "System";
+type Person5ControlKey = "profile" | "model";
+type P5CollapsedGroupKey = "conversation" | "agent" | "monitoring" | "tools" | "system";
+type P5CollapsedIconItem = {
+  key: string;
+  label: string;
+  icon: string;
+  routeName?: string;
+  beta?: boolean;
+  superAdminOnly?: boolean;
+  hidden?: () => boolean;
+  action?: () => void;
+};
 
+const p5CollapsedGroups: Array<{ key: P5CollapsedGroupKey; label: string; active: () => boolean }> = [
+  { key: "conversation", label: "对话", active: () => isNavActive("hermes.chat", "hermes.session", "hermes.history", "hermes.historySession", "hermes.groupChat", "hermes.groupChatRoom") },
+  { key: "agent", label: "代理", active: () => isNavActive("hermes.jobs", "hermes.kanban", "hermes.channels", "hermes.skills", "hermes.plugins", "hermes.mcp", "hermes.memory", "hermes.models") },
+  { key: "monitoring", label: "监控", active: () => isNavActive("hermes.logs", "hermes.usage", "hermes.performance", "hermes.skillsUsage") },
+  { key: "tools", label: "工具", active: () => isNavActive("hermes.codingAgents", "hermes.versionPreview") },
+  { key: "system", label: "系统", active: () => isNavActive("hermes.profiles", "hermes.settings") },
+];
+
+const p5CollapsedItems: Record<P5CollapsedGroupKey, P5CollapsedIconItem[]> = {
+  conversation: [
+    { key: "chat", label: "聊天", icon: "message", routeName: "hermes.chat" },
+    { key: "history", label: "历史", icon: "clock", routeName: "hermes.history" },
+    { key: "groupChat", label: "群聊", icon: "users", routeName: "hermes.groupChat", beta: true },
+    { key: "search", label: "搜索", icon: "search", action: openSessionSearch },
+  ],
+  agent: [
+    { key: "jobs", label: "任务", icon: "calendar", routeName: "hermes.jobs" },
+    { key: "kanban", label: "看板", icon: "columns", routeName: "hermes.kanban" },
+    { key: "channels", label: "渠道", icon: "moon", routeName: "hermes.channels" },
+    { key: "skills", label: "技能", icon: "layers", routeName: "hermes.skills" },
+    { key: "plugins", label: "插件", icon: "wrench", routeName: "hermes.plugins" },
+    { key: "mcp", label: "MCP", icon: "terminal", routeName: "hermes.mcp" },
+    { key: "memory", label: "记忆", icon: "bulb", routeName: "hermes.memory" },
+    { key: "models", label: "模型", icon: "cpu", routeName: "hermes.models" },
+  ],
+  monitoring: [
+    { key: "logs", label: "日志", icon: "file", routeName: "hermes.logs" },
+    { key: "usage", label: "用量", icon: "bar", routeName: "hermes.usage" },
+    { key: "performance", label: "性能", icon: "pulse", routeName: "hermes.performance", superAdminOnly: true },
+    { key: "skillsUsage", label: "技能用量", icon: "pie", routeName: "hermes.skillsUsage" },
+  ],
+  tools: [
+    { key: "codingAgents", label: "编码代理", icon: "code", routeName: "hermes.codingAgents" },
+    { key: "versionPreview", label: "版本预览", icon: "box", routeName: "hermes.versionPreview", superAdminOnly: true, hidden: () => isVersionPreview },
+  ],
+  system: [
+    { key: "profiles", label: "用户", icon: "user", routeName: "hermes.profiles", superAdminOnly: true },
+    { key: "settings", label: "设置", icon: "settings", routeName: "hermes.settings" },
+  ],
+};
+
+const p5IconPaths: Record<string, Array<Record<string, string>>> = {
+  message: [{ tag: "path", d: "M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" }],
+  clock: [{ tag: "circle", cx: "12", cy: "12", r: "9" }, { tag: "path", d: "M12 7v6l4 2" }],
+  users: [{ tag: "path", d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" }, { tag: "circle", cx: "9", cy: "7", r: "4" }, { tag: "path", d: "M22 21v-2a4 4 0 0 0-3-3.7M16 3.3a4 4 0 0 1 0 7.4" }],
+  search: [{ tag: "circle", cx: "11", cy: "11", r: "7" }, { tag: "path", d: "m20 20-3.5-3.5" }],
+  calendar: [{ tag: "rect", x: "3", y: "4", width: "18", height: "17", rx: "2" }, { tag: "path", d: "M8 2v4M16 2v4M3 10h18" }],
+  columns: [{ tag: "rect", x: "3", y: "3", width: "5", height: "18", rx: "1" }, { tag: "rect", x: "10", y: "3", width: "5", height: "12", rx: "1" }, { tag: "rect", x: "17", y: "3", width: "5", height: "18", rx: "1" }],
+  moon: [{ tag: "path", d: "M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" }],
+  layers: [{ tag: "path", d: "m12 2 10 5-10 5L2 7z" }, { tag: "path", d: "m2 12 10 5 10-5M2 17l10 5 10-5" }],
+  wrench: [{ tag: "path", d: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2-2a4 4 0 0 1-5.2 5.2l-7.8 7.8a2.1 2.1 0 0 1-3-3l7.8-7.8a4 4 0 0 1 5.2-5.2z" }],
+  terminal: [{ tag: "path", d: "m4 17 6-6-6-6" }, { tag: "path", d: "M12 19h8" }],
+  bulb: [{ tag: "path", d: "M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" }],
+  cpu: [{ tag: "rect", x: "7", y: "7", width: "10", height: "10", rx: "2" }, { tag: "path", d: "M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4" }],
+  file: [{ tag: "path", d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }, { tag: "path", d: "M14 2v6h6M8 13h8M8 17h8" }],
+  bar: [{ tag: "rect", x: "3", y: "12", width: "4", height: "8", rx: "1" }, { tag: "rect", x: "10", y: "7", width: "4", height: "13", rx: "1" }, { tag: "rect", x: "17", y: "4", width: "4", height: "16", rx: "1" }],
+  pulse: [{ tag: "path", d: "M22 12h-4l-3 8L9 4l-3 8H2" }],
+  pie: [{ tag: "path", d: "M21 12A9 9 0 1 1 12 3v9z" }, { tag: "path", d: "M12 3a9 9 0 0 1 9 9h-9z" }],
+  code: [{ tag: "path", d: "m16 18 6-6-6-6M8 6l-6 6 6 6M14 4l-4 16" }],
+  box: [{ tag: "path", d: "M21 16V8l-9-5-9 5v8l9 5z" }, { tag: "path", d: "M3.3 7.3 12 12l8.7-4.7M12 22V12" }],
+  home: [{ tag: "path", d: "M3 11 12 3l9 8" }, { tag: "path", d: "M5 10v10h14V10" }, { tag: "path", d: "M9 20v-6h6v6" }],
+  logout: [{ tag: "path", d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }, { tag: "path", d: "M16 17l5-5-5-5" }, { tag: "path", d: "M21 12H9" }],
+  image: [{ tag: "rect", x: "3", y: "5", width: "18", height: "14", rx: "2" }, { tag: "circle", cx: "8", cy: "10", r: "2" }, { tag: "path", d: "m21 15-5-5L5 19" }],
+  refresh: [{ tag: "path", d: "M21 12a9 9 0 0 1-15.5 6.2" }, { tag: "path", d: "M3 12A9 9 0 0 1 18.5 5.8" }, { tag: "path", d: "M18 2v4h4M6 22v-4H2" }],
+  server: [{ tag: "rect", x: "3", y: "4", width: "18", height: "7", rx: "2" }, { tag: "rect", x: "3", y: "13", width: "18", height: "7", rx: "2" }, { tag: "path", d: "M7 8h.01M7 17h.01" }],
+  user: [{ tag: "path", d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }, { tag: "circle", cx: "12", cy: "7", r: "4" }],
+  settings: [{ tag: "circle", cx: "12", cy: "12", r: "3" }, { tag: "path", d: "M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1-2.8-2.8.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1 2.8-2.8.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3h4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1 2.8 2.8-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1z" }],
+};
+
+const P5CollapsedIcon = (props: { name: string }) => h(
+  'svg',
+  {
+    class: 'p5-collapsed-svg-icon',
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': '2',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'aria-hidden': 'true',
+  },
+  (p5IconPaths[props.name] || p5IconPaths.message).map(({ tag, ...attrs }) => h(tag, attrs)),
+);
+
+const p5CollapsedOpenGroup = ref<P5CollapsedGroupKey | null>(null);
+const p5CollapsedAgentOpen = ref(false);
+
+function toggleP5CollapsedGroup(key: P5CollapsedGroupKey) {
+  p5CollapsedOpenGroup.value = p5CollapsedOpenGroup.value === key ? null : key;
+  p5CollapsedAgentOpen.value = false;
+}
+
+function toggleP5CollapsedAgent() {
+  p5CollapsedAgentOpen.value = !p5CollapsedAgentOpen.value;
+  p5CollapsedOpenGroup.value = null;
+}
+
+const P5MenuStrip = (props: { title: string; subtitle?: string; hot?: string }) => {
+  const chars = titleChars(props.title, props.hot);
+  const charWidth = 54;
+  const gap = 6;
+  const titleWidth = chars.length * charWidth + Math.max(0, chars.length - 1) * gap;
+  const titleStart = 218 + (5 - chars.length) * 18;
+  const subtitleWidth = Math.max(160, (props.subtitle?.length || 0) * 22 + 34);
+
+  return h(
+    'svg',
+    {
+      class: 'p5-menu-strip-svg',
+      viewBox: '0 0 760 150',
+      'aria-hidden': 'true',
+    },
+    [
+      h('polygon', { points: '72,8 742,8 724,134 34,134 82,76 56,18', fill: '#050505' }),
+      h('polyline', { points: '72,8 742,8 724,134 34,134 82,76 56,18 72,8', fill: 'none', stroke: '#fff8ec', 'stroke-width': '4', 'stroke-linejoin': 'miter' }),
+      h('polyline', { points: '82,18 728,18 712,124 56,124 96,76 76,30 82,18', fill: 'none', stroke: '#fff8ec', 'stroke-width': '2.5', 'stroke-linejoin': 'miter' }),
+      h('g', { class: 'p5-strip-svg-stars' }, [
+        h('path', { d: 'M31 18 L37 38 L58 38 L41 50 L48 71 L31 58 L14 71 L21 50 L4 38 L25 38 Z', fill: '#d6001c', stroke: '#fff8ec', 'stroke-width': '5', transform: 'translate(8 18) rotate(-12 31 44)' }),
+        h('path', { d: 'M21.5 0 L26.3 15 L42 15 L29.3 24 L34.1 39 L21.5 30 L8.9 39 L13.7 24 L1 15 L16.7 15 Z', fill: '#050505', stroke: '#fff8ec', 'stroke-width': '4', transform: 'translate(48 35) rotate(21 21.5 19.5)' }),
+        h('path', { d: 'M21.5 0 L26.3 15 L42 15 L29.3 24 L34.1 39 L21.5 30 L8.9 39 L13.7 24 L1 15 L16.7 15 Z', fill: '#fff8ec', transform: 'translate(58 45) scale(.55) rotate(29 21.5 19.5)' }),
+        h('path', { d: 'M8 0 L10 5 L16 5 L11 9 L13 15 L8 11 L3 15 L5 9 L0 5 L6 5 Z', fill: '#d6001c', transform: 'translate(0 73) rotate(-26 8 8)' }),
+        h('path', { d: 'M8.5 0 L10.5 5.5 L17 5.5 L11.8 9.5 L13.8 16 L8.5 12 L3.2 16 L5.2 9.5 L0 5.5 L6.5 5.5 Z', fill: '#fff8ec', stroke: '#050505', 'stroke-width': '3', transform: 'translate(63 5) rotate(15 8.5 8)' }),
+        h('path', { d: 'M6 0 L7.4 4 L12 4 L8.3 6.8 L9.8 11.5 L6 8.7 L2.2 11.5 L3.7 6.8 L0 4 L4.6 4 Z', fill: '#fff8ec', stroke: '#050505', 'stroke-width': '2', opacity: '.86', transform: 'translate(32 2) rotate(-8 6 6)' }),
+      ]),
+      h('polyline', { points: '5 14 126 7 96 39', fill: 'none', stroke: '#fff8ec', 'stroke-width': '4', 'stroke-linecap': 'square', 'stroke-linejoin': 'miter', transform: 'translate(594 18)' }),
+      h('polyline', { points: '0 30 112 18 92 30 300 12', fill: 'none', stroke: '#d6001c', 'stroke-width': '7', 'stroke-linecap': 'square', 'stroke-linejoin': 'miter', transform: 'translate(80 87)' }),
+      h('g', { transform: `translate(${titleStart} 27) rotate(-2)` }, [
+        h('g', { transform: 'skewX(-8)' }, chars.map((part, index) => h('rect', {
+          x: index * (charWidth + gap),
+          y: 0,
+          width: charWidth,
+          height: 58,
+          fill: part.hot ? '#d6001c' : '#050505',
+          stroke: '#fff8ec',
+          'stroke-width': '3',
+        }))),
+        ...chars.map((part, index) => h('text', {
+          class: 'p5-menu-strip-char',
+          x: index * (charWidth + gap) + charWidth / 2,
+          y: 31,
+          transform: 'skewX(-8)',
+          fill: '#fff8ec',
+          stroke: '#050505',
+          'stroke-width': '7',
+          'paint-order': 'stroke',
+          'stroke-linejoin': 'round',
+          'dominant-baseline': 'central',
+          'text-anchor': 'middle',
+        }, part.text)),
+        props.subtitle ? h('g', { transform: `translate(${Math.max(96, titleWidth * 0.33)} 64)` }, [
+          h('polygon', { points: `-6 0 ${subtitleWidth} -8 ${subtitleWidth + 8} 28 2 31`, fill: 'rgba(0,0,0,.86)', stroke: 'rgba(255,255,255,.7)', 'stroke-width': '2' }),
+          h('text', { class: 'p5-menu-strip-subtitle', x: 14, y: 20 }, props.subtitle),
+        ]) : null,
+      ]),
+    ],
+  );
+};
+
+const person5GroupLabels: Record<SidebarGroupKey, string> = {
+  Conversation: "作战会议室",
+  Agent: "心之怪盗团",
+  Monitoring: "潜入记录",
+  Tools: "黑匣终端",
+  System: "系统面板",
+};
+
+const person5GroupMeta: Record<SidebarGroupKey, { subtitle: string; hot?: string }> = {
+  Conversation: { subtitle: "作战 / 潜入" },
+  Agent: { subtitle: "成员 / 侧写", hot: "心" },
+  Monitoring: { subtitle: "会话 / 档案", hot: "入" },
+  Tools: { subtitle: "终端 / 黑箱", hot: "黑" },
+  System: { subtitle: "控制 / 状态" },
+};
+
+const person5ControlMeta: Record<Person5ControlKey, { title: string; subtitle: string; hot?: string }> = {
+  profile: { title: "人格面具", subtitle: "Persona / 侧写", hot: "面" },
+  model: { title: "模型中枢", subtitle: "Model / 调度" },
+};
+
+const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
+  profile: true,
+  model: true,
+});
+const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
+const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
+const p5ModelSubmenuRef = ref<HTMLElement | null>(null);
+const p5ProfileActionsOpen = ref<Record<string, boolean>>({});
+const p5ProfileRestarting = ref<Record<string, boolean>>({});
+const p5GatewayRestarting = ref<Record<string, boolean>>({});
+const p5AvatarSaving = ref<Record<string, boolean>>({});
+const p5AvatarProfileName = ref<string | null>(null);
+const p5AvatarInputRef = ref<HTMLInputElement | null>(null);
+
+const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
+const activeProfileModels = computed(() => {
+  const profileModels = appStore.profileModelGroups.find(entry => entry.profile === activeProfileName.value);
+  return profileModels?.groups || appStore.modelGroups || [];
+});
+const p5ModelItems = computed(() => activeProfileModels.value.flatMap(group => {
+  const models = [
+    ...group.models,
+    ...(appStore.customModels[group.provider] || []).filter(model => !group.models.includes(model)),
+  ];
+  return models.map(model => ({
+    provider: group.provider,
+    providerLabel: group.label,
+    model,
+    label: appStore.displayModelName(model, group.provider),
+  }));
+}));
 function groupLabel(key: SidebarGroupKey) {
+  if (isPerson5.value) {
+    return person5GroupLabels[key];
+  }
   return t(`sidebar.group${key}${appStore.sidebarCollapsed ? "Short" : ""}`);
 }
 
+function groupSubtitle(key: SidebarGroupKey) {
+  return person5GroupMeta[key].subtitle;
+}
+
+function groupTitleChars(key: SidebarGroupKey) {
+  const title = person5GroupLabels[key];
+  const hot = person5GroupMeta[key].hot;
+  return titleChars(title, hot);
+}
+
+function titleChars(title: string, hot?: string) {
+  if (!hot) return Array.from(title).map((text) => ({ text, hot: false }));
+  const index = title.indexOf(hot);
+  if (index < 0) return Array.from(title).map((text) => ({ text, hot: false }));
+  return Array.from(title).map((text, charIndex) => ({
+    text,
+    hot: charIndex >= index && charIndex < index + hot.length,
+  }));
+}
+
 function toggleGroup(key: string) {
-  collapsedGroups[key] = !collapsedGroups[key];
+  collapsedGroups[key] = !isGroupCollapsed(key);
   persistCollapsedGroups();
 }
 
+function shouldShowCollapsedItem(item: P5CollapsedIconItem) {
+  if (item.superAdminOnly && !isSuperAdmin.value) return false;
+  if (item.routeName && !hasRoute(item.routeName)) return false;
+  if (item.hidden?.()) return false;
+  return true;
+}
+
+function isCollapsedItemActive(item: P5CollapsedIconItem) {
+  if (!item.routeName) return false;
+  if (item.routeName === "hermes.chat") return isNavActive("hermes.chat", "hermes.session");
+  if (item.routeName === "hermes.history") return isNavActive("hermes.history", "hermes.historySession");
+  if (item.routeName === "hermes.groupChat") return isNavActive("hermes.groupChat", "hermes.groupChatRoom");
+  return selectedKey.value === item.routeName;
+}
+
+function handleCollapsedAction(item: P5CollapsedIconItem) {
+  item.action?.();
+}
+
 function isGroupCollapsed(key: string) {
+  if (isPerson5.value && collapsedGroups[key] === undefined) {
+    return true;
+  }
   return !!collapsedGroups[key];
+}
+
+function toggleP5Control(key: Person5ControlKey) {
+  p5ControlCollapsed.value[key] = !p5ControlCollapsed.value[key];
+}
+
+function isP5ControlCollapsed(key: Person5ControlKey) {
+  return p5ControlCollapsed.value[key];
+}
+
+function scrollP5Submenu(key: Person5ControlKey) {
+  const el = key === "profile" ? p5ProfileSubmenuRef.value : p5ModelSubmenuRef.value;
+  if (!el) return;
+  const firstItem = el.querySelector<HTMLElement>(".nav-item");
+  const itemHeight = firstItem?.offsetHeight || 64;
+  el.scrollBy({
+    top: itemHeight * 4,
+    behavior: "smooth",
+  });
+}
+
+function scrollP5AgentSubmenu() {
+  const el = p5AgentSubmenuRef.value;
+  if (!el) return;
+  const firstItem = el.querySelector<HTMLElement>(".nav-item");
+  const itemHeight = firstItem?.offsetHeight || 64;
+  el.scrollBy({
+    top: itemHeight * 4,
+    behavior: "smooth",
+  });
+}
+
+function isP5ProfileActionsOpen(name: string) {
+  return !!p5ProfileActionsOpen.value[name];
+}
+
+function toggleP5ProfileActions(name: string) {
+  p5ProfileActionsOpen.value = {
+    [name]: !p5ProfileActionsOpen.value[name],
+  };
+}
+
+async function handleP5ProfileSwitch(name: string) {
+  if (name === activeProfileName.value) return;
+  const ok = await profilesStore.switchProfile(name);
+  if (ok) {
+    message.success(`人格面具已切换：${name}`);
+    window.location.reload();
+  } else {
+    message.error("人格面具切换失败");
+  }
+}
+
+function handleP5ChooseAvatar(name: string) {
+  p5AvatarProfileName.value = name;
+  p5AvatarInputRef.value?.click();
+}
+
+async function handleP5AvatarFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  const name = p5AvatarProfileName.value;
+  if (!file || !name) return;
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    message.warning(t("profiles.avatar.invalidType"));
+    return;
+  }
+  if (file.size > 1024 * 1024) {
+    message.warning(t("profiles.avatar.tooLarge"));
+    return;
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+  p5AvatarSaving.value = { ...p5AvatarSaving.value, [name]: true };
+  try {
+    await profilesStore.updateAvatar(name, { type: "image", dataUrl });
+    message.success(t("profiles.avatar.saveSuccess"));
+  } catch (err: any) {
+    message.error(err?.message || t("profiles.avatar.saveFailed"));
+  } finally {
+    p5AvatarSaving.value = { ...p5AvatarSaving.value, [name]: false };
+    p5AvatarProfileName.value = null;
+  }
+}
+
+async function handleP5RestartProfile(name: string) {
+  p5ProfileRestarting.value = { ...p5ProfileRestarting.value, [name]: true };
+  try {
+    await restartProfileRuntime(name);
+    message.success(t('profiles.runtime.profileRestarted', { name }));
+  } catch (err: any) {
+    message.error(err?.message || t('profiles.runtime.profileRestartFailed'));
+  } finally {
+    p5ProfileRestarting.value = { ...p5ProfileRestarting.value, [name]: false };
+  }
+}
+
+async function handleP5RestartGateway(name: string) {
+  p5GatewayRestarting.value = { ...p5GatewayRestarting.value, [name]: true };
+  try {
+    await restartProfileGateway(name);
+    message.success(t('profiles.runtime.gatewayRestarted', { name }));
+  } catch (err: any) {
+    message.error(err?.message || t('profiles.runtime.gatewayRestartFailed'));
+  } finally {
+    p5GatewayRestarting.value = { ...p5GatewayRestarting.value, [name]: false };
+  }
+}
+
+async function handleP5ModelSwitch(model: string, provider: string) {
+  if (model === appStore.selectedModel && provider === appStore.selectedProvider) return;
+  await appStore.switchModel(model, provider);
+  message.success(`模型已切换：${appStore.displayModelName(model, provider)}`);
 }
 
 
@@ -79,13 +470,27 @@ const showChangelog = ref(false);
 function openChangelog() {
   showChangelog.value = true;
 }
+
+onMounted(() => {
+  if (profilesStore.profiles.length === 0) {
+    void profilesStore.fetchProfiles();
+  }
+  void appStore.loadModels();
+});
 </script>
 
 <template>
   <aside class="sidebar" :class="{ open: appStore.sidebarOpen, collapsed: appStore.sidebarCollapsed }">
+    <div v-if="isPerson5" class="p5-sidebar-title">
+      {{ appStore.sidebarCollapsed ? 'MENU' : 'COMMAND MENU' }}
+    </div>
     <RouteLinkItem class="sidebar-logo" :to="{ name: 'hermes.chat' }">
       <img :src="logoPath" alt="Hermes Studio" class="logo-img" />
-      <span class="logo-text">Hermes Studio</span>
+      <span class="logo-copy">
+        <span class="p5-logo-title">卢布朗咖啡店</span>
+        <span class="logo-text">Hermes Studio</span>
+        <span class="p5-logo-subtitle">CAFÉ LEBLANC / HERMES STUDIO</span>
+      </span>
       <!-- <video class="logo-dance" :src="isDark ? danceVideoDark : danceVideoLight" autoplay loop muted playsinline /> -->
     </RouteLinkItem>
 
@@ -96,16 +501,120 @@ function openChangelog() {
       </svg>
     </button>
 
+    <div v-if="isPerson5 && appStore.sidebarCollapsed" class="p5-collapsed-rail" aria-label="PERSON5 collapsed menu">
+      <div
+        v-for="group in p5CollapsedGroups"
+        :key="group.key"
+        class="p5-collapsed-stack"
+        :class="{ open: p5CollapsedOpenGroup === group.key }"
+      >
+        <button
+          class="p5-collapsed-tab"
+          :class="{ active: group.active() }"
+          type="button"
+          @click.stop.prevent="toggleP5CollapsedGroup(group.key)"
+        >
+          <span>{{ group.label }}</span>
+        </button>
+        <div v-if="p5CollapsedOpenGroup === group.key" class="p5-collapsed-icons">
+          <template
+            v-for="item in p5CollapsedItems[group.key]"
+            :key="item.key"
+          >
+            <RouteLinkItem
+              v-if="item.routeName && shouldShowCollapsedItem(item)"
+              class="p5-collapsed-icon"
+              :to="{ name: item.routeName }"
+              :active="isCollapsedItemActive(item)"
+              :title="item.label"
+            >
+              <P5CollapsedIcon :name="item.icon" />
+            </RouteLinkItem>
+            <button
+              v-else-if="shouldShowCollapsedItem(item)"
+              class="p5-collapsed-icon"
+              type="button"
+              :title="item.label"
+              @click="handleCollapsedAction(item)"
+            >
+              <P5CollapsedIcon :name="item.icon" />
+            </button>
+          </template>
+        </div>
+      </div>
+      <div class="p5-collapsed-agent" :class="{ open: p5CollapsedAgentOpen }">
+        <button
+          class="p5-collapsed-agent-button"
+          type="button"
+          :title="activeProfileName"
+          @click.stop.prevent="toggleP5CollapsedAgent"
+        >
+          <ProfileAvatarView
+            :name="activeProfileName"
+            :avatar="profilesStore.activeProfile?.avatar"
+            :size="42"
+          />
+        </button>
+        <div v-if="p5CollapsedAgentOpen" class="p5-collapsed-agent-actions">
+          <button class="p5-collapsed-icon" type="button" title="选择头像" @click.stop="handleP5ChooseAvatar(activeProfileName)">
+            <P5CollapsedIcon name="image" />
+          </button>
+          <button class="p5-collapsed-icon" type="button" title="选择配置" @click.stop="handleP5ProfileSwitch(activeProfileName)">
+            <P5CollapsedIcon name="user" />
+          </button>
+          <button class="p5-collapsed-icon" type="button" title="重启配置" @click.stop="handleP5RestartProfile(activeProfileName)">
+            <P5CollapsedIcon name="refresh" />
+          </button>
+          <button class="p5-collapsed-icon" type="button" title="重启网关" @click.stop="handleP5RestartGateway(activeProfileName)">
+            <P5CollapsedIcon name="server" />
+          </button>
+        </div>
+      </div>
+      <div class="p5-collapsed-quick-actions">
+        <ThemeSwitch />
+        <button class="p5-collapsed-icon" type="button" :title="t('sidebar.logout')" @click="handleLogout">
+          <P5CollapsedIcon name="logout" />
+        </button>
+      </div>
+    </div>
+
     <nav class="sidebar-nav">
       <!-- Conversation -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-conversation" :class="{ expanded: !isGroupCollapsed('conversation') }">
         <div class="nav-group-label" @click="toggleGroup('conversation')">
-          <span>{{ groupLabel("Conversation") }}</span>
+          <template v-if="isPerson5">
+            <span class="p5-hero-card-media" aria-hidden="true"></span>
+            <span class="p5-menu-stars" aria-hidden="true"></span>
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-full">{{ groupLabel("Conversation") }}</span>
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in groupTitleChars('Conversation')"
+                  :key="`conversation-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ groupSubtitle("Conversation") }}</span>
+            </span>
+            <span class="p5-menu-gear" aria-hidden="true"></span>
+          </template>
+          <span v-else>{{ groupLabel("Conversation") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('conversation') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('conversation')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('conversation') }">
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.chat' }" :active="isNavActive('hermes.chat', 'hermes.session')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -139,14 +648,17 @@ function openChangelog() {
       </div>
 
       <!-- Agent -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-agent" :class="{ expanded: !isGroupCollapsed('agent') }">
         <div class="nav-group-label" @click="toggleGroup('agent')">
-          <span>{{ groupLabel("Agent") }}</span>
+          <template v-if="isPerson5">
+            <P5MenuStrip :title="groupLabel('Agent')" :subtitle="groupSubtitle('Agent')" :hot="person5GroupMeta.Agent.hot" />
+          </template>
+          <span v-else>{{ groupLabel("Agent") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('agent') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('agent')" class="nav-group-items">
+        <div ref="p5AgentSubmenuRef" class="nav-group-items p5-limited-submenu" :class="{ collapsed: isGroupCollapsed('agent') }">
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.jobs' }" :active="selectedKey === 'hermes.jobs'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -217,17 +729,28 @@ function openChangelog() {
             <span>{{ t("sidebar.models") }}</span>
           </RouteLinkItem>
         </div>
+        <button
+          v-if="isPerson5 && !isGroupCollapsed('agent')"
+          class="p5-submenu-more p5-nav-submenu-more"
+          type="button"
+          @click.stop="scrollP5AgentSubmenu"
+        >
+          更多 ↓
+        </button>
       </div>
 
       <!-- Monitoring -->
-      <div class="nav-group">
-        <div class="nav-group-label" @click="toggleGroup('monitoring')">
-          <span>{{ groupLabel("Monitoring") }}</span>
+      <div class="nav-group nav-group-monitoring" :class="{ expanded: !isGroupCollapsed('monitoring') }">
+        <div class="nav-group-label p5-strip-shift" @click="toggleGroup('monitoring')">
+          <template v-if="isPerson5">
+            <P5MenuStrip :title="groupLabel('Monitoring')" :subtitle="groupSubtitle('Monitoring')" :hot="person5GroupMeta.Monitoring.hot" />
+          </template>
+          <span v-else>{{ groupLabel("Monitoring") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('monitoring') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('monitoring')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('monitoring') }">
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.logs' }" :active="selectedKey === 'hermes.logs'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -263,14 +786,17 @@ function openChangelog() {
       </div>
 
       <!-- Tools -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-tools" :class="{ expanded: !isGroupCollapsed('tools') }">
         <div class="nav-group-label" @click="toggleGroup('tools')">
-          <span>{{ groupLabel("Tools") }}</span>
+          <template v-if="isPerson5">
+            <P5MenuStrip :title="groupLabel('Tools')" :subtitle="groupSubtitle('Tools')" :hot="person5GroupMeta.Tools.hot" />
+          </template>
+          <span v-else>{{ groupLabel("Tools") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('tools') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('tools')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('tools') }">
           <RouteLinkItem v-if="hasRoute('hermes.codingAgents')" class="nav-item" :to="{ name: 'hermes.codingAgents' }" :active="selectedKey === 'hermes.codingAgents'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="16 18 22 12 16 6" />
@@ -294,14 +820,17 @@ function openChangelog() {
       </div>
 
       <!-- System -->
-      <div class="nav-group">
-        <div class="nav-group-label" @click="toggleGroup('system')">
-          <span>{{ groupLabel("System") }}</span>
+      <div class="nav-group nav-group-system" :class="{ expanded: !isGroupCollapsed('system') }">
+        <div class="nav-group-label p5-strip-shift" @click="toggleGroup('system')">
+          <template v-if="isPerson5">
+            <P5MenuStrip :title="groupLabel('System')" :subtitle="groupSubtitle('System')" :hot="person5GroupMeta.System.hot" />
+          </template>
+          <span v-else>{{ groupLabel("System") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('system') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('system')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('system') }">
           <RouteLinkItem v-if="isSuperAdmin" class="nav-item" :to="{ name: 'hermes.profiles' }" :active="selectedKey === 'hermes.profiles'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -320,11 +849,129 @@ function openChangelog() {
       </div>
     </nav>
 
-    <ProfileSelector />
-    <ModelSelector />
+    <div class="p5-sidebar-controls" :class="{ 'is-person5': isPerson5 }">
+      <template v-if="isPerson5">
+        <div class="nav-group p5-control-group p5-control-profile" :class="{ expanded: !isP5ControlCollapsed('profile') }">
+          <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('profile')">
+            <P5MenuStrip :title="person5ControlMeta.profile.title" :subtitle="person5ControlMeta.profile.subtitle" :hot="person5ControlMeta.profile.hot" />
+            <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('profile') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <div ref="p5ProfileSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('profile') }">
+            <div
+              v-for="profile in profilesStore.profiles"
+              :key="profile.name"
+              class="p5-profile-row"
+            >
+              <button
+                class="nav-item p5-profile-item"
+                :class="{ active: profile.name === activeProfileName }"
+                type="button"
+                @click="toggleP5ProfileActions(profile.name)"
+              >
+                <ProfileAvatarView :name="profile.name" :avatar="profile.avatar" :size="38" />
+                <span class="p5-submenu-main">{{ profile.name }}</span>
+              </button>
+              <div v-if="isP5ProfileActionsOpen(profile.name)" class="p5-profile-actions">
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="p5AvatarSaving[profile.name]"
+                  @click.stop="handleP5ChooseAvatar(profile.name)"
+                >
+                  选择头像
+                </button>
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="profile.name === activeProfileName"
+                  @click.stop="handleP5ProfileSwitch(profile.name)"
+                >
+                  选择配置
+                </button>
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="p5ProfileRestarting[profile.name]"
+                  @click.stop="handleP5RestartProfile(profile.name)"
+                >
+                  重启配置
+                </button>
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="p5GatewayRestarting[profile.name]"
+                  @click.stop="handleP5RestartGateway(profile.name)"
+                >
+                  重启网关
+                </button>
+              </div>
+            </div>
+          </div>
+          <input
+            ref="p5AvatarInputRef"
+            class="p5-avatar-input"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            @change="handleP5AvatarFileChange"
+          >
+          <button
+            v-if="profilesStore.profiles.length > 4 && !isP5ControlCollapsed('profile')"
+            class="p5-submenu-more"
+            type="button"
+            @click.stop="scrollP5Submenu('profile')"
+          >
+            更多人格面具 ↓
+          </button>
+        </div>
+
+        <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">
+          <button class="nav-group-label p5-control-label-main p5-strip-shift" type="button" @click="toggleP5Control('model')">
+            <P5MenuStrip :title="person5ControlMeta.model.title" :subtitle="person5ControlMeta.model.subtitle" :hot="person5ControlMeta.model.hot" />
+            <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('model') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <div ref="p5ModelSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('model') }">
+            <button
+              v-for="item in p5ModelItems"
+              :key="`${item.provider}:${item.model}`"
+              class="nav-item p5-model-item"
+              :class="{ active: item.model === appStore.selectedModel && item.provider === appStore.selectedProvider }"
+              type="button"
+              @click="handleP5ModelSwitch(item.model, item.provider)"
+            >
+              <span class="p5-model-mark">M</span>
+              <span class="p5-submenu-main">{{ item.label }}</span>
+              <span class="p5-submenu-sub">{{ item.providerLabel }}</span>
+            </button>
+          </div>
+          <button
+            v-if="p5ModelItems.length > 4 && !isP5ControlCollapsed('model')"
+            class="p5-submenu-more"
+            type="button"
+            @click.stop="scrollP5Submenu('model')"
+          >
+            更多模型 ↓
+          </button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="p5-control-strip p5-control-profile">
+          <span class="p5-control-label">人格面具</span>
+          <ProfileSelector />
+        </div>
+        <div class="p5-control-strip p5-control-model">
+          <span class="p5-control-label">模型中枢</span>
+          <ModelSelector />
+        </div>
+      </template>
+    </div>
 
     <div class="sidebar-footer">
-      <button class="nav-item logout-item" @click="handleLogout">
+      <button class="nav-item logout-item" :class="{ 'p5-logout-strip': isPerson5 }" @click="handleLogout">
+        <P5MenuStrip v-if="isPerson5" :title="t('sidebar.logout')" />
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
           <polyline points="16 17 21 12 16 7" />
@@ -332,8 +979,10 @@ function openChangelog() {
         </svg>
         <span>{{ t("sidebar.logout") }}</span>
       </button>
-      <div class="status-row">
+      <div class="status-row" :class="isPerson5 ? ['p5-utility-card', 'p5-language-card'] : []">
+        <P5MenuStrip v-if="isPerson5" title="" />
         <div
+          v-if="!isPerson5"
           class="status-indicator"
           :class="{
             connected: appStore.connected,
@@ -349,13 +998,16 @@ function openChangelog() {
         </div>
         <LanguageSwitch />
       </div>
-      <div class="version-info">
+      <div class="version-info" :class="isPerson5 ? ['p5-utility-card', 'p5-repo-card'] : []">
+        <P5MenuStrip v-if="isPerson5" title="" />
         <div class="version-links">
-          <a class="github-link" href="https://github.com/EKKOLearnAI/hermes-web-ui" target="_blank" rel="noopener noreferrer" title="GitHub">
+          <a class="github-link" href="https://github.com/ifsherlock/hermes-web-ui" target="_blank" rel="noopener noreferrer" title="GitHub">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span v-if="isPerson5" class="p5-footer-link-label">仓库</span>
           </a>
           <a class="website-link" href="https://hermes-studio.ai/" target="_blank" rel="noopener noreferrer" title="Website">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span v-if="isPerson5" class="p5-footer-link-label">主页</span>
           </a>
         </div>
         <span class="version-text" @click="openChangelog">Studio v{{ appStore.serverVersion || "0.1.0" }}</span>
@@ -370,7 +1022,15 @@ function openChangelog() {
     </div>
 
     <!-- Changelog modal -->
-    <NModal v-model:show="showChangelog" preset="dialog" :title="t('sidebar.changelog')" style="width: 520px;">
+    <NModal
+      v-model:show="showChangelog"
+      preset="dialog"
+      :title="t('sidebar.changelog')"
+      class="changelog-modal"
+      title-class="changelog-dialog-title"
+      content-class="changelog-dialog-content"
+      style="width: 520px;"
+    >
       <div class="changelog-list">
         <div v-for="entry in changelog" :key="entry.version" class="changelog-version-block">
           <div class="changelog-version-header">
@@ -467,6 +1127,14 @@ function openChangelog() {
   border-top: 1px solid $border-color;
 }
 
+.p5-sidebar-controls {
+  display: contents;
+}
+
+.p5-control-label {
+  display: none;
+}
+
 .nav-group {
   display: flex;
   flex-direction: column;
@@ -483,6 +1151,10 @@ function openChangelog() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+
+  &.collapsed {
+    display: none;
+  }
 }
 
 .nav-group-label {

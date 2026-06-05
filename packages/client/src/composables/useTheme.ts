@@ -1,7 +1,7 @@
 import { ref, watch, computed } from 'vue'
 
 export type BrightnessMode = 'light' | 'dark' | 'system'
-export type ThemeStyle = 'ink' | 'comic'
+export type ThemeStyle = 'ink' | 'comic' | 'person5'
 
 const BRIGHTNESS_KEY = 'hermes_brightness'
 const STYLE_KEY = 'hermes_style'
@@ -16,6 +16,7 @@ const style = ref<ThemeStyle>(
 
 const isDark = ref(false)
 const isComic = ref(false)
+const isPerson5 = ref(false)
 
 function resolveDark(b: BrightnessMode): boolean {
   if (b === 'system') {
@@ -28,8 +29,13 @@ function applyClasses() {
   const dark = resolveDark(brightness.value)
   isDark.value = dark
   isComic.value = style.value === 'comic'
+  isPerson5.value = style.value === 'person5'
   document.documentElement.classList.toggle('dark', dark)
   document.documentElement.classList.toggle('comic', isComic.value)
+  document.documentElement.classList.toggle(
+    'person5',
+    isPerson5.value && !document.documentElement.classList.contains('p5-login-active'),
+  )
 }
 
 // Initial
@@ -56,6 +62,7 @@ watch(style, (s) => {
 export function useTheme() {
   const themeName = computed(() => {
     const b = isDark.value ? 'dark' : 'light'
+    if (isPerson5.value) return 'person5'
     return isComic.value ? `comic-${b}` : b
   })
 
@@ -72,7 +79,13 @@ export function useTheme() {
   }
 
   function toggleStyle() {
-    style.value = isComic.value ? 'ink' : 'comic'
+    if (style.value === 'ink') {
+      style.value = 'comic'
+    } else if (style.value === 'comic') {
+      style.value = 'person5'
+    } else {
+      style.value = 'ink'
+    }
   }
 
   return {
@@ -80,6 +93,7 @@ export function useTheme() {
     style,
     isDark,
     isComic,
+    isPerson5,
     themeName,
     setBrightness,
     setStyle,

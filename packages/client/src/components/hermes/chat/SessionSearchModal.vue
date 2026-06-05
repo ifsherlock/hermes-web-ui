@@ -243,6 +243,7 @@ onUnmounted(() => {
   <NModal
     v-model:show="sessionSearchOpen"
     preset="card"
+    class="session-search-card"
     :title="t('chat.searchTitle')"
     :style="{ width: 'min(760px, calc(100vw - 24px))' }"
     :mask-closable="true"

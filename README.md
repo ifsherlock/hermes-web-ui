@@ -135,6 +135,7 @@ Unified configuration for **8 platforms** in one page:
 - Token-based auth (auto-generated on first run or set via `AUTH_TOKEN` env var)
 - Username/password login with account management in Settings
 - Default bootstrap credentials are `admin` / `123456`; users are prompted after login to change the default username and password
+- The login page does not display the default credentials; keep this README as the bootstrap reference
 - Super administrators can manage users and profile bindings; regular administrators can manage their own account details
 
 CLI maintenance commands:
