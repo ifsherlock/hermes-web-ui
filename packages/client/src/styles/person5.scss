@@ -7900,16 +7900,37 @@ html.person5 .chat-input-area .input-textarea {
 
 /* Lift the PERSON5 session drawer tag above the white stage line. */
 html.person5 .chat-panel > .p5-session-handle {
-  top: 84px !important;
+  top: 54px !important;
 }
 
 html.person5 .chat-panel > .p5-session-handle.open {
-  top: 84px !important;
+  top: 54px !important;
 }
 
 /* Keep collapsed sidebar controls away from the lower scrollbar/collapse hit area. */
+html.person5 .sidebar {
+  padding-bottom: 112px !important;
+}
+
+html.person5 .sidebar-nav {
+  padding-bottom: 112px !important;
+}
+
+html.person5 .sidebar::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: var(--p5-sidebar-wide);
+  height: 92px;
+  z-index: 70;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.96) 38%, rgba(0, 0, 0, 1));
+}
+
 html.person5 .sidebar.collapsed .p5-collapsed-rail {
-  bottom: 150px !important;
+  bottom: 184px !important;
   align-items: center !important;
 }
 
@@ -7920,11 +7941,15 @@ html.person5 .sidebar.collapsed .collapse-btn {
 html.person5 .sidebar.collapsed .collapse-btn::before {
   content: "";
   position: absolute;
-  left: -12px;
-  right: -12px;
-  top: -18px;
-  height: 18px;
+  left: -18px;
+  right: -18px;
+  top: -34px;
+  height: 34px;
   pointer-events: auto;
+}
+
+html.person5 .sidebar.collapsed::after {
+  width: 112px;
 }
 
 html.person5 .sidebar.collapsed .p5-collapsed-agent,
@@ -7939,4 +7964,29 @@ html.person5 .sidebar.collapsed .p5-collapsed-agent-actions {
 html.person5 .sidebar.collapsed .p5-collapsed-agent-button {
   margin-left: auto !important;
   margin-right: auto !important;
+}
+
+/* When the PERSON5 rail is collapsed, center the message column inside the red stage, not the page. */
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .virtual-row {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message {
+  width: min(100%, 1180px) !important;
+  max-width: 1180px !important;
+}
+
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.assistant .msg-body,
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.system .msg-body,
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.command .msg-body,
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.tool .tool-line,
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.tool .tool-details {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: min(100%, 1120px) !important;
+}
+
+html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.user .msg-body {
+  max-width: min(75%, 960px) !important;
 }
