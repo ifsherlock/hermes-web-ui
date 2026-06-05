@@ -7838,3 +7838,37 @@ html.p5-login-active .p5-login-view .login-btn {
     transform: rotate(-0.8deg) !important;
   }
 }
+
+/* PERSON5 critical chat fix: keep the message area from consuming the composer. */
+html.person5 .chat-main {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+html.person5 .chat-content-wrapper {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+html.person5 .chat-main-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+html.person5 .chat-input-area {
+  position: relative !important;
+  z-index: 40 !important;
+  display: block !important;
+  flex: 0 0 auto !important;
+  min-height: 118px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+}
+
+html.person5 .chat-input-area .input-wrapper {
+  display: flex !important;
+  min-height: 76px !important;
+}
