@@ -60,6 +60,10 @@ function openProfileModal() {
   })
 }
 
+defineExpose({
+  openProfileModal,
+})
+
 function scheduleRuntimeStatusPoll(attempt = 0) {
   if (attempt >= 12 || typeof window === 'undefined') return
   window.setTimeout(() => {

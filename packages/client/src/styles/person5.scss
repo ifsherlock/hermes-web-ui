@@ -5244,6 +5244,17 @@ html.person5 .p5-control-profile .p5-profile-item .p5-submenu-main {
   max-width: calc(100% - 72px) !important;
 }
 
+html.person5 .p5-profile-modal-bridge {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 @media (max-width: 2200px) {
   html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label,
   html.person5 .p5-control-label-main,

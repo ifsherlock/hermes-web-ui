@@ -46,6 +46,9 @@ const { record: collapsedGroups, persist: persistCollapsedGroups } = usePersiste
 
 type SidebarGroupKey = "Conversation" | "Agent" | "Monitoring" | "Tools" | "System";
 type Person5ControlKey = "profile" | "model";
+type ProfileSelectorExpose = {
+  openProfileModal: () => void;
+};
 
 const P5StripBorder = () => h(
   'svg',
@@ -89,6 +92,7 @@ const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
 const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
 const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
 const p5ModelSubmenuRef = ref<HTMLElement | null>(null);
+const p5ProfileSelectorRef = ref<ProfileSelectorExpose | null>(null);
 
 const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
 const activeProfileModels = computed(() => {
@@ -158,6 +162,10 @@ function isGroupCollapsed(key: string) {
 }
 
 function toggleP5Control(key: Person5ControlKey) {
+  if (key === "profile") {
+    p5ProfileSelectorRef.value?.openProfileModal();
+    return;
+  }
   p5ControlCollapsed.value[key] = !p5ControlCollapsed.value[key];
 }
 
@@ -657,6 +665,7 @@ onMounted(() => {
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
+          <ProfileSelector ref="p5ProfileSelectorRef" class="p5-profile-modal-bridge" />
           <div ref="p5ProfileSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('profile') }">
             <button
               v-for="profile in profilesStore.profiles"
