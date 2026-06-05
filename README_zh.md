@@ -1,4 +1,7 @@
 <p align="center">
+    <a href="https://linux.do" alt="LINUX DO"><img src="https://shorturl.at/ggSqS" /></a>
+</p>
+<p align="center">
   <strong>Hermes Web UI</strong>
   <a href="./README.md">English</a>
 </p>
