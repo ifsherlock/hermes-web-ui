@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { NButton, NModal, useMessage } from "naive-ui";
 import { useAppStore } from "@/stores/hermes/app";
 import { useProfilesStore } from "@/stores/hermes/profiles";
+import { restartProfileGateway, restartProfileRuntime } from "@/api/hermes/profiles";
 import ProfileAvatarView from "@/components/hermes/profiles/ProfileAvatar.vue";
 import ModelSelector from "./ModelSelector.vue";
 import ProfileSelector from "./ProfileSelector.vue";
@@ -46,9 +47,6 @@ const { record: collapsedGroups, persist: persistCollapsedGroups } = usePersiste
 
 type SidebarGroupKey = "Conversation" | "Agent" | "Monitoring" | "Tools" | "System";
 type Person5ControlKey = "profile" | "model";
-type ProfileSelectorExpose = {
-  openProfileModal: () => void;
-};
 
 const P5StripBorder = () => h(
   'svg',
@@ -92,7 +90,8 @@ const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
 const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
 const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
 const p5ModelSubmenuRef = ref<HTMLElement | null>(null);
-const p5ProfileSelectorRef = ref<ProfileSelectorExpose | null>(null);
+const p5ProfileRestarting = ref(false);
+const p5GatewayRestarting = ref(false);
 
 const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
 const activeProfileModels = computed(() => {
@@ -162,10 +161,6 @@ function isGroupCollapsed(key: string) {
 }
 
 function toggleP5Control(key: Person5ControlKey) {
-  if (key === "profile") {
-    p5ProfileSelectorRef.value?.openProfileModal();
-    return;
-  }
   p5ControlCollapsed.value[key] = !p5ControlCollapsed.value[key];
 }
 
@@ -203,6 +198,32 @@ async function handleP5ProfileSwitch(name: string) {
     window.location.reload();
   } else {
     message.error("人格面具切换失败");
+  }
+}
+
+async function handleP5RestartProfile() {
+  const name = activeProfileName.value;
+  p5ProfileRestarting.value = true;
+  try {
+    await restartProfileRuntime(name);
+    message.success(t('profiles.runtime.profileRestarted', { name }));
+  } catch (err: any) {
+    message.error(err?.message || t('profiles.runtime.profileRestartFailed'));
+  } finally {
+    p5ProfileRestarting.value = false;
+  }
+}
+
+async function handleP5RestartGateway() {
+  const name = activeProfileName.value;
+  p5GatewayRestarting.value = true;
+  try {
+    await restartProfileGateway(name);
+    message.success(t('profiles.runtime.gatewayRestarted', { name }));
+  } catch (err: any) {
+    message.error(err?.message || t('profiles.runtime.gatewayRestartFailed'));
+  } finally {
+    p5GatewayRestarting.value = false;
   }
 }
 
@@ -665,7 +686,6 @@ onMounted(() => {
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
-          <ProfileSelector ref="p5ProfileSelectorRef" class="p5-profile-modal-bridge" />
           <div ref="p5ProfileSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('profile') }">
             <button
               v-for="profile in profilesStore.profiles"
@@ -687,6 +707,24 @@ onMounted(() => {
           >
             更多人格面具 ↓
           </button>
+          <div v-if="!isP5ControlCollapsed('profile')" class="p5-profile-actions">
+            <button
+              class="p5-profile-action"
+              type="button"
+              :disabled="p5ProfileRestarting"
+              @click.stop="handleP5RestartProfile"
+            >
+              重启配置
+            </button>
+            <button
+              class="p5-profile-action"
+              type="button"
+              :disabled="p5GatewayRestarting"
+              @click.stop="handleP5RestartGateway"
+            >
+              重启网关
+            </button>
+          </div>
         </div>
 
         <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">

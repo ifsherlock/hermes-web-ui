@@ -5170,7 +5170,7 @@ html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label,
 html.person5 .p5-control-label-main,
 html.person5 .p5-logout-strip {
   width: min(750px, calc(100% - 10px)) !important;
-  min-height: 146px !important;
+  min-height: 190px !important;
 }
 
 html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-char,
@@ -5244,15 +5244,37 @@ html.person5 .p5-control-profile .p5-profile-item .p5-submenu-main {
   max-width: calc(100% - 72px) !important;
 }
 
-html.person5 .p5-profile-modal-bridge {
-  position: absolute !important;
-  width: 0 !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+html.person5 .p5-profile-actions {
+  display: flex !important;
+  gap: 12px !important;
+  width: min(320px, calc(100% - 100px)) !important;
+  margin: 12px auto 16px !important;
+}
+
+html.person5 .p5-profile-action {
+  flex: 1 1 0 !important;
+  min-height: 46px !important;
+  padding: 8px 12px !important;
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(90deg, rgba(214, 0, 28, 0.34), rgba(0, 0, 0, 0.16)),
+    url('/person5/p5x-bg.webp') center / 100% 100% no-repeat,
+    #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  outline: 2px solid #050505 !important;
+  box-shadow: 4px 4px 0 #050505, 7px 7px 0 rgba(214, 0, 28, 0.9) !important;
+  font-size: 18px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+  transform: skewX(-6deg) rotate(-1deg) !important;
+  cursor: pointer !important;
+}
+
+html.person5 .p5-profile-action:disabled {
+  opacity: 0.65 !important;
+  cursor: wait !important;
 }
 
 @media (max-width: 2200px) {
@@ -5260,7 +5282,7 @@ html.person5 .p5-profile-modal-bridge {
   html.person5 .p5-control-label-main,
   html.person5 .p5-logout-strip {
     width: min(650px, calc(100% - 8px)) !important;
-    min-height: 128px !important;
+    min-height: 166px !important;
   }
 
   html.person5 .nav-group:not(.nav-group-conversation) .p5-menu-char,
@@ -5269,4 +5291,9 @@ html.person5 .p5-profile-modal-bridge {
     min-height: 56px !important;
     font-size: clamp(28px, 1.65vw, 36px) !important;
   }
+}
+
+html.person5 .nav-group-conversation .p5-hero-card-media {
+  transform: scale(0.7) !important;
+  transform-origin: left center !important;
 }
