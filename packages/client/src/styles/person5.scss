@@ -5094,6 +5094,26 @@ html.person5 .p5-submenu-main {
   white-space: nowrap;
 }
 
+html.person5 .p5-control-profile .p5-submenu-scroll {
+  width: min(420px, calc(100% - 76px)) !important;
+  max-height: calc((98px * 4) + 54px) !important;
+}
+
+html.person5 .p5-control-profile .p5-submenu-scroll:not(.collapsed) .p5-profile-item:not(.logout-item) {
+  width: min(390px, calc(100% - 12px)) !important;
+  min-height: 98px !important;
+  height: 98px !important;
+  justify-content: flex-start !important;
+  padding-right: 34px !important;
+  padding-left: 30px !important;
+}
+
+html.person5 .p5-control-profile .p5-profile-item .p5-submenu-main {
+  max-width: calc(100% - 104px) !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
 html.person5 .p5-submenu-sub {
   max-width: 176px;
   overflow: hidden;

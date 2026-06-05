@@ -192,6 +192,7 @@ async function handleP5ProfileSwitch(name: string) {
   const ok = await profilesStore.switchProfile(name);
   if (ok) {
     message.success(`人格面具已切换：${name}`);
+    window.location.reload();
   } else {
     message.error("人格面具切换失败");
   }
