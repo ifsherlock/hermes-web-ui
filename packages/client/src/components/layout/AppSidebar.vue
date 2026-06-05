@@ -90,8 +90,12 @@ const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
 const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
 const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
 const p5ModelSubmenuRef = ref<HTMLElement | null>(null);
-const p5ProfileRestarting = ref(false);
-const p5GatewayRestarting = ref(false);
+const p5ProfileActionsOpen = ref<Record<string, boolean>>({});
+const p5ProfileRestarting = ref<Record<string, boolean>>({});
+const p5GatewayRestarting = ref<Record<string, boolean>>({});
+const p5AvatarSaving = ref<Record<string, boolean>>({});
+const p5AvatarProfileName = ref<string | null>(null);
+const p5AvatarInputRef = ref<HTMLInputElement | null>(null);
 
 const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
 const activeProfileModels = computed(() => {
@@ -190,6 +194,17 @@ function scrollP5AgentSubmenu() {
   });
 }
 
+function isP5ProfileActionsOpen(name: string) {
+  return !!p5ProfileActionsOpen.value[name];
+}
+
+function toggleP5ProfileActions(name: string) {
+  p5ProfileActionsOpen.value = {
+    ...p5ProfileActionsOpen.value,
+    [name]: !p5ProfileActionsOpen.value[name],
+  };
+}
+
 async function handleP5ProfileSwitch(name: string) {
   if (name === activeProfileName.value) return;
   const ok = await profilesStore.switchProfile(name);
@@ -201,29 +216,64 @@ async function handleP5ProfileSwitch(name: string) {
   }
 }
 
-async function handleP5RestartProfile() {
-  const name = activeProfileName.value;
-  p5ProfileRestarting.value = true;
+function handleP5ChooseAvatar(name: string) {
+  p5AvatarProfileName.value = name;
+  p5AvatarInputRef.value?.click();
+}
+
+async function handleP5AvatarFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  const name = p5AvatarProfileName.value;
+  if (!file || !name) return;
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    message.warning(t("profiles.avatar.invalidType"));
+    return;
+  }
+  if (file.size > 1024 * 1024) {
+    message.warning(t("profiles.avatar.tooLarge"));
+    return;
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+  p5AvatarSaving.value = { ...p5AvatarSaving.value, [name]: true };
+  try {
+    await profilesStore.updateAvatar(name, { type: "image", dataUrl });
+    message.success(t("profiles.avatar.saveSuccess"));
+  } catch (err: any) {
+    message.error(err?.message || t("profiles.avatar.saveFailed"));
+  } finally {
+    p5AvatarSaving.value = { ...p5AvatarSaving.value, [name]: false };
+    p5AvatarProfileName.value = null;
+  }
+}
+
+async function handleP5RestartProfile(name: string) {
+  p5ProfileRestarting.value = { ...p5ProfileRestarting.value, [name]: true };
   try {
     await restartProfileRuntime(name);
     message.success(t('profiles.runtime.profileRestarted', { name }));
   } catch (err: any) {
     message.error(err?.message || t('profiles.runtime.profileRestartFailed'));
   } finally {
-    p5ProfileRestarting.value = false;
+    p5ProfileRestarting.value = { ...p5ProfileRestarting.value, [name]: false };
   }
 }
 
-async function handleP5RestartGateway() {
-  const name = activeProfileName.value;
-  p5GatewayRestarting.value = true;
+async function handleP5RestartGateway(name: string) {
+  p5GatewayRestarting.value = { ...p5GatewayRestarting.value, [name]: true };
   try {
     await restartProfileGateway(name);
     message.success(t('profiles.runtime.gatewayRestarted', { name }));
   } catch (err: any) {
     message.error(err?.message || t('profiles.runtime.gatewayRestartFailed'));
   } finally {
-    p5GatewayRestarting.value = false;
+    p5GatewayRestarting.value = { ...p5GatewayRestarting.value, [name]: false };
   }
 }
 
@@ -687,18 +737,63 @@ onMounted(() => {
             </svg>
           </button>
           <div ref="p5ProfileSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('profile') }">
-            <button
+            <div
               v-for="profile in profilesStore.profiles"
               :key="profile.name"
-              class="nav-item p5-profile-item"
-              :class="{ active: profile.name === activeProfileName }"
-              type="button"
-              @click="handleP5ProfileSwitch(profile.name)"
+              class="p5-profile-row"
             >
-              <ProfileAvatarView :name="profile.name" :avatar="profile.avatar" :size="38" />
-              <span class="p5-submenu-main">{{ profile.name }}</span>
-            </button>
+              <button
+                class="nav-item p5-profile-item"
+                :class="{ active: profile.name === activeProfileName }"
+                type="button"
+                @click="toggleP5ProfileActions(profile.name)"
+              >
+                <ProfileAvatarView :name="profile.name" :avatar="profile.avatar" :size="38" />
+                <span class="p5-submenu-main">{{ profile.name }}</span>
+              </button>
+              <div v-if="isP5ProfileActionsOpen(profile.name)" class="p5-profile-actions">
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="p5AvatarSaving[profile.name]"
+                  @click.stop="handleP5ChooseAvatar(profile.name)"
+                >
+                  选择头像
+                </button>
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="profile.name === activeProfileName"
+                  @click.stop="handleP5ProfileSwitch(profile.name)"
+                >
+                  选择配置
+                </button>
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="p5ProfileRestarting[profile.name]"
+                  @click.stop="handleP5RestartProfile(profile.name)"
+                >
+                  重启配置
+                </button>
+                <button
+                  class="p5-profile-action"
+                  type="button"
+                  :disabled="p5GatewayRestarting[profile.name]"
+                  @click.stop="handleP5RestartGateway(profile.name)"
+                >
+                  重启网关
+                </button>
+              </div>
+            </div>
           </div>
+          <input
+            ref="p5AvatarInputRef"
+            class="p5-avatar-input"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            @change="handleP5AvatarFileChange"
+          >
           <button
             v-if="profilesStore.profiles.length > 4 && !isP5ControlCollapsed('profile')"
             class="p5-submenu-more"
@@ -707,24 +802,6 @@ onMounted(() => {
           >
             更多人格面具 ↓
           </button>
-          <div v-if="!isP5ControlCollapsed('profile')" class="p5-profile-actions">
-            <button
-              class="p5-profile-action"
-              type="button"
-              :disabled="p5ProfileRestarting"
-              @click.stop="handleP5RestartProfile"
-            >
-              重启配置
-            </button>
-            <button
-              class="p5-profile-action"
-              type="button"
-              :disabled="p5GatewayRestarting"
-              @click.stop="handleP5RestartGateway"
-            >
-              重启网关
-            </button>
-          </div>
         </div>
 
         <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">
