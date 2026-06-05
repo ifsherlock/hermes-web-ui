@@ -51,7 +51,7 @@ const person5GroupLabels: Record<SidebarGroupKey, string> = {
   Conversation: "作战会议室",
   Agent: "心之怪盗团",
   Monitoring: "潜入记录",
-  Tools: "黑匣子终端",
+  Tools: "黑匣终端",
   System: "系统面板",
 };
 
