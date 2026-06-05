@@ -4996,3 +4996,128 @@ html.person5 .p5-logout-strip .p5-strip-border {
     padding-left: 116px !important;
   }
 }
+
+/* PERSON5 secondary menu refinement: slimmer strips with the local p5x frame asset. */
+html.person5 .nav-group-items {
+  align-items: center;
+}
+
+html.person5 .nav-group-items:not(.collapsed) .nav-item:not(.logout-item),
+html.person5 .p5-submenu-scroll:not(.collapsed) .nav-item {
+  width: min(280px, calc(100% - 14px)) !important;
+  min-height: 92px !important;
+  height: 92px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+  padding: 18px 26px !important;
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(90deg, rgba(214, 0, 28, 0.18), rgba(0, 0, 0, 0.12)),
+    url('/person5/p5x-bg.webp') center / 100% 100% no-repeat !important;
+  border: 2px solid var(--p5-white) !important;
+  outline: 2px solid #050505 !important;
+  box-shadow: 6px 6px 0 #050505, 8px 8px 0 rgba(214, 0, 28, 0.9) !important;
+  clip-path: none !important;
+  gap: 18px !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  font-size: clamp(28px, 1.55vw, 34px) !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  text-shadow: 3px 3px 0 #050505 !important;
+}
+
+html.person5 .nav-group-items:not(.collapsed) .nav-item:not(.logout-item) svg,
+html.person5 .p5-submenu-scroll:not(.collapsed) .nav-item svg {
+  width: 34px !important;
+  height: 34px !important;
+  flex: 0 0 34px !important;
+  stroke-width: 2.4 !important;
+}
+
+html.person5 .p5-limited-submenu,
+html.person5 .p5-submenu-scroll,
+html.person5 .p5-control-group .p5-submenu-scroll {
+  width: min(310px, calc(100% - 128px)) !important;
+  max-height: calc((92px * 4) + 54px) !important;
+  padding: 14px 12px 20px !important;
+}
+
+html.person5 .nav-group-agent .p5-limited-submenu {
+  margin-left: 118px !important;
+}
+
+html.person5 .p5-control-group .p5-submenu-scroll {
+  margin-left: 118px !important;
+}
+
+html.person5 .p5-profile-item .profile-avatar-view,
+html.person5 .p5-model-mark {
+  width: 72px !important;
+  height: 72px !important;
+  flex: 0 0 72px !important;
+}
+
+html.person5 .p5-model-mark {
+  font-size: 40px !important;
+}
+
+html.person5 .p5-submenu-main {
+  max-width: 176px;
+  overflow: hidden;
+  font-size: clamp(28px, 1.55vw, 34px) !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html.person5 .p5-submenu-sub {
+  max-width: 176px;
+  overflow: hidden;
+  font-size: 20px !important;
+  line-height: 1.1 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html.person5 .p5-submenu-more,
+html.person5 .p5-nav-submenu-more,
+html.person5 .p5-control-group .p5-submenu-more {
+  min-width: 260px !important;
+  min-height: 68px !important;
+  margin: 14px auto 0 !important;
+  padding: 14px 34px 16px !important;
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(90deg, rgba(214, 0, 28, 0.28), rgba(0, 0, 0, 0.2)),
+    url('/person5/p5x-bg.webp') center / 100% 100% no-repeat !important;
+  border: 2px solid var(--p5-white) !important;
+  outline: 2px solid #050505 !important;
+  box-shadow: 6px 6px 0 #050505, 8px 8px 0 rgba(214, 0, 28, 0.9) !important;
+  clip-path: none !important;
+  font-size: 26px !important;
+  line-height: 1 !important;
+  text-shadow: 3px 3px 0 #050505 !important;
+  transform: rotate(-1.5deg) !important;
+}
+
+@media (max-width: 760px) {
+  html.person5 .p5-limited-submenu,
+  html.person5 .p5-submenu-scroll,
+  html.person5 .p5-control-group .p5-submenu-scroll {
+    width: min(300px, calc(100% - 48px)) !important;
+    margin-left: 24px !important;
+    margin-right: 12px !important;
+  }
+
+  html.person5 .nav-group-items:not(.collapsed) .nav-item:not(.logout-item),
+  html.person5 .p5-submenu-scroll:not(.collapsed) .nav-item {
+    width: min(270px, calc(100% - 10px)) !important;
+  }
+
+  html.person5 .p5-submenu-more,
+  html.person5 .p5-nav-submenu-more,
+  html.person5 .p5-control-group .p5-submenu-more {
+    min-width: 230px !important;
+  }
+}
