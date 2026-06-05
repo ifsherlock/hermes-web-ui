@@ -4653,3 +4653,16 @@ html.person5 .empty-state .empty-logo svg {
     margin-right: 8px;
   }
 }
+
+/* PERSON5 small correction: extend the hero menu character frames downward. */
+html.person5 .nav-group-conversation .p5-menu-char {
+  min-height: 72px;
+  padding-bottom: 18px;
+}
+
+@media (max-width: 2200px) {
+  html.person5 .nav-group-conversation .p5-menu-char {
+    min-height: 64px;
+    padding-bottom: 14px;
+  }
+}
