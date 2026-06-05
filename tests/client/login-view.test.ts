@@ -54,10 +54,10 @@ describe('LoginView password login', () => {
     expect(mockReplace).toHaveBeenCalledWith('/hermes/chat')
   })
 
-  it('shows the default login hint', () => {
+  it('does not show the default login hint', () => {
     const wrapper = mount(LoginView)
 
-    expect(wrapper.text()).toContain('login.defaultCredentialsHint')
+    expect(wrapper.text()).not.toContain('login.defaultCredentialsHint')
   })
 
   it('shows an error when password login fails', async () => {

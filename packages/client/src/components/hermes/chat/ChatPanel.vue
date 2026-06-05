@@ -1104,25 +1104,26 @@ async function handleSessionModelCustomSubmit() {
       </template>
     </NModal>
 
+    <button
+      v-if="currentMode === 'chat'"
+      class="p5-session-handle"
+      :class="{ open: showSessions }"
+      type="button"
+      :aria-pressed="showSessions"
+      aria-label="切换会话栏"
+      @click="showSessions = !showSessions"
+    >
+      <span>{{ showSessions ? '收起' : '会话' }}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </button>
+
     <div class="chat-main">
-      <button
-        v-if="currentMode === 'chat'"
-        class="p5-session-handle"
-        :class="{ open: showSessions }"
-        type="button"
-        :aria-pressed="showSessions"
-        aria-label="切换会话栏"
-        @click="showSessions = !showSessions"
-      >
-        <span>会话</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </button>
       <header class="chat-header">
         <div class="header-left">
           <NButton
-            v-if="currentMode === 'chat'"
+            v-if="currentMode === 'chat' && !isPerson5"
             quaternary
             size="small"
             @click="showSessions = !showSessions"
@@ -1144,7 +1145,7 @@ async function handleSessionModelCustomSubmit() {
               </svg>
             </template>
           </NButton>
-          <span class="header-session-title">{{ headerTitle }}</span>
+          <span v-if="!isPerson5" class="header-session-title">{{ headerTitle }}</span>
           <span
             v-if="chatStore.activeSession?.workspace"
             class="workspace-badge"

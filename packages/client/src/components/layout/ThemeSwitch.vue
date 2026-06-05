@@ -14,11 +14,7 @@ const nextStyleTitle = computed(() => {
 <template>
   <div class="theme-switch-container" style="display: flex; gap: 4px; align-items: center;">
     <button class="theme-switch" :class="{ 'person5-active': isPerson5 }" :title="nextStyleTitle" @click="toggleStyle">
-      <!-- Persona-style mark -->
-      <svg v-if="isPerson5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 17L9 4l3 9 4-7 4 14" />
-        <path d="M7 14h10" />
-      </svg>
+      <img v-if="isPerson5" class="person5-theme-mark" src="/person5/phantom-mask.svg" alt="" aria-hidden="true" />
       <!-- Palette icon for comic toggle -->
       <svg v-else-if="isComic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />

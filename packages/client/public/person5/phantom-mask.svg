@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Phantom mask">
+  <path d="M7 28C13 12 24 7 32 7s19 5 25 21c-5 4-11 8-18 10l-7 16-7-16C18 36 12 32 7 28Z" fill="#fff8ec" stroke="#050505" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M10 28c6-4 12-6 19-5-3 7-8 11-16 12l-3-7Zm44 0c-6-4-12-6-19-5 3 7 8 11 16 12l3-7Z" fill="#050505"/>
+  <path d="M20 22c4-9 9-13 12-13s8 4 12 13" fill="none" stroke="#d6001c" stroke-width="4" stroke-linecap="round"/>
+  <path d="M25 39 32 55l7-16" fill="#050505" stroke="#fff8ec" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M5 29 18 19M59 29 46 19" stroke="#d6001c" stroke-width="4" stroke-linecap="square"/>
+</svg>

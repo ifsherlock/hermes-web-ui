@@ -5314,9 +5314,9 @@ html.person5 .nav-group-conversation .p5-hero-card-media {
 html.person5 .sidebar {
   --p5-primary-pair-gap: 8px;
   --p5-primary-group-gap: calc(var(--p5-primary-pair-gap) * 2);
-  width: calc(var(--p5-sidebar-wide) - 20px) !important;
-  min-width: calc(var(--p5-sidebar-wide) - 20px) !important;
-  max-width: calc(var(--p5-sidebar-wide) - 20px) !important;
+  width: calc(var(--p5-sidebar-wide) - 50px) !important;
+  min-width: calc(var(--p5-sidebar-wide) - 50px) !important;
+  max-width: calc(var(--p5-sidebar-wide) - 50px) !important;
   overflow-x: hidden !important;
   box-shadow:
     inset -5px 0 0 #050505,
@@ -5366,11 +5366,640 @@ html.person5 .sidebar-nav::-webkit-scrollbar:horizontal {
   height: 0 !important;
 }
 
+html.person5 .p5-session-handle {
+  top: 36px !important;
+  min-width: 96px !important;
+  min-height: 50px !important;
+  padding: 10px 15px !important;
+  font-size: 17px !important;
+  gap: 7px !important;
+}
+
+html.person5 .chat-main .p5-session-handle {
+  top: 84px !important;
+}
+
+html.person5 .p5-session-handle svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+html.person5 .p5-sidebar-title {
+  width: max-content !important;
+  max-width: none !important;
+  min-height: 64px !important;
+  margin: 6px 0 26px 18px !important;
+  padding: 12px 34px 16px 22px !important;
+  font-size: 25px !important;
+  font-style: normal !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+html.person5 .p5-sidebar-title::before {
+  bottom: 11px !important;
+  width: 112px !important;
+  height: 4px !important;
+  box-shadow: 0 8px 0 #050505 !important;
+}
+
+html.person5 .p5-sidebar-title::after {
+  bottom: 6px !important;
+  height: 4px !important;
+}
+
+html.person5 .sidebar::after {
+  background:
+    radial-gradient(circle, rgba(255, 248, 236, 0.16) 0 1.6px, transparent 2px),
+    radial-gradient(circle, rgba(214, 0, 28, 0.16) 0 1.4px, transparent 2px),
+    repeating-linear-gradient(116deg, transparent 0 24px, rgba(255, 255, 255, 0.035) 24px 26px, transparent 26px 56px),
+    radial-gradient(circle at 18% 35%, rgba(208, 0, 32, 0.14) 0 2px, transparent 2px 8px) !important;
+  background-size:
+    30px 30px,
+    26px 26px,
+    auto,
+    auto !important;
+  background-position:
+    28px 20px,
+    54px 46px,
+    0 0,
+    0 0 !important;
+  clip-path: polygon(0 0, 58% 0, 47% 34%, 42% 34%, 34% 58%, 29% 58%, 20% 82%, 15% 82%, 9% 100%, 0 100%) !important;
+}
+
+html.person5 .sidebar.collapsed .sidebar-nav {
+  display: none !important;
+}
+
+html.person5 .p5-collapsed-rail {
+  position: absolute;
+  left: 10px;
+  top: 182px;
+  z-index: 18;
+  display: flex;
+  width: 76px;
+  flex-direction: column;
+  gap: 9px;
+  pointer-events: auto;
+}
+
+html.person5 .sidebar.collapsed .p5-sidebar-title {
+  display: block !important;
+  min-height: 38px !important;
+  margin: 22px 0 84px 2px !important;
+  padding: 8px 13px 10px 10px !important;
+  font-size: 15px !important;
+  transform: rotate(-4deg) skewX(-9deg) !important;
+}
+
+html.person5 .sidebar.collapsed .p5-sidebar-title::before {
+  bottom: 7px !important;
+  width: 44px !important;
+  height: 2px !important;
+  box-shadow: 0 5px 0 #050505 !important;
+}
+
+html.person5 .sidebar.collapsed .p5-sidebar-title::after {
+  bottom: 4px !important;
+  height: 2px !important;
+}
+
+html.person5 .p5-collapsed-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+html.person5 .p5-collapsed-tab {
+  position: relative;
+  display: block;
+  min-height: 42px;
+  width: 76px;
+  padding: 6px 9px 7px 11px;
+  color: var(--p5-white);
+  background: #050505;
+  border: 3px solid var(--p5-white);
+  box-shadow:
+    inset 0 0 0 2px #050505,
+    4px 4px 0 var(--p5-red),
+    7px 7px 0 #050505;
+  clip-path: polygon(6% 0, 100% 0, 88% 50%, 100% 100%, 0 100%, 10% 50%);
+  cursor: pointer;
+  transform: rotate(-2deg) skewX(-6deg);
+  list-style: none;
+  appearance: none;
+}
+
+html.person5 .p5-collapsed-tab::-webkit-details-marker,
+html.person5 .p5-collapsed-tab::marker {
+  display: none;
+  content: '';
+}
+
+html.person5 .p5-collapsed-stack:nth-child(even) .p5-collapsed-tab {
+  transform: translateX(7px) rotate(2deg) skewX(-6deg);
+}
+
+html.person5 .p5-collapsed-tab::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 9px;
+  height: 9px;
+  background: var(--p5-red);
+  clip-path: polygon(50% 0, 62% 35%, 100% 35%, 69% 57%, 80% 100%, 50% 72%, 20% 100%, 31% 57%, 0 35%, 38% 35%);
+  filter: drop-shadow(1px 1px 0 var(--p5-white));
+}
+
+html.person5 .p5-collapsed-tab::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: 5px;
+  width: 22px;
+  height: 3px;
+  background: var(--p5-red);
+  transform: rotate(-8deg);
+  box-shadow: 8px -5px 0 var(--p5-white);
+}
+
+html.person5 .p5-collapsed-tab span {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: var(--p5-white);
+  font-size: 16px;
+  font-weight: 1000;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow:
+    2px 2px 0 #050505,
+    -1px -1px 0 #050505;
+  transform: skewX(6deg);
+}
+
+html.person5 .p5-collapsed-tab.active {
+  color: #050505;
+  background: var(--p5-white);
+  border-color: #050505;
+  box-shadow:
+    0 0 0 3px var(--p5-white),
+    5px 5px 0 var(--p5-red),
+    9px 9px 0 #050505;
+}
+
+html.person5 .p5-collapsed-tab.active span {
+  color: #050505;
+  text-shadow:
+    1px 1px 0 var(--p5-white),
+    2px 2px 0 var(--p5-red);
+}
+
+html.person5 .p5-collapsed-stack[open] .p5-collapsed-tab {
+  background: var(--p5-red);
+  border-color: var(--p5-white);
+  box-shadow:
+    inset 0 0 0 2px #050505,
+    5px 5px 0 var(--p5-white),
+    8px 8px 0 #050505;
+}
+
+html.person5 .p5-collapsed-stack[open] .p5-collapsed-tab span {
+  color: var(--p5-white);
+  text-shadow:
+    2px 2px 0 #050505,
+    -1px -1px 0 #050505;
+}
+
+html.person5 .p5-collapsed-icons {
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
+  gap: 7px 6px;
+  margin: -1px 0 2px 10px;
+  padding: 7px 6px 8px;
+  background: rgba(5, 5, 5, 0.9);
+  border: 2px solid var(--p5-white);
+  box-shadow: 4px 4px 0 var(--p5-red), 7px 7px 0 #050505;
+  clip-path: polygon(0 8%, 92% 0, 100% 18%, 94% 100%, 8% 94%, 0 78%);
+}
+
+html.person5 .p5-collapsed-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 2px 2px 0 var(--p5-red);
+  text-decoration: none !important;
+  cursor: pointer;
+  transform: rotate(-2deg);
+}
+
+html.person5 .p5-collapsed-icon:nth-child(even) {
+  transform: rotate(2deg);
+}
+
+html.person5 .p5-collapsed-icon.active {
+  color: #050505 !important;
+  background: var(--p5-white) !important;
+  border-color: #050505 !important;
+  box-shadow: 0 0 0 2px var(--p5-white), 3px 3px 0 var(--p5-red);
+}
+
+html.person5 .p5-collapsed-icon-mark {
+  display: block !important;
+  color: inherit !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 1px 1px 0 #050505;
+}
+
+html.person5 .p5-collapsed-svg-icon {
+  width: 18px !important;
+  height: 18px !important;
+  color: inherit !important;
+  filter: drop-shadow(1px 1px 0 #050505);
+}
+
+html.person5 .p5-collapsed-icon.active .p5-collapsed-svg-icon {
+  filter: drop-shadow(1px 1px 0 var(--p5-white)) drop-shadow(2px 2px 0 var(--p5-red));
+}
+
+html.person5 .collapse-btn {
+  top: 30px !important;
+  right: 26px !important;
+}
+
+html.person5 .sidebar.collapsed .collapse-btn {
+  top: 30px !important;
+  right: -28px !important;
+}
+
+html.person5 .session-search-modal {
+  color: var(--p5-white);
+}
+
+html.person5 .session-search-modal .search-title,
+html.person5 .session-search-modal .search-hint,
+html.person5 .session-search-modal .search-scope,
+html.person5 .session-search-modal .search-footer,
+html.person5 .session-search-modal .search-empty,
+html.person5 .session-search-modal .result-source,
+html.person5 .session-search-modal .result-meta,
+html.person5 .session-search-modal .result-snippet {
+  color: var(--p5-white) !important;
+  text-shadow: 1px 1px 0 #050505;
+}
+
+html.person5 .session-search-modal .result-item {
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 3px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 var(--p5-red), 10px 10px 0 #050505 !important;
+  clip-path: polygon(0 10%, 96% 0, 100% 22%, 96% 100%, 4% 92%, 0 78%);
+}
+
+html.person5 .session-search-modal .result-item:hover,
+html.person5 .session-search-modal .result-item.active {
+  background: var(--p5-red) !important;
+  transform: translateX(4px);
+}
+
+html.person5 .session-search-modal .result-title {
+  color: var(--p5-white) !important;
+  font-weight: 1000 !important;
+  text-shadow: 2px 2px 0 #050505;
+}
+
+html.person5 .p5-collapsed-icon.active .p5-collapsed-icon-mark {
+  text-shadow: 1px 1px 0 var(--p5-white), 2px 2px 0 var(--p5-red);
+}
+
+/* Focused final overrides for the collapsed PERSON5 rail. */
+html.person5 .p5-sidebar-title {
+  min-height: 72px !important;
+  padding: 15px 36px 19px 24px !important;
+  font-style: normal !important;
+  font-weight: 1000 !important;
+  letter-spacing: 0 !important;
+}
+
+html.person5 .p5-brand {
+  margin-left: 16px !important;
+}
+
+html.person5 .p5-sidebar-title::before {
+  bottom: 13px !important;
+}
+
+html.person5 .p5-sidebar-title::after {
+  bottom: 7px !important;
+}
+
+html.person5 .sidebar.collapsed .p5-sidebar-title {
+  min-height: 46px !important;
+  margin: 18px 0 88px 5px !important;
+  padding: 10px 16px 12px 12px !important;
+  font-size: 17px !important;
+  font-style: normal !important;
+  font-weight: 1000 !important;
+  transform: rotate(-3deg) skewX(-8deg) !important;
+}
+
+html.person5 .sidebar.collapsed .p5-sidebar-title::before {
+  bottom: 8px !important;
+  width: 38px !important;
+}
+
+html.person5 .sidebar.collapsed .p5-sidebar-title::after {
+  bottom: 5px !important;
+}
+
+html.person5 .sidebar::after {
+  background:
+    linear-gradient(116deg, transparent 0 38px, rgba(255, 248, 236, 0.12) 38px 41px, transparent 41px 68px),
+    radial-gradient(circle, rgba(255, 248, 236, 0.26) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle, rgba(214, 0, 28, 0.22) 0 1px, transparent 1.7px) !important;
+  background-size:
+    88px 58px,
+    13px 13px,
+    17px 17px !important;
+  background-position:
+    -10px 6px,
+    18px 15px,
+    23px 20px !important;
+  clip-path: polygon(0 0, 178px 0, 42px 178px, 0 178px) !important;
+  opacity: 0.72 !important;
+}
+
+html.person5 .p5-collapsed-stack.open .p5-collapsed-tab {
+  background: var(--p5-red);
+  border-color: var(--p5-white);
+  box-shadow:
+    inset 0 0 0 2px #050505,
+    5px 5px 0 var(--p5-white),
+    8px 8px 0 #050505;
+}
+
+html.person5 .p5-collapsed-stack.open .p5-collapsed-tab span {
+  color: var(--p5-white);
+  text-shadow:
+    2px 2px 0 #050505,
+    -1px -1px 0 #050505;
+}
+
+html.person5 .sidebar.collapsed .p5-collapsed-rail {
+  inset: 132px auto 78px 10px !important;
+  top: 132px !important;
+  bottom: 78px !important;
+  height: auto !important;
+  width: 92px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 17px !important;
+  overflow-x: visible !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+}
+
+html.person5 .sidebar.collapsed .p5-collapsed-rail::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+html.person5 .sidebar.collapsed .p5-collapsed-stack {
+  position: relative !important;
+  left: 0 !important;
+  top: auto !important;
+  flex: 0 0 auto !important;
+}
+
+html.person5 .p5-collapsed-tab {
+  border-radius: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+html.person5 .p5-collapsed-icons {
+  position: relative;
+  z-index: 22;
+  grid-template-columns: repeat(2, 34px);
+  width: max-content;
+  gap: 8px 7px;
+}
+
+html.person5 .p5-collapsed-icon {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+}
+
+html.person5 .p5-collapsed-svg-icon {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+html.person5 .collapse-btn,
+html.person5 .sidebar.collapsed .collapse-btn {
+  position: absolute !important;
+  top: auto !important;
+  bottom: 22px !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+html.person5 .session-search-card.n-card,
+html.person5 .session-search-card .n-card {
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(135deg, rgba(214, 0, 28, 0.92), rgba(5, 5, 5, 0.96) 36%, rgba(5, 5, 5, 0.98)) !important;
+  border: 4px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    12px 12px 0 var(--p5-red),
+    18px 18px 0 #050505 !important;
+  clip-path: polygon(0 4%, 97% 0, 100% 12%, 98% 100%, 3% 96%, 0 86%) !important;
+}
+
+html.person5 .session-search-card .n-card-header,
+html.person5 .session-search-card .n-card-header__main {
+  color: var(--p5-white) !important;
+  font-weight: 1000 !important;
+  text-shadow: 2px 2px 0 #050505;
+}
+
+html.person5 .session-search-modal .n-input {
+  background: #050505 !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow: 5px 5px 0 var(--p5-red) !important;
+}
+
+html.person5 .session-search-modal .n-input__input-el,
+html.person5 .session-search-modal .n-input__placeholder {
+  color: var(--p5-white) !important;
+}
+
+html.person5 .sidebar-footer {
+  margin-top: 8px !important;
+  padding-top: 10px !important;
+  border-top: 0 !important;
+}
+
+html.person5 .status-row.p5-footer-strip,
+html.person5 .version-info.p5-footer-strip {
+  position: relative !important;
+  width: min(560px, calc(100% - 34px)) !important;
+  min-height: 0 !important;
+  aspect-ratio: 760 / 150 !important;
+  margin: 0 22px 12px 18px !important;
+  padding: 0 60px 0 92px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  color: var(--p5-white) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  transform: none !important;
+  filter: drop-shadow(9px 8px 0 #050505) !important;
+}
+
+html.person5 .status-row.p5-footer-strip > *:not(.p5-menu-strip-svg),
+html.person5 .version-info.p5-footer-strip > *:not(.p5-menu-strip-svg) {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+html.person5 .p5-footer-strip .p5-menu-strip-svg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+}
+
+html.person5 .p5-footer-strip .p5-menu-strip-char {
+  font-size: 34px !important;
+}
+
+html.person5 .p5-footer-strip .p5-menu-strip-subtitle {
+  font-size: 18px !important;
+}
+
+html.person5 .p5-footer-strip .status-indicator,
+html.person5 .p5-footer-strip .version-links,
+html.person5 .p5-footer-strip .version-text {
+  color: var(--p5-white) !important;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+}
+
+html.person5 .p5-footer-strip .github-link,
+html.person5 .p5-footer-strip .website-link,
+html.person5 .p5-footer-strip .theme-switch-container,
+html.person5 .p5-footer-strip button {
+  color: var(--p5-white) !important;
+  border-color: var(--p5-white) !important;
+}
+
+html.person5 .sidebar.collapsed .sidebar-footer {
+  display: none !important;
+}
+
+html.person5 .changelog-modal.n-dialog,
+html.person5 .changelog-modal.n-card {
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(135deg, rgba(227, 0, 18, 0.88), rgba(5, 5, 5, 0.98) 32%, rgba(46, 0, 4, 0.98)) !important;
+  border: 4px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    12px 12px 0 var(--p5-red),
+    18px 18px 0 #050505 !important;
+  clip-path: polygon(0 5%, 97% 0, 100% 15%, 97% 100%, 4% 96%, 0 82%) !important;
+}
+
+html.person5 .changelog-modal .n-dialog__title,
+html.person5 .changelog-modal .n-card-header,
+html.person5 .changelog-modal .n-card-header__main {
+  color: var(--p5-white) !important;
+  font-size: 22px !important;
+  font-weight: 1000 !important;
+  text-shadow: 3px 3px 0 #050505, -1px -1px 0 #050505 !important;
+}
+
+html.person5 .changelog-modal .n-dialog__content,
+html.person5 .changelog-modal .n-card__content {
+  color: var(--p5-white) !important;
+}
+
+html.person5 .changelog-modal .changelog-list {
+  max-height: min(58vh, 520px) !important;
+  padding: 6px 8px 10px 2px !important;
+  scrollbar-color: var(--p5-red) #050505 !important;
+}
+
+html.person5 .changelog-modal .changelog-version-block {
+  position: relative !important;
+  margin: 0 0 18px !important;
+  padding: 14px 16px 14px 18px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow: 6px 6px 0 var(--p5-red), 10px 10px 0 #050505 !important;
+  clip-path: polygon(0 8%, 97% 0, 100% 20%, 96% 100%, 4% 94%, 0 78%) !important;
+}
+
+html.person5 .changelog-modal .changelog-version-tag {
+  display: inline-block !important;
+  padding: 4px 9px !important;
+  color: var(--p5-white) !important;
+  background: var(--p5-red) !important;
+  border: 2px solid var(--p5-white) !important;
+  font-weight: 1000 !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.person5 .changelog-modal .changelog-date,
+html.person5 .changelog-modal .changelog-changes li {
+  color: var(--p5-white) !important;
+  font-weight: 800 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+html.person5 .changelog-modal .changelog-changes li::before {
+  background: var(--p5-red) !important;
+  border: 1px solid var(--p5-white) !important;
+  clip-path: polygon(50% 0, 62% 35%, 100% 35%, 69% 57%, 80% 100%, 50% 72%, 20% 100%, 31% 57%, 0 35%, 38% 35%) !important;
+}
+
 /* PERSON5 SVG primary strip migration.
    The approved demo owns the geometry, stars, borders, Z line and 7 line here. */
 html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg),
 html.person5 .p5-control-label-main:has(.p5-menu-strip-svg),
-html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) {
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg),
+html.person5 .p5-footer-strip:has(.p5-menu-strip-svg) {
   width: min(690px, calc(100% - 22px)) !important;
   min-height: 0 !important;
   height: auto !important;
@@ -5393,7 +6022,9 @@ html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-me
 html.person5 .p5-control-label-main:has(.p5-menu-strip-svg)::before,
 html.person5 .p5-control-label-main:has(.p5-menu-strip-svg)::after,
 html.person5 .p5-logout-strip:has(.p5-menu-strip-svg)::before,
-html.person5 .p5-logout-strip:has(.p5-menu-strip-svg)::after {
+html.person5 .p5-logout-strip:has(.p5-menu-strip-svg)::after,
+html.person5 .p5-footer-strip:has(.p5-menu-strip-svg)::before,
+html.person5 .p5-footer-strip:has(.p5-menu-strip-svg)::after {
   display: none !important;
 }
 
@@ -5448,7 +6079,8 @@ html.person5 .p5-control-label-main.p5-strip-shift:has(.p5-menu-strip-svg) {
 @media (max-width: 2200px) {
   html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg),
   html.person5 .p5-control-label-main:has(.p5-menu-strip-svg),
-  html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) {
+  html.person5 .p5-logout-strip:has(.p5-menu-strip-svg),
+  html.person5 .p5-footer-strip:has(.p5-menu-strip-svg) {
     width: min(650px, calc(100% - 18px)) !important;
   }
 }
@@ -5456,7 +6088,8 @@ html.person5 .p5-control-label-main.p5-strip-shift:has(.p5-menu-strip-svg) {
 @media (max-width: 760px) {
   html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label:has(.p5-menu-strip-svg),
   html.person5 .p5-control-label-main:has(.p5-menu-strip-svg),
-  html.person5 .p5-logout-strip:has(.p5-menu-strip-svg) {
+  html.person5 .p5-logout-strip:has(.p5-menu-strip-svg),
+  html.person5 .p5-footer-strip:has(.p5-menu-strip-svg) {
     width: min(340px, calc(100% - 26px)) !important;
     margin-left: 10px !important;
   }
@@ -5469,5 +6102,1739 @@ html.person5 .p5-control-label-main.p5-strip-shift:has(.p5-menu-strip-svg) {
 
   html.person5 .p5-menu-strip-char {
     font-size: 36px;
+  }
+}
+
+/* PERSON5 footer/status and changelog final pass. */
+html.person5 .chat-main .p5-session-handle {
+  top: 132px !important;
+  left: 18px !important;
+  min-width: 122px !important;
+  min-height: 58px !important;
+  padding: 11px 20px 11px 18px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 4px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    8px 8px 0 var(--p5-red) !important;
+  clip-path: polygon(0 0, 86% 0, 100% 50%, 86% 100%, 0 100%, 8% 50%) !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+  transform: rotate(-2deg) skewX(-7deg) !important;
+}
+
+html.person5 .chat-main .p5-session-handle > * {
+  transform: skewX(7deg) rotate(2deg) !important;
+}
+
+html.person5 .chat-main .p5-session-handle.open {
+  transform: translateX(272px) rotate(-2deg) skewX(-7deg) !important;
+}
+
+html.person5 .chat-main .p5-session-handle.open svg {
+  transform: skewX(7deg) rotate(182deg) !important;
+}
+
+html.person5 .status-row.p5-footer-strip:has(.p5-menu-strip-svg),
+html.person5 .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  width: min(520px, calc(100% - 44px)) !important;
+  aspect-ratio: 760 / 150 !important;
+  margin: 0 18px 10px 16px !important;
+  padding: 0 48px 0 118px !important;
+  align-items: center !important;
+  filter: drop-shadow(8px 8px 0 #050505) !important;
+}
+
+html.person5 .sidebar-footer .p5-logout-strip:has(.p5-menu-strip-svg),
+html.person5 .sidebar-footer .status-row.p5-footer-strip:has(.p5-menu-strip-svg),
+html.person5 .sidebar-footer .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  --p5-footer-align-base: 44px;
+  --p5-footer-align-step: 14px;
+  width: min(520px, calc(100% - 72px)) !important;
+  aspect-ratio: 760 / 150 !important;
+  filter: drop-shadow(8px 8px 0 #050505) !important;
+}
+
+html.person5 .sidebar-footer .p5-logout-strip:has(.p5-menu-strip-svg) {
+  margin: 0 18px 10px var(--p5-footer-align-base) !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip:has(.p5-menu-strip-svg) {
+  margin: 0 18px 10px calc(var(--p5-footer-align-base) - var(--p5-footer-align-step)) !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  margin: 0 18px 10px calc(var(--p5-footer-align-base) - var(--p5-footer-align-step) * 2) !important;
+}
+
+html.person5 .p5-footer-strip .p5-menu-strip-char {
+  font-size: 30px !important;
+}
+
+html.person5 .p5-footer-strip .p5-menu-strip-subtitle {
+  font-size: 16px !important;
+}
+
+html.person5 .p5-footer-strip .status-indicator,
+html.person5 .p5-footer-strip .version-links,
+html.person5 .p5-footer-strip .version-text,
+html.person5 .p5-footer-strip .theme-switch-container {
+  z-index: 3 !important;
+}
+
+html.person5 .status-row.p5-footer-strip:has(.p5-menu-strip-svg),
+html.person5 .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  justify-content: flex-start !important;
+}
+
+html.person5 .status-row.p5-footer-strip:has(.p5-menu-strip-svg) {
+  gap: 22px !important;
+}
+
+html.person5 .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  gap: 12px !important;
+}
+
+html.person5 .p5-footer-strip .status-indicator {
+  min-width: 88px !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+}
+
+html.person5 .p5-footer-strip .language-switch {
+  flex: 0 0 auto !important;
+}
+
+html.person5 .p5-footer-strip .status-text {
+  color: var(--p5-white) !important;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+}
+
+html.person5 .p5-footer-strip .status-dot {
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 2px 2px 0 #050505 !important;
+}
+
+html.person5 .p5-footer-strip .version-links {
+  margin-left: auto !important;
+  gap: 8px !important;
+}
+
+html.person5 .p5-footer-strip .github-link,
+html.person5 .p5-footer-strip .website-link,
+html.person5 .p5-footer-strip .theme-switch {
+  width: 30px !important;
+  height: 30px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.person5 .p5-footer-strip .github-link svg,
+html.person5 .p5-footer-strip .website-link svg,
+html.person5 .p5-footer-strip .theme-switch svg {
+  width: 16px !important;
+  height: 16px !important;
+  transform: skewX(6deg) rotate(2deg) !important;
+}
+
+html.person5 .p5-footer-strip .version-text {
+  color: var(--p5-white) !important;
+  font-size: 12px !important;
+  max-width: 94px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+html.person5 .changelog-modal.n-dialog,
+html.person5 .changelog-modal.n-card,
+html.person5 .n-dialog.changelog-modal,
+html.person5 .n-card.changelog-modal {
+  width: min(640px, calc(100vw - 40px)) !important;
+  color: var(--p5-white) !important;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(255, 248, 236, 0.14), transparent 24%),
+    linear-gradient(135deg, rgba(214, 0, 28, 0.96), rgba(5, 5, 5, 0.98) 34%, rgba(35, 0, 5, 0.98)) !important;
+  border: 4px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    12px 12px 0 var(--p5-red),
+    18px 18px 0 #050505 !important;
+  clip-path: polygon(0 5%, 96% 0, 100% 13%, 98% 100%, 4% 96%, 0 84%) !important;
+}
+
+html.person5 .changelog-dialog-title,
+html.person5 .changelog-modal .n-dialog__title,
+html.person5 .changelog-modal .n-card-header__main {
+  width: max-content !important;
+  max-width: 100% !important;
+  padding: 5px 14px !important;
+  color: var(--p5-white) !important;
+  background: var(--p5-red) !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow: 4px 4px 0 #050505 !important;
+  font-size: 24px !important;
+  font-weight: 1000 !important;
+  text-shadow: 3px 3px 0 #050505 !important;
+  transform: rotate(-2deg) skewX(-7deg) !important;
+}
+
+html.person5 .changelog-dialog-content {
+  color: var(--p5-white) !important;
+}
+
+html.person5 .changelog-modal .changelog-list {
+  max-height: min(62vh, 560px) !important;
+  padding: 14px 12px 18px 4px !important;
+  overflow-y: auto !important;
+}
+
+html.person5 .changelog-modal .changelog-list::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+html.person5 .changelog-modal .changelog-list::-webkit-scrollbar-thumb {
+  background: var(--p5-red) !important;
+  border: 2px solid var(--p5-white) !important;
+}
+
+html.person5 .changelog-modal .changelog-version-block {
+  background:
+    linear-gradient(120deg, #050505 0 72%, rgba(214, 0, 28, 0.72) 72% 100%) !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 2px #050505,
+    7px 7px 0 var(--p5-red) !important;
+}
+
+html.person5 .changelog-modal .changelog-changes {
+  margin: 10px 0 0 !important;
+  padding-left: 0 !important;
+  list-style: none !important;
+}
+
+/* PERSON5 footer geometry correction: keep bottom strips the same scale as primary strips. */
+html.person5 .sidebar-footer .p5-logout-strip:has(.p5-menu-strip-svg),
+html.person5 .sidebar-footer .status-row.p5-footer-strip:has(.p5-menu-strip-svg),
+html.person5 .sidebar-footer .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  --p5-footer-align-base: 2px;
+  --p5-footer-align-step: 16px;
+  position: relative !important;
+  width: min(650px, calc(100% - 18px)) !important;
+  min-height: 0 !important;
+  height: auto !important;
+  aspect-ratio: 760 / 150 !important;
+  padding: 0 !important;
+  display: block !important;
+  color: var(--p5-white) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  filter: drop-shadow(11px 10px 0 #050505) !important;
+}
+
+html.person5 .sidebar-footer .p5-logout-strip:has(.p5-menu-strip-svg) {
+  margin: 0 18px 7px var(--p5-footer-align-base) !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip:has(.p5-menu-strip-svg) {
+  margin: 0 18px 7px calc(var(--p5-footer-align-base) - var(--p5-footer-align-step)) !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip:has(.p5-menu-strip-svg) {
+  margin: 0 18px 7px calc(var(--p5-footer-align-base) - var(--p5-footer-align-step) * 2) !important;
+}
+
+html.person5 .sidebar-footer .p5-footer-strip .p5-menu-strip-char {
+  font-size: 34px !important;
+}
+
+html.person5 .sidebar-footer .p5-footer-strip .p5-menu-strip-subtitle {
+  font-size: 18px !important;
+}
+
+html.person5 .sidebar-footer .p5-footer-strip > *:not(.p5-menu-strip-svg) {
+  position: absolute !important;
+  z-index: 3 !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip .status-indicator {
+  display: none !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip .input-sm,
+html.person5 .sidebar-footer .status-row.p5-footer-strip .n-select {
+  right: 64px !important;
+  top: 50% !important;
+  width: 178px !important;
+  transform: translateY(-50%) rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip .n-base-selection {
+  min-height: 34px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip .n-base-selection-label,
+html.person5 .sidebar-footer .status-row.p5-footer-strip .n-base-selection-input,
+html.person5 .sidebar-footer .status-row.p5-footer-strip .n-base-selection-input__content {
+  color: var(--p5-white) !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+  transform: skewX(6deg) rotate(2deg) !important;
+}
+
+html.person5 .sidebar-footer .status-row.p5-footer-strip .n-base-suffix {
+  color: var(--p5-white) !important;
+  transform: skewX(6deg) rotate(2deg) !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .version-links {
+  right: 148px !important;
+  top: 30px !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  transform: none !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .version-text {
+  right: 116px !important;
+  bottom: 26px !important;
+  top: auto !important;
+  max-width: 148px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 8px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .theme-switch-container {
+  right: 64px !important;
+  bottom: 26px !important;
+  top: auto !important;
+  transform: none !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .theme-switch-container .theme-switch:nth-child(2) {
+  display: none !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .github-link,
+html.person5 .sidebar-footer .version-info.p5-footer-strip .website-link {
+  flex: 0 0 82px !important;
+  width: 82px !important;
+  height: 34px !important;
+  min-width: 82px !important;
+  min-height: 34px !important;
+  gap: 6px !important;
+  padding: 0 9px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+  text-decoration: none !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .theme-switch {
+  flex: 0 0 34px !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .github-link > *,
+html.person5 .sidebar-footer .version-info.p5-footer-strip .website-link > *,
+html.person5 .sidebar-footer .version-info.p5-footer-strip .theme-switch > * {
+  transform: skewX(6deg) rotate(2deg) !important;
+}
+
+html.person5 .sidebar-footer .version-info.p5-footer-strip .p5-footer-link-label {
+  color: var(--p5-white) !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+/* PERSON5 compact footer utilities: language/repo are tools, not primary SVG menu strips. */
+html.person5 .sidebar-footer {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin: 12px 0 18px !important;
+  padding: 10px 0 8px !important;
+  border-top: 0 !important;
+}
+
+html.person5 .sidebar-footer .p5-logout-strip:has(.p5-menu-strip-svg) {
+  width: min(650px, calc(100% - 18px)) !important;
+  margin: 0 18px 2px 18px !important;
+  filter: drop-shadow(11px 10px 0 #050505) !important;
+}
+
+html.person5 .p5-utility-card {
+  position: relative !important;
+  z-index: 1 !important;
+  width: min(520px, calc(100% - 86px)) !important;
+  min-height: 58px !important;
+  margin: 0 26px 0 44px !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(135deg, #050505 0 72%, rgba(214, 0, 28, 0.52) 72% 100%) !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 2px #050505,
+    6px 6px 0 var(--p5-red),
+    10px 10px 0 #050505 !important;
+  clip-path: polygon(0 8%, 97% 0, 100% 25%, 96% 100%, 4% 94%, 0 76%) !important;
+  overflow: visible !important;
+  transform: rotate(-1deg) skewX(-4deg) !important;
+}
+
+html.person5 .p5-utility-card > * {
+  position: relative !important;
+  z-index: 2 !important;
+  transform: skewX(4deg) rotate(1deg) !important;
+}
+
+html.person5 .p5-utility-card::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 16px !important;
+  bottom: 8px !important;
+  width: 98px !important;
+  height: 5px !important;
+  background: var(--p5-red) !important;
+  clip-path: polygon(0 52%, 36% 0, 34% 56%, 100% 18%, 100% 66%, 50% 100%, 53% 48%, 0 100%) !important;
+  z-index: 1 !important;
+}
+
+html.person5 .p5-utility-title {
+  flex: 0 0 auto !important;
+  min-width: 84px !important;
+  color: var(--p5-white) !important;
+  font-size: 17px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow:
+    2px 2px 0 #050505,
+    -1px -1px 0 #050505 !important;
+}
+
+html.person5 .p5-language-card .input-sm,
+html.person5 .p5-language-card .n-select {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+html.person5 .p5-language-card .n-base-selection {
+  min-height: 36px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+}
+
+html.person5 .p5-language-card .n-base-selection-label,
+html.person5 .p5-language-card .n-base-selection-input,
+html.person5 .p5-language-card .n-base-selection-input__content {
+  color: var(--p5-white) !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+html.person5 .p5-language-card .n-base-suffix {
+  color: var(--p5-white) !important;
+}
+
+html.person5 .p5-repo-card {
+  min-height: 72px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 10px 12px !important;
+  padding-right: 18px !important;
+}
+
+html.person5 .p5-repo-card .p5-utility-title {
+  min-width: 84px !important;
+}
+
+html.person5 .p5-repo-card .version-links {
+  flex: 1 1 auto !important;
+  min-width: 160px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+
+html.person5 .p5-repo-card .github-link,
+html.person5 .p5-repo-card .website-link,
+html.person5 .p5-repo-card .version-text,
+html.person5 .p5-repo-card .theme-switch {
+  position: relative !important;
+  flex: 0 0 auto !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 0 10px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 3px 3px 0 var(--p5-red) !important;
+  text-decoration: none !important;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+  transform: rotate(-1deg) skewX(-5deg) !important;
+}
+
+html.person5 .p5-repo-card .github-link > *,
+html.person5 .p5-repo-card .website-link > *,
+html.person5 .p5-repo-card .version-text > *,
+html.person5 .p5-repo-card .theme-switch > * {
+  transform: skewX(5deg) rotate(1deg) !important;
+}
+
+html.person5 .p5-repo-card .version-text {
+  max-width: 142px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container .theme-switch:nth-child(2) {
+  display: none !important;
+}
+
+html.person5 .p5-repo-card .theme-switch {
+  width: 34px !important;
+  min-width: 34px !important;
+  padding: 0 !important;
+}
+
+html.person5 .p5-footer-link-label {
+  color: var(--p5-white) !important;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+@media (max-width: 760px) {
+  html.person5 .p5-utility-card {
+    width: min(320px, calc(100% - 32px)) !important;
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+    padding: 10px 12px !important;
+  }
+
+  html.person5 .p5-utility-title {
+    min-width: 72px !important;
+    font-size: 15px !important;
+  }
+}
+
+/* PERSON5 footer micro-fixes: align collapse button and keep utility cards readable. */
+html.person5 .sidebar:not(.collapsed) .collapse-btn {
+  top: auto !important;
+  bottom: 22px !important;
+  right: 26px !important;
+}
+
+html.person5 .p5-language-card .n-base-selection-placeholder,
+html.person5 .p5-language-card .n-base-selection-input__content,
+html.person5 .p5-language-card .n-base-selection-input__content * {
+  color: var(--p5-white) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: var(--p5-white) !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+html.person5 .p5-language-card .n-base-selection .n-base-selection-input {
+  color: var(--p5-white) !important;
+  opacity: 1 !important;
+}
+
+html.person5 .p5-repo-card {
+  display: grid !important;
+  grid-template-columns: 92px 70px minmax(0, 1fr) !important;
+  grid-template-areas:
+    "title links links"
+    "title theme version" !important;
+  align-items: center !important;
+  column-gap: 12px !important;
+  row-gap: 8px !important;
+  min-height: 86px !important;
+}
+
+html.person5 .p5-repo-card .p5-utility-title {
+  grid-area: title !important;
+}
+
+html.person5 .p5-repo-card .version-links {
+  grid-area: links !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+html.person5 .p5-repo-card .version-text {
+  grid-area: version !important;
+  justify-self: start !important;
+  max-width: 126px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 7px !important;
+  font-size: 11px !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  grid-area: theme !important;
+  justify-self: end !important;
+}
+
+html.person5 .p5-repo-card .github-link,
+html.person5 .p5-repo-card .website-link {
+  min-width: 78px !important;
+}
+
+html.person5 .p5-language-card .n-base-selection,
+html.person5 .p5-language-card .n-base-selection .n-base-selection-label,
+html.person5 .p5-language-card .n-base-selection .n-base-selection-input {
+  background: #050505 !important;
+}
+
+html.person5 .p5-language-card .n-base-selection-input__content {
+  background: transparent !important;
+  color: var(--p5-white) !important;
+  -webkit-text-fill-color: var(--p5-white) !important;
+}
+
+html.person5 .p5-language-card .n-base-selection__border,
+html.person5 .p5-language-card .n-base-selection__state-border {
+  border-color: var(--p5-white) !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  grid-area: theme !important;
+  justify-self: start !important;
+  align-self: center !important;
+  transform: none !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active {
+  width: 62px !important;
+  min-width: 62px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 7px 0 5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 2px #050505,
+    4px 4px 0 var(--p5-red),
+    7px 7px 0 #050505 !important;
+  transform: rotate(-2deg) skewX(-5deg) !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active::after {
+  content: "主题" !important;
+  color: var(--p5-white) !important;
+  font-size: 12px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+  transform: skewX(5deg) rotate(2deg) !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active .person5-theme-mark {
+  width: 18px !important;
+  height: 18px !important;
+  display: block !important;
+  object-fit: contain !important;
+  filter:
+    drop-shadow(1px 1px 0 var(--p5-white))
+    drop-shadow(2px 2px 0 #050505) !important;
+  transform: skewX(5deg) rotate(2deg) !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active:hover {
+  background: var(--p5-red) !important;
+  box-shadow:
+    0 0 0 2px #050505,
+    4px 4px 0 var(--p5-white),
+    7px 7px 0 #050505 !important;
+  transform: translateY(-1px) rotate(-2deg) skewX(-5deg) !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -6px -7px -7px -6px !important;
+  z-index: -1 !important;
+  background: var(--p5-red) !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 2px 2px 0 #050505 !important;
+  transform: translate(4px, 4px) skewX(-4deg) !important;
+}
+
+/* PERSON5 session drawer handle lives above both the drawer and the stage frame. */
+html.person5 .chat-panel > .p5-session-handle {
+  position: absolute !important;
+  left: 18px !important;
+  top: 132px !important;
+  z-index: 220 !important;
+  min-width: 112px !important;
+  min-height: 52px !important;
+  padding: 10px 18px 10px 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 4px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    8px 8px 0 var(--p5-red),
+    12px 12px 0 #050505 !important;
+  clip-path: polygon(0 0, 84% 0, 100% 50%, 84% 100%, 0 100%, 8% 50%) !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transform: rotate(-2deg) skewX(-7deg) !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle > * {
+  transform: skewX(7deg) rotate(2deg) !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle.open {
+  left: calc(var(--p5-stage-drawer) - 20px) !important;
+  top: 172px !important;
+  min-width: 98px !important;
+  background:
+    linear-gradient(110deg, #050505 0 72%, rgba(214, 0, 28, 0.78) 72% 100%) !important;
+  z-index: 260 !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle.open svg {
+  transform: skewX(7deg) rotate(182deg) !important;
+}
+
+html.person5 .chat-main .p5-session-handle {
+  display: none !important;
+}
+
+/* Keep the PERSON5 sidebar collapse control pinned to the viewport, not the scrollable sidebar content. */
+html.person5 .collapse-btn,
+html.person5 .sidebar:not(.collapsed) .collapse-btn {
+  position: fixed !important;
+  top: auto !important;
+  bottom: 22px !important;
+  left: calc(var(--p5-sidebar-wide) - 94px) !important;
+  right: auto !important;
+  z-index: 80 !important;
+}
+
+html.person5 .sidebar.collapsed .collapse-btn {
+  position: fixed !important;
+  top: auto !important;
+  bottom: 22px !important;
+  left: 68px !important;
+  right: auto !important;
+  z-index: 80 !important;
+}
+
+@media (max-width: 2200px) {
+  html.person5 .collapse-btn,
+  html.person5 .sidebar:not(.collapsed) .collapse-btn {
+    left: calc(var(--p5-sidebar-wide) - 78px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  html.person5 .collapse-btn,
+  html.person5 .sidebar:not(.collapsed) .collapse-btn {
+    left: calc(var(--p5-sidebar-wide) - 62px) !important;
+  }
+}
+
+/* PERSON5 focused fixes: make the theme badge frame explicit and keep the session drawer handle above the open drawer. */
+html.person5 .p5-repo-card {
+  grid-template-columns: 92px 88px minmax(0, 1fr) !important;
+  overflow: visible !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  overflow: visible !important;
+  z-index: 5 !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active {
+  width: 76px !important;
+  min-width: 76px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 9px 0 7px !important;
+  gap: 5px !important;
+  border: 2px solid var(--p5-white) !important;
+  outline: 2px solid #050505 !important;
+  box-shadow:
+    0 0 0 4px var(--p5-white),
+    5px 5px 0 var(--p5-red),
+    8px 8px 0 #050505 !important;
+  clip-path: polygon(0 10%, 92% 0, 100% 42%, 94% 100%, 6% 100%, 0 76%) !important;
+  overflow: visible !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active::before {
+  display: none !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active::after {
+  font-size: 13px !important;
+}
+
+html.person5 .p5-repo-card .theme-switch.person5-active .person5-theme-mark {
+  width: 16px !important;
+  height: 16px !important;
+  filter: none !important;
+}
+
+html.person5 .chat-panel {
+  isolation: isolate !important;
+  overflow: visible !important;
+}
+
+html.person5 .session-list {
+  z-index: 220 !important;
+}
+
+html.person5 .session-backdrop {
+  z-index: 210 !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle {
+  left: 20px !important;
+  top: 150px !important;
+  z-index: 360 !important;
+  min-width: 108px !important;
+  min-height: 50px !important;
+  padding: 10px 17px !important;
+  border-width: 3px !important;
+  outline: 3px solid #050505 !important;
+  box-shadow:
+    0 0 0 3px var(--p5-white),
+    7px 7px 0 var(--p5-red),
+    11px 11px 0 #050505 !important;
+  clip-path: polygon(0 0, 86% 0, 100% 50%, 86% 100%, 0 100%, 9% 50%) !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle.open {
+  left: calc(var(--p5-stage-drawer) + 12px) !important;
+  top: 126px !important;
+  min-width: 88px !important;
+  min-height: 64px !important;
+  padding: 10px 12px !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  background:
+    linear-gradient(135deg, var(--p5-red) 0 34%, #050505 34% 100%) !important;
+  border-color: var(--p5-white) !important;
+  transform: rotate(2deg) skewX(-7deg) !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle.open > * {
+  transform: skewX(7deg) rotate(-2deg) !important;
+}
+
+html.person5 .chat-panel > .p5-session-handle.open svg {
+  width: 18px !important;
+  height: 18px !important;
+  transform: skewX(7deg) rotate(178deg) !important;
+}
+
+@media (max-width: 760px) {
+  html.person5 .p5-repo-card {
+    grid-template-columns: 72px 78px minmax(0, 1fr) !important;
+  }
+
+  html.person5 .p5-repo-card .theme-switch.person5-active {
+    width: 68px !important;
+    min-width: 68px !important;
+  }
+
+  html.person5 .chat-panel > .p5-session-handle.open {
+    left: min(calc(var(--p5-stage-drawer) + 8px), calc(100vw - 112px)) !important;
+  }
+}
+
+/* PERSON5 footer alignment: match the bottom action block with the persona/model strips above. */
+html.person5 .sidebar-footer {
+  margin-right: 30px !important;
+}
+
+html.person5 .sidebar-footer .p5-logout-strip:has(.p5-menu-strip-svg) {
+  width: min(650px, calc(100% - 18px)) !important;
+  margin-left: 18px !important;
+  margin-right: 0 !important;
+}
+
+html.person5 .sidebar-footer .p5-utility-card {
+  margin-left: 34px !important;
+  margin-right: 0 !important;
+}
+
+/* Keep the repo card version label away from the clipped right edge. */
+html.person5 .p5-repo-card {
+  grid-template-columns: 92px minmax(0, 1fr) !important;
+  grid-template-areas:
+    "title links"
+    "title tools" !important;
+  padding-right: 28px !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  grid-area: tools !important;
+  justify-self: start !important;
+}
+
+html.person5 .p5-repo-card .version-text {
+  grid-area: tools !important;
+  justify-self: start !important;
+  width: 118px !important;
+  max-width: 118px !important;
+  margin-left: 94px !important;
+  padding: 0 7px !important;
+  font-size: 10px !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+/* Final repo-card placement: keep Studio version inside the non-clipped safe zone. */
+html.person5 .p5-repo-card {
+  min-height: 98px !important;
+  padding-right: 34px !important;
+  clip-path: polygon(0 8%, 98% 0, 100% 20%, 99% 100%, 4% 94%, 0 76%) !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  position: absolute !important;
+  left: 122px !important;
+  bottom: 16px !important;
+  grid-area: auto !important;
+}
+
+html.person5 .p5-repo-card .version-text {
+  position: absolute !important;
+  left: 222px !important;
+  right: auto !important;
+  bottom: 8px !important;
+  grid-area: auto !important;
+  width: 156px !important;
+  max-width: 156px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  z-index: 30 !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 2px #050505,
+    4px 4px 0 var(--p5-red) !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+}
+
+/* PERSON5 repo card simplification: keep only repository and theme controls. */
+html.person5 .p5-repo-card {
+  min-height: 64px !important;
+  grid-template-columns: 92px 88px 88px !important;
+  grid-template-areas: "title links theme" !important;
+  align-items: center !important;
+  row-gap: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+html.person5 .p5-repo-card .version-links {
+  grid-area: links !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+html.person5 .p5-repo-card .website-link,
+html.person5 .p5-repo-card .version-text {
+  display: none !important;
+}
+
+html.person5 .p5-repo-card .theme-switch-container {
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  grid-area: theme !important;
+  justify-self: start !important;
+}
+
+/* PERSON5 footer utility strips: use the approved primary SVG strip as the background. */
+html.person5 .sidebar-footer .p5-utility-card {
+  position: relative !important;
+  width: min(520px, calc(100% - 56px)) !important;
+  min-height: 0 !important;
+  aspect-ratio: 760 / 150 !important;
+  margin: 0 0 0 34px !important;
+  padding: 0 76px 0 118px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 14px !important;
+  color: var(--p5-white) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  transform: none !important;
+  filter: drop-shadow(8px 7px 0 #050505) !important;
+}
+
+html.person5 .sidebar-footer .p5-utility-card::before {
+  display: none !important;
+}
+
+html.person5 .sidebar-footer .p5-utility-card > * {
+  position: relative !important;
+  z-index: 2 !important;
+  transform: none !important;
+}
+
+html.person5 .sidebar-footer .p5-utility-card > .p5-menu-strip-svg {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+}
+
+html.person5 .sidebar-footer .p5-utility-card .p5-menu-strip-char,
+html.person5 .sidebar-footer .p5-utility-card .p5-menu-strip-subtitle {
+  display: none !important;
+}
+
+html.person5 .sidebar-footer .p5-language-card {
+  padding-left: 138px !important;
+  padding-right: 120px !important;
+}
+
+html.person5 .sidebar-footer .p5-language-card .input-sm,
+html.person5 .sidebar-footer .p5-language-card .n-select {
+  width: 190px !important;
+  max-width: 190px !important;
+  flex: 0 0 190px !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card {
+  min-height: 0 !important;
+  display: flex !important;
+  padding-left: 150px !important;
+  padding-right: 96px !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .version-links {
+  width: auto !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .github-link {
+  min-width: 86px !important;
+  width: 86px !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .theme-switch-container {
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  flex: 0 0 auto !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .website-link,
+html.person5 .sidebar-footer .p5-repo-card .version-text {
+  display: none !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .theme-switch.person5-active {
+  width: 76px !important;
+  min-width: 76px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+}
+
+/* PERSON5 footer strip alignment: same SVG size, centered controls, aligned right diagonals. */
+html.person5 .sidebar-footer .p5-utility-card {
+  width: min(520px, calc(100% - 56px)) !important;
+  margin-left: 34px !important;
+  margin-right: 0 !important;
+  padding: 0 118px !important;
+  justify-content: center !important;
+  gap: 14px !important;
+}
+
+html.person5 .sidebar-footer .p5-language-card,
+html.person5 .sidebar-footer .p5-repo-card {
+  width: min(520px, calc(100% - 56px)) !important;
+  aspect-ratio: 760 / 150 !important;
+}
+
+html.person5 .sidebar-footer .p5-language-card {
+  padding-left: 118px !important;
+  padding-right: 118px !important;
+}
+
+html.person5 .sidebar-footer .p5-language-card .input-sm,
+html.person5 .sidebar-footer .p5-language-card .n-select {
+  flex: 0 0 210px !important;
+  width: 210px !important;
+  max-width: 210px !important;
+  margin: 0 auto !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-left: 118px !important;
+  padding-right: 118px !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .version-links {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .theme-switch-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .github-link,
+html.person5 .sidebar-footer .p5-repo-card .theme-switch.person5-active {
+  height: 34px !important;
+  min-height: 34px !important;
+}
+
+/* Force repository and theme controls onto one centered row inside the SVG strip. */
+html.person5 .sidebar-footer .p5-repo-card {
+  position: relative !important;
+  display: block !important;
+  padding: 0 !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .version-links {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  z-index: 4 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 86px !important;
+  height: 34px !important;
+  margin: 0 !important;
+  transform: translate(calc(-50% - 52px), -50%) rotate(-1deg) !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .theme-switch-container {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  z-index: 5 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 76px !important;
+  height: 34px !important;
+  margin: 0 !important;
+  transform: translate(calc(-50% + 50px), -50%) rotate(1deg) !important;
+}
+
+html.person5 .sidebar-footer .p5-repo-card .github-link {
+  width: 86px !important;
+  min-width: 86px !important;
+}
+
+/* PERSON5 collapsed rail: active agent and utility quick actions. */
+html.person5 .p5-collapsed-agent,
+html.person5 .p5-collapsed-quick-actions {
+  position: relative !important;
+  z-index: 24 !important;
+  width: 82px !important;
+  margin-left: 5px !important;
+  display: grid !important;
+  justify-items: center !important;
+  gap: 8px !important;
+}
+
+html.person5 .p5-collapsed-agent {
+  margin-top: 2px !important;
+  padding-top: 2px !important;
+}
+
+html.person5 .p5-collapsed-agent::before {
+  content: "" !important;
+  position: absolute !important;
+  top: -10px !important;
+  left: 8px !important;
+  right: 10px !important;
+  height: 3px !important;
+  background: var(--p5-red) !important;
+  box-shadow: 0 -5px 0 var(--p5-white), 18px 4px 0 #050505 !important;
+  transform: rotate(-5deg) !important;
+}
+
+html.person5 .p5-collapsed-agent-button {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 64px !important;
+  height: 64px !important;
+  padding: 0 !important;
+  color: var(--p5-white) !important;
+  background: var(--p5-red) !important;
+  border: 4px solid var(--p5-white) !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    6px 6px 0 var(--p5-red),
+    10px 10px 0 #050505 !important;
+  clip-path: polygon(0 10%, 88% 0, 100% 22%, 94% 100%, 10% 92%, 0 74%) !important;
+  cursor: pointer !important;
+  transform: rotate(-3deg) !important;
+}
+
+html.person5 .p5-collapsed-agent.open .p5-collapsed-agent-button {
+  background: #050505 !important;
+  box-shadow:
+    0 0 0 3px var(--p5-white),
+    6px 6px 0 #050505,
+    10px 10px 0 var(--p5-red) !important;
+}
+
+html.person5 .p5-collapsed-agent-button .profile-avatar,
+html.person5 .p5-collapsed-agent-button img {
+  width: 50px !important;
+  height: 50px !important;
+}
+
+html.person5 .p5-collapsed-agent-actions,
+html.person5 .p5-collapsed-quick-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, 34px) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px 7px !important;
+  padding: 8px 6px !important;
+  background: rgba(5, 5, 5, 0.92) !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 4px 4px 0 var(--p5-red), 7px 7px 0 #050505 !important;
+  clip-path: polygon(0 9%, 92% 0, 100% 18%, 94% 100%, 8% 94%, 0 78%) !important;
+}
+
+html.person5 .p5-collapsed-quick-actions {
+  margin-top: 4px !important;
+}
+
+html.person5 .p5-collapsed-quick-actions .theme-switch-container {
+  display: contents !important;
+}
+
+html.person5 .p5-collapsed-quick-actions .theme-switch-container .theme-switch:nth-child(2) {
+  display: none !important;
+}
+
+html.person5 .p5-collapsed-quick-actions .theme-switch,
+html.person5 .p5-collapsed-agent-actions .p5-collapsed-icon,
+html.person5 .p5-collapsed-quick-actions .p5-collapsed-icon {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+}
+
+html.person5 .p5-collapsed-quick-actions .theme-switch.person5-active::after {
+  display: none !important;
+}
+
+html.person5 .p5-collapsed-quick-actions .theme-switch.person5-active .person5-theme-mark {
+  width: 19px !important;
+  height: 19px !important;
+}
+
+html.person5 .p5-collapsed-quick-actions {
+  grid-template-columns: repeat(2, 34px) !important;
+  width: max-content !important;
+  padding: 7px 6px !important;
+}
+
+/* PERSON5 focused fix: selected profile stays red and keeps its action grid visible. */
+html.person5 .p5-control-profile .p5-profile-item.active {
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(90deg, rgba(214, 0, 28, 0.96), rgba(156, 0, 18, 0.9)),
+    #d6001c !important;
+  border-color: var(--p5-white) !important;
+  outline-color: #050505 !important;
+  box-shadow:
+    0 0 0 2px #050505,
+    6px 6px 0 #050505,
+    10px 10px 0 var(--p5-red) !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+}
+
+html.person5 .p5-control-profile .p5-profile-item.active .p5-submenu-main {
+  color: var(--p5-white) !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+}
+
+html.person5 .p5-collapsed-agent.open .p5-collapsed-agent-button {
+  background: var(--p5-red) !important;
+  box-shadow:
+    0 0 0 3px var(--p5-white),
+    6px 6px 0 var(--p5-red),
+    10px 10px 0 #050505 !important;
+}
+
+/* PERSON5 collapsed agent state: black by default, red only when selected/open. */
+html.person5 .p5-collapsed-agent:not(.open) .p5-collapsed-agent-button {
+  background: #050505 !important;
+  border-color: var(--p5-white) !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    6px 6px 0 #050505,
+    10px 10px 0 rgba(255, 248, 236, 0.9) !important;
+}
+
+html.person5 .p5-collapsed-agent.open .p5-collapsed-agent-button {
+  background: var(--p5-red) !important;
+  border-color: var(--p5-white) !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    6px 6px 0 var(--p5-red),
+    10px 10px 0 #050505 !important;
+}
+
+/* PERSON5 conversation hero now owns its title, stars and subtitle inside command-hero-card.svg. */
+html.person5 .nav-group-conversation .p5-menu-copy,
+html.person5 .nav-group-conversation .p5-notch-stars,
+html.person5 .nav-group-conversation .p5-menu-stars,
+html.person5 .nav-group-conversation .p5-z-stripe,
+html.person5 .nav-group-conversation .p5-seven-stripe,
+html.person5 .nav-group-conversation .p5-menu-gear {
+  display: none !important;
+}
+
+html.person5 .nav-group-conversation .nav-group-label {
+  padding: 0 !important;
+  min-height: clamp(248px, 14.6vw, 320px) !important;
+  margin-top: -2px !important;
+  margin-bottom: 0 !important;
+  filter: none !important;
+  overflow: visible !important;
+}
+
+html.person5 .nav-group-conversation .p5-hero-card-media {
+  inset: -128px -132px -54px -104px !important;
+  display: block !important;
+  background: url('/person5/command-hero-card.svg') left center / contain no-repeat !important;
+  transform: translateX(64px) translateY(18px) scale(0.78) !important;
+  transform-origin: left center !important;
+}
+
+html.person5 .sidebar-nav > .nav-group-conversation {
+  margin-top: -12px !important;
+  margin-bottom: 6px !important;
+}
+
+html.person5 .nav-group-conversation .nav-group-items:not(.collapsed) {
+  margin-top: -60px !important;
+}
+
+html.person5 .nav-group-conversation .nav-group-arrow {
+  right: 128px !important;
+  z-index: 3 !important;
+}
+
+/* PERSON5 login hard override: LoginView is lazy-loaded, so keep the full skin global. */
+html.p5-login-active body,
+html.p5-login-active #app,
+html.p5-login-active .app-layout.no-sidebar,
+html.p5-login-active .app-layout.no-sidebar .app-main {
+  width: 100% !important;
+  height: calc(100 * var(--vh)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+html.p5-login-active .login-view.p5-login-view {
+  position: relative !important;
+  display: flex !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  height: calc(100 * var(--vh)) !important;
+  min-height: calc(100 * var(--vh)) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  background:
+    linear-gradient(98deg, rgba(0, 0, 0, 0.94) 0 29%, rgba(230, 0, 18, 0.46) 29% 54%, rgba(0, 0, 0, 0.90) 54% 100%),
+    url('/person5/login-wallpaper.webp') center / cover no-repeat,
+    #050505 !important;
+}
+
+html.p5-login-active .p5-login-scene,
+html.p5-login-active .p5-login-noise,
+html.p5-login-active .p5-login-slash,
+html.p5-login-active .p5-login-slogan {
+  position: absolute !important;
+  pointer-events: none !important;
+}
+
+html.p5-login-active .p5-login-scene {
+  inset: 0 !important;
+  z-index: 0 !important;
+  overflow: hidden !important;
+}
+
+html.p5-login-active .p5-login-noise {
+  inset: 0 !important;
+  opacity: 0.86 !important;
+  background:
+    radial-gradient(circle, rgba(255, 248, 236, 0.20) 0 1.5px, transparent 2px) 0 0 / 28px 28px,
+    radial-gradient(circle, rgba(230, 0, 18, 0.18) 0 1.5px, transparent 2px) 12px 14px / 34px 34px,
+    repeating-linear-gradient(116deg, transparent 0 30px, rgba(255, 248, 236, 0.09) 30px 33px, transparent 33px 70px) !important;
+  mix-blend-mode: screen !important;
+}
+
+html.p5-login-active .p5-login-slash {
+  background: #e60012 !important;
+  box-shadow: 14px 14px 0 #050505, -8px -8px 0 #fff7e8 !important;
+  clip-path: polygon(6% 0, 100% 15%, 91% 100%, 0 82%) !important;
+}
+
+html.p5-login-active .p5-login-slash-one {
+  left: -9vw !important;
+  top: 16vh !important;
+  width: 46vw !important;
+  height: 15vh !important;
+  transform: rotate(-15deg) !important;
+}
+
+html.p5-login-active .p5-login-slash-two {
+  right: -8vw !important;
+  bottom: 8vh !important;
+  width: 52vw !important;
+  height: 18vh !important;
+  transform: rotate(-12deg) !important;
+}
+
+html.p5-login-active .p5-login-slogan {
+  left: -3vw !important;
+  bottom: 4vh !important;
+  color: rgba(230, 0, 18, 0.48) !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-size: clamp(64px, 9vw, 168px) !important;
+  font-style: italic !important;
+  font-weight: 900 !important;
+  line-height: 0.9 !important;
+  transform: rotate(-9deg) !important;
+  white-space: nowrap !important;
+}
+
+html.p5-login-active .p5-login-brand {
+  position: absolute !important;
+  left: clamp(48px, 5vw, 108px) !important;
+  top: clamp(34px, 5vh, 76px) !important;
+  z-index: 3 !important;
+  display: flex !important;
+  align-items: center !important;
+  filter: drop-shadow(8px 8px 0 #050505) !important;
+  transform: rotate(-2deg) !important;
+}
+
+html.p5-login-active .p5-login-kanji {
+  display: flex !important;
+  gap: 2px !important;
+  align-items: center !important;
+}
+
+html.p5-login-active .p5-login-char {
+  display: inline-grid !important;
+  min-width: clamp(30px, 2.45vw, 48px) !important;
+  min-height: clamp(34px, 2.7vw, 54px) !important;
+  place-items: center !important;
+  padding: 4px 6px 8px !important;
+  border: 3px solid #050505 !important;
+  outline: 2px solid #fff7e8 !important;
+  background: #e60012 !important;
+  color: #fff7e8 !important;
+  font-size: clamp(22px, 2.1vw, 42px) !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 3px 3px 0 #050505 !important;
+  transform: skewX(-8deg) !important;
+}
+
+html.p5-login-active .p5-login-char:nth-child(even) {
+  background: #050505 !important;
+  outline-color: #e60012 !important;
+}
+
+html.p5-login-active .p5-login-char:nth-child(3n) {
+  transform: translateY(7px) skewX(-8deg) rotate(2deg) !important;
+}
+
+html.p5-login-active .p5-login-en {
+  margin-left: -4px !important;
+  padding: 10px 28px 12px !important;
+  border-top: 3px solid #fff7e8 !important;
+  border-bottom: 3px solid #fff7e8 !important;
+  background: #050505 !important;
+  color: #fff7e8 !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-size: clamp(18px, 1.9vw, 36px) !important;
+  font-style: italic !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  line-height: 1 !important;
+  text-shadow: 3px 3px 0 #e60012 !important;
+  transform: translateY(12px) skewX(-12deg) !important;
+}
+
+html.p5-login-active .p5-login-view .login-card {
+  position: relative !important;
+  z-index: 2 !important;
+  width: min(560px, calc(100vw - 40px)) !important;
+  margin-left: clamp(280px, 25vw, 520px) !important;
+  padding: 50px 54px 48px !important;
+  border: 6px solid #fff7e8 !important;
+  outline: 5px solid #050505 !important;
+  border-radius: 0 !important;
+  background: rgba(5, 5, 5, 0.94) !important;
+  box-shadow: 18px 18px 0 #e60012, 28px 28px 0 #050505 !important;
+  color: #fff7e8 !important;
+  clip-path: polygon(0 7%, 91% 0, 100% 16%, 94% 100%, 7% 93%, 0 78%) !important;
+  text-align: center !important;
+  transform: rotate(-1.2deg) skewX(-3deg) !important;
+}
+
+html.p5-login-active .p5-login-view .login-card > * {
+  position: relative !important;
+  z-index: 2 !important;
+  transform: skewX(3deg) !important;
+}
+
+html.p5-login-active .p5-login-view .login-logo {
+  display: grid !important;
+  width: 128px !important;
+  height: 128px !important;
+  margin: 0 auto 24px !important;
+  place-items: center !important;
+  border: 5px solid #fff7e8 !important;
+  outline: 5px solid #050505 !important;
+  background: #e60012 !important;
+  box-shadow: 9px 9px 0 #050505 !important;
+  clip-path: polygon(0 10%, 90% 0, 100% 18%, 92% 100%, 12% 92%, 0 74%) !important;
+}
+
+html.p5-login-active .p5-login-view .login-logo img {
+  width: 88px !important;
+  height: 88px !important;
+  object-fit: contain !important;
+}
+
+html.p5-login-active .p5-login-title-main {
+  display: inline-block !important;
+  padding: 8px 18px 11px !important;
+  border: 4px solid #050505 !important;
+  outline: 3px solid #fff7e8 !important;
+  background: #e60012 !important;
+  color: #fff7e8 !important;
+  box-shadow: 6px 6px 0 #050505 !important;
+  font-size: clamp(32px, 2.4vw, 46px) !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-shadow: 3px 3px 0 #050505 !important;
+  transform: rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.p5-login-active .p5-login-title-sub {
+  display: inline-block !important;
+  margin-top: 6px !important;
+  padding: 4px 14px 5px !important;
+  border: 2px solid #fff7e8 !important;
+  background: #050505 !important;
+  color: #fff7e8 !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-size: 15px !important;
+  font-style: italic !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+  transform: rotate(1deg) skewX(-8deg) !important;
+}
+
+html.p5-login-active .p5-login-view .login-desc,
+html.p5-login-active .p5-login-view .login-default-hint {
+  color: #fff7e8 !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+}
+
+html.p5-login-active .p5-login-view .login-default-hint {
+  display: inline-block !important;
+  padding: 5px 12px !important;
+  border: 2px solid #fff7e8 !important;
+  background: #050505 !important;
+  box-shadow: 4px 4px 0 #e60012 !important;
+}
+
+html.p5-login-active .p5-login-view .login-input {
+  position: relative !important;
+  z-index: 3 !important;
+  min-height: 58px !important;
+  border: 3px solid #050505 !important;
+  outline: 3px solid #fff7e8 !important;
+  border-radius: 0 !important;
+  background: #fff7e8 !important;
+  box-shadow: 6px 6px 0 #e60012, 9px 9px 0 #050505 !important;
+  color: #050505 !important;
+  caret-color: #e60012 !important;
+  clip-path: polygon(0 14%, 94% 0, 100% 50%, 94% 100%, 0 86%) !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+}
+
+html.p5-login-active .p5-login-view .login-btn {
+  position: relative !important;
+  z-index: 3 !important;
+  min-height: 62px !important;
+  margin-top: 10px !important;
+  border: 4px solid #050505 !important;
+  outline: 3px solid #fff7e8 !important;
+  border-radius: 0 !important;
+  background: #e60012 !important;
+  box-shadow: 8px 8px 0 #050505 !important;
+  color: #fff7e8 !important;
+  clip-path: polygon(0 16%, 88% 0, 100% 50%, 88% 100%, 0 84%, 5% 50%) !important;
+  font-size: 20px !important;
+  font-weight: 1000 !important;
+  text-shadow: 2px 2px 0 #050505 !important;
+  transform: rotate(-1deg) skewX(-5deg) !important;
+}
+
+@media (max-width: 900px) {
+  html.p5-login-active .p5-login-brand {
+    left: 16px !important;
+    top: 18px !important;
+    transform: scale(0.72) rotate(-2deg) !important;
+    transform-origin: left top !important;
+  }
+
+  html.p5-login-active .p5-login-view {
+    align-items: flex-end !important;
+    padding: 132px 18px 34px !important;
+  }
+
+  html.p5-login-active .p5-login-view .login-card {
+    width: min(100%, 520px) !important;
+    margin-left: 0 !important;
+    padding: 38px 26px 34px !important;
+    transform: rotate(-0.8deg) !important;
   }
 }

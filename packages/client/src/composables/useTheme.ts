@@ -32,7 +32,10 @@ function applyClasses() {
   isPerson5.value = style.value === 'person5'
   document.documentElement.classList.toggle('dark', dark)
   document.documentElement.classList.toggle('comic', isComic.value)
-  document.documentElement.classList.toggle('person5', isPerson5.value)
+  document.documentElement.classList.toggle(
+    'person5',
+    isPerson5.value && !document.documentElement.classList.contains('p5-login-active'),
+  )
 }
 
 // Initial
