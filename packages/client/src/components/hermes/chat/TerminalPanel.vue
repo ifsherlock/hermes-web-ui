@@ -7,10 +7,12 @@ import "@xterm/xterm/css/xterm.css";
 import { getApiKey, getBaseUrlValue } from "@/api/client";
 import { NButton, NPopconfirm, NTooltip, NSelect, useMessage } from "naive-ui";
 import { useI18n } from "vue-i18n";
+import { useTheme } from "@/composables/useTheme";
 import type { ITheme } from "@xterm/xterm";
 
 const { t } = useI18n();
 const message = useMessage();
+const { isPerson5 } = useTheme();
 
 const props = defineProps<{ visible?: boolean; initialCommand?: string }>();
 
@@ -122,8 +124,42 @@ const themeOptions = computed(() =>
 );
 
 const terminalBg = computed(
-  () => TERMINAL_THEMES[selectedTheme.value]?.theme.background ?? "#1a1a2e",
+  () => resolveTerminalTheme(selectedTheme.value).background ?? "#1a1a2e",
 );
+
+function resolveTerminalTheme(themeName: string): ITheme {
+  const baseTheme = TERMINAL_THEMES[themeName]?.theme ?? TERMINAL_THEMES.default.theme;
+  if (!isPerson5.value) return baseTheme;
+
+  return {
+    ...baseTheme,
+    background: "#080808",
+    foreground: "#fff7e8",
+    cursor: "#e60012",
+    cursorAccent: "#fff7e8",
+    selectionBackground: "rgba(230, 0, 18, 0.36)",
+    black: "#050505",
+    red: "#ff5252",
+    green: "#9cffb2",
+    yellow: "#ffd866",
+    blue: "#8ad8ff",
+    magenta: "#ff8df5",
+    cyan: "#5ef2e2",
+    white: "#fff7e8",
+    brightBlack: "#c9c0b4",
+    brightRed: "#ff7777",
+    brightGreen: "#c0ffd0",
+    brightYellow: "#ffe795",
+    brightBlue: "#b7e8ff",
+    brightMagenta: "#ffb6fa",
+    brightCyan: "#9efff3",
+    brightWhite: "#ffffff",
+  };
+}
+
+function resolveTerminalFontSize(): number {
+  return isPerson5.value ? 15 : 14;
+}
 
 // ─── WebSocket ──────────────────────────────────────────────────
 
@@ -267,9 +303,9 @@ function getOrCreateTerm(id: string): { term: Terminal; fitAddon: FitAddon } {
   if (!entry) {
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: resolveTerminalFontSize(),
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      theme: { ...TERMINAL_THEMES[selectedTheme.value].theme },
+      theme: { ...resolveTerminalTheme(selectedTheme.value) },
     });
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
@@ -405,12 +441,18 @@ function handleTerminalTouchEnd() {
 function applyTheme(themeName: string) {
   selectedTheme.value = themeName;
   localStorage.setItem(STORAGE_KEY_THEME, themeName);
-  const themeObj = TERMINAL_THEMES[themeName]?.theme;
+  const themeObj = resolveTerminalTheme(themeName);
   if (!themeObj) return;
   for (const entry of termMap.values()) {
     entry.term.options.theme = { ...themeObj };
+    entry.term.options.fontSize = resolveTerminalFontSize();
   }
 }
+
+watch(isPerson5, () => {
+  applyTheme(selectedTheme.value);
+  setTimeout(() => tryFit(), 50);
+});
 
 // ─── Helpers ────────────────────────────────────────────────────
 

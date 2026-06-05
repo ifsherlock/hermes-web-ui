@@ -1617,9 +1617,10 @@ html.person5 .chat-main-content {
   border: 4px solid var(--p5-white);
   box-shadow: 7px 7px 0 #000;
   background:
-    linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.08)),
-    radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.16) 0 5px, transparent 6px),
-    radial-gradient(circle at 72% 74%, rgba(255, 255, 255, 0.12) 0 7px, transparent 8px);
+    linear-gradient(90deg, rgba(210, 0, 12, 0.10), rgba(0, 0, 0, 0.22)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.26)),
+    url('/person5/p5r-chat-bg.webp') center / cover no-repeat,
+    #d90b10;
 }
 
 html.person5 .chat-main-content .virtual-message-list,
@@ -1628,7 +1629,8 @@ html.person5 .chat-main-content .virtual-message-list-empty {
   background:
     radial-gradient(circle at 76% 15%, rgba(255, 255, 255, 0.16) 0 5px, transparent 6px),
     radial-gradient(circle at 70% 76%, rgba(255, 255, 255, 0.11) 0 7px, transparent 8px),
-    linear-gradient(180deg, rgba(208, 15, 7, 0.92), rgba(133, 0, 0, 0.96)) !important;
+    linear-gradient(90deg, rgba(208, 15, 7, 0.28), rgba(0, 0, 0, 0.42)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.34)) !important;
 }
 
 html.person5 .chat-main-content .virtual-message-list {
@@ -1693,6 +1695,158 @@ html.person5 .tool-line,
 html.person5 .thinking-header,
 html.person5 .workspace-badge {
   color: var(--p5-muted) !important;
+}
+
+html.person5 .message-bubble .markdown-body,
+html.person5 .message-bubble .tool-details {
+  font-size: 15px !important;
+}
+
+html.person5 .tool-line {
+  color: #fff7e8 !important;
+  font-size: 13px !important;
+  text-shadow: 2px 2px 0 #000;
+}
+
+html.person5 .tool-line .tool-name {
+  color: #fff7e8 !important;
+  font-weight: 900;
+}
+
+html.person5 .tool-line .tool-preview {
+  color: #ffe1dd !important;
+  opacity: 0.96;
+}
+
+html.person5 .tool-detail-label {
+  color: #fff7e8 !important;
+  font-size: 12px !important;
+  text-shadow: 2px 2px 0 #000;
+}
+
+html.person5 .tool-details {
+  border-left-color: #fff7e8 !important;
+}
+
+html.person5 .hljs-code-block {
+  border: 2px solid #fff7e8 !important;
+  border-radius: 6px !important;
+  background: #101010 !important;
+  box-shadow: 6px 6px 0 #000;
+}
+
+html.person5 .hljs-code-block .code-header {
+  background: #161616 !important;
+  border-bottom: 1px solid rgba(255, 247, 232, 0.52) !important;
+}
+
+html.person5 .hljs-code-block .code-lang,
+html.person5 .hljs-code-block .copy-btn {
+  color: #fff7e8 !important;
+  font-size: 12px !important;
+  font-weight: 900;
+  text-shadow: 1px 1px 0 #000;
+}
+
+html.person5 .hljs-code-block .copy-btn:hover {
+  color: #fff !important;
+  background: #e60012 !important;
+}
+
+html.person5 .hljs-code-block code.hljs,
+html.person5 .tool-detail-code-block code.hljs {
+  color: #fff7e8 !important;
+  font-size: 14px !important;
+  line-height: 1.62 !important;
+  background: #101010 !important;
+}
+
+html.person5 .tool-detail-code-block code.hljs {
+  max-height: 360px !important;
+}
+
+html.person5 .hljs-code-block .hljs-keyword,
+html.person5 .hljs-code-block .hljs-selector-tag,
+html.person5 .hljs-code-block .hljs-meta .hljs-keyword {
+  color: #ff5252 !important;
+  font-weight: 900;
+}
+
+html.person5 .hljs-code-block .hljs-string,
+html.person5 .hljs-code-block .hljs-attr,
+html.person5 .hljs-code-block .hljs-regexp,
+html.person5 .hljs-code-block .hljs-template-variable {
+  color: #5ef2e2 !important;
+}
+
+html.person5 .hljs-code-block .hljs-number,
+html.person5 .hljs-code-block .hljs-literal,
+html.person5 .hljs-code-block .hljs-symbol,
+html.person5 .hljs-code-block .hljs-bullet {
+  color: #ffd866 !important;
+}
+
+html.person5 .hljs-code-block .hljs-comment,
+html.person5 .hljs-code-block .hljs-quote,
+html.person5 .hljs-code-block .hljs-meta {
+  color: #c9c0b4 !important;
+}
+
+html.person5 .hljs-code-block .hljs-built_in,
+html.person5 .hljs-code-block .hljs-title.class_,
+html.person5 .hljs-code-block .hljs-title.function_ {
+  color: #8ad8ff !important;
+}
+
+html.person5 .hljs-code-block .hljs-type,
+html.person5 .hljs-code-block .hljs-variable,
+html.person5 .hljs-code-block .hljs-property,
+html.person5 .hljs-code-block .hljs-params {
+  color: #ffb6b6 !important;
+}
+
+html.person5 .hljs-code-block .hljs-tag,
+html.person5 .hljs-code-block .hljs-name,
+html.person5 .hljs-code-block .hljs-section,
+html.person5 .hljs-code-block .hljs-title {
+  color: #fff7e8 !important;
+}
+
+html.person5 .hljs-code-block.hljs-unified-diff .diff-line-number {
+  color: #d8d1c7 !important;
+  background: rgba(255, 247, 232, 0.08) !important;
+}
+
+html.person5 .hljs-code-block.hljs-unified-diff .diff-line-added {
+  color: #b9ffcf !important;
+  background: rgba(42, 168, 85, 0.24) !important;
+}
+
+html.person5 .hljs-code-block.hljs-unified-diff .diff-line-removed {
+  color: #ffc0c0 !important;
+  background: rgba(230, 0, 18, 0.24) !important;
+}
+
+html.person5 .terminal-panel-drawer {
+  color: #fff7e8 !important;
+  background: #080808 !important;
+}
+
+html.person5 .terminal-header,
+html.person5 .terminal-sidebar {
+  color: #fff7e8 !important;
+  background: #111 !important;
+  border-color: rgba(255, 247, 232, 0.42) !important;
+}
+
+html.person5 .terminal-container,
+html.person5 .terminal-xterm {
+  background: #080808 !important;
+  border-color: #fff7e8 !important;
+}
+
+html.person5 .terminal-xterm .xterm {
+  font-size: 15px !important;
 }
 
 html.person5 .chat-input-area {
