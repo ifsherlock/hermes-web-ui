@@ -940,6 +940,7 @@ onMounted(() => {
               class="nav-item p5-model-item"
               :class="{ active: item.model === appStore.selectedModel && item.provider === appStore.selectedProvider }"
               type="button"
+              :title="`${item.providerLabel} / ${item.label} (${item.model})`"
               @click="handleP5ModelSwitch(item.model, item.provider)"
             >
               <span class="p5-model-mark">M</span>

@@ -39,13 +39,16 @@ extraResources:
     filter:
       - "package.json"
       - "dist/**"
-      - "node_modules/**"
-      # Drop other-platform node-pty prebuilds (saves ~45MB)
+      # The server build is bundled into dist/server/index.js. Keep only the
+      # native dependency that cannot be bundled, otherwise NSIS has to unpack
+      # tens of thousands of development files and appears to stall.
+      - "node_modules/node-pty/package.json"
+      - "node_modules/node-pty/lib/**"
+      - "node_modules/node-pty/prebuilds/**"
       - "!node_modules/node-pty/prebuilds/!(${platform}-${arch})/**"
-      - "!node_modules/node-pty/build/**"
       - "!packages/desktop/**"
       - "!**/{.git,.github,docs,tests,playwright.config.ts,README*,scripts,*.map}"
-      - "!node_modules/**/*.md"
+      - "!node_modules/**/*.map"
 
 asarUnpack:
   - "**/*.node"

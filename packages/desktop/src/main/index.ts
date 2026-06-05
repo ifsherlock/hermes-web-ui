@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage } from 'electron'
 import { join } from 'node:path'
 import { startWebUiServer, stopWebUiServer, getToken } from './webui-server'
+import { startStaticClientServer, stopStaticClientServer } from './static-client-server'
 import { desktopIcon, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin } from './paths'
 import { checkForDesktopUpdates, initAutoUpdater } from './updater'
 import { t } from './desktop-i18n'
@@ -152,7 +153,7 @@ function createWindow() {
   mainWindow.on('show', updateTrayMenu)
   mainWindow.on('hide', updateTrayMenu)
 
-  // External links → system browser
+  // External links open in the system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) {
       return { action: 'allow' }
@@ -221,31 +222,33 @@ function runtimeSourceHtml(errorMessage?: string): string {
   *{box-sizing:border-box}
   html,body{margin:0;min-height:100%;background:#191919;color:#f1f1f1;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;}
   body{display:grid;place-items:center;padding:32px}
-  .wrap{width:min(720px,100%);display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+  .wrap{width:min(920px,100%);display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
   .brand{display:flex;align-items:center;gap:10px;color:#f6f6f6}
   .mark{width:32px;height:32px;border-radius:7px;background:#f0f0f0;color:#171717;display:grid;place-items:center;font-weight:700;font-size:16px}
   h1{font-weight:560;margin:0;font-size:22px;line-height:1.25}
-  .label{max-width:520px;font-size:14px;line-height:1.6;color:#b9b9b9;margin:0}
-  .actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-  button{min-height:86px;border:1px solid #4c4c4c;border-radius:8px;background:#242424;color:#f2f2f2;cursor:pointer;padding:16px;text-align:left;display:flex;flex-direction:column;gap:7px;transition:background .14s ease,border-color .14s ease,transform .14s ease}
+  .label{max-width:620px;font-size:14px;line-height:1.6;color:#b9b9b9;margin:0}
+  .actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  button{min-height:92px;border:1px solid #4c4c4c;border-radius:8px;background:#242424;color:#f2f2f2;cursor:pointer;padding:16px;text-align:left;display:flex;flex-direction:column;gap:7px;transition:background .14s ease,border-color .14s ease,transform .14s ease}
   button:hover{background:#2d2d2d;border-color:#747474;transform:translateY(-1px)}
   button:active{transform:translateY(0)}
   button:focus-visible{outline:2px solid #dcdcdc;outline-offset:3px}
   .button-title{font-size:15px;font-weight:650;line-height:1.2}
   .button-detail{font-size:12px;line-height:1.45;color:#aaaaaa}
+  .remote-button{border-color:#7f1d1d;background:linear-gradient(135deg,#351414,#202020 58%,#141414)}
+  .remote-button:hover{border-color:#d05252;background:linear-gradient(135deg,#471717,#282828 58%,#181818)}
   .error{width:100%;text-align:left;background:#241b1b;border:1px solid #6b3939;border-radius:8px;padding:14px}
   .error-title{font-size:13px;font-weight:650;color:#ffc3c3;margin-bottom:8px}
   pre{width:100%;max-height:180px;overflow:auto;white-space:pre-wrap;margin:0;color:#ffaaaa;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-  @media (max-width:560px){
-    body{padding:24px}
-    .actions{grid-template-columns:1fr}
-    button{min-height:78px}
-  }
+  @media (max-width:720px){body{padding:24px}.actions{grid-template-columns:1fr}button{min-height:78px}}
 </style></head><body><main class="wrap">
 <div class="brand"><div class="mark">H</div><h1>Hermes Studio</h1></div>
-<p class="label">${escapeHtml(t('desktop.selectRuntimeSource'))}</p>
+<p class="label">璇烽€夋嫨鍚姩鏂瑰紡銆傛湰鍦扮増缁х画浠庝笅杞芥簮瀹夎 Hermes 杩愯鏃讹紱杩滅▼妯″紡浼氭墦寮€鍓嶇鐧诲綍椤碉紝鏈嶅姟鍣ㄥ湴鍧€鍙渶瑕佸湪閭ｉ噷濉啓涓€娆°€?/p>
 ${errorBlock}
 <div class="actions">
+  <button id="remote" class="remote-button">
+    <span class="button-title">杩滅▼妯″紡</span>
+    <span class="button-detail">杩炴帴 NAS 鎴栧眬鍩熺綉閲岀殑 Hermes 鏈嶅姟锛屼笉涓嬭浇鏈満杩愯鏃躲€?/span>
+  </button>
   <button id="cf">
     <span class="button-title">${escapeHtml(t('desktop.downloadCloudflareTitle'))}</span>
     <span class="button-detail">${escapeHtml(t('desktop.downloadCloudflareDetail'))}</span>
@@ -256,6 +259,9 @@ ${errorBlock}
   </button>
 </div>
 <script>
+  document.getElementById('remote')?.addEventListener('click', async () => {
+    await window.hermesDesktop?.enterRemoteMode?.()
+  })
   document.getElementById('cf')?.addEventListener('click', () => {
     window.hermesDesktop?.retryBootstrap?.('cf')
   })
@@ -266,7 +272,6 @@ ${errorBlock}
 </main></body></html>`
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(html)
 }
-
 function envRuntimeDownloadSource(): RuntimeDownloadSource | undefined {
   const source = process.env.HERMES_DESKTOP_RUNTIME_SOURCE?.trim().toLowerCase()
   return source === 'cf' || source === 'github' ? source : undefined
@@ -365,6 +370,11 @@ async function bootstrap(source?: RuntimeDownloadSource) {
 }
 
 ipcMain.handle('hermes-desktop:get-token', () => getToken())
+ipcMain.handle('hermes-desktop:enter-remote-mode', async () => {
+  const url = await startStaticClientServer()
+  serverUrl = url
+  await mainWindow?.loadURL(url)
+})
 ipcMain.handle('hermes-desktop:retry-bootstrap', async (_event, source?: RuntimeDownloadSource) => {
   if (serverUrl) {
     await mainWindow?.loadURL(serverUrl)
@@ -440,6 +450,7 @@ function runDesktopApp() {
     }
     e.preventDefault()
     await stopWebUiServer().catch(() => undefined)
+    await stopStaticClientServer().catch(() => undefined)
     app.exit(0)
   })
 }

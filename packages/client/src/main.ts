@@ -19,6 +19,9 @@ const isComic = savedStyle === 'comic'
 const isPerson5 = savedStyle === 'person5'
 
 // Apply classes to prevent FOUC
+if ((window as typeof window & { hermesDesktop?: { isDesktop?: boolean } }).hermesDesktop?.isDesktop === true) {
+  document.documentElement.classList.add('desktop-shell')
+}
 if (isDark) {
   document.documentElement.classList.add('dark')
 }

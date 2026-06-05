@@ -8144,3 +8144,77 @@ html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.tool .to
 html.person5 .sidebar.collapsed + .app-main .chat-main-content .message.user .msg-body {
   max-width: min(75%, 960px) !important;
 }
+
+/* PERSON5 targeted stability fixes: keep the model picker readable and the
+   System -> Profile gap controlled after the earlier broad submenu rules. */
+html.person5 .sidebar-nav {
+  margin-bottom: 0 !important;
+}
+
+html.person5 .sidebar-nav > .nav-group-system {
+  margin-bottom: var(--p5-primary-pair-gap) !important;
+}
+
+html.person5 .p5-sidebar-controls {
+  margin-top: 0 !important;
+}
+
+html.person5 .p5-control-model .p5-submenu-scroll {
+  width: min(600px, calc(100% - 36px)) !important;
+  max-height: calc((72px * 4) + 48px) !important;
+  margin-right: 18px !important;
+  margin-left: 18px !important;
+  padding-right: 12px !important;
+  padding-left: 12px !important;
+}
+
+html.person5 .p5-control-model .p5-submenu-scroll:not(.collapsed) .p5-model-item {
+  width: min(568px, calc(100% - 8px)) !important;
+  min-height: 72px !important;
+  height: 72px !important;
+  justify-content: flex-start !important;
+  padding-right: 24px !important;
+  padding-left: 22px !important;
+  text-align: left !important;
+}
+
+html.person5 .p5-control-model .p5-model-item .p5-model-mark {
+  width: 46px !important;
+  height: 46px !important;
+  flex: 0 0 46px !important;
+  font-size: 26px !important;
+}
+
+html.person5 .p5-control-model .p5-model-item .p5-submenu-main {
+  max-width: calc(100% - 182px) !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+
+html.person5 .p5-control-model .p5-model-item .p5-submenu-sub {
+  max-width: 126px !important;
+  min-width: 70px !important;
+  margin-left: auto !important;
+  text-align: right !important;
+}
+
+html.person5 .p5-control-model .p5-submenu-more {
+  margin-left: 210px !important;
+}
+
+@media (max-width: 760px) {
+  html.person5 .p5-control-model .p5-submenu-scroll {
+    width: min(360px, calc(100% - 28px)) !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
+  }
+
+  html.person5 .p5-control-model .p5-submenu-scroll:not(.collapsed) .p5-model-item {
+    width: min(332px, calc(100% - 8px)) !important;
+  }
+
+  html.person5 .p5-control-model .p5-submenu-more {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}

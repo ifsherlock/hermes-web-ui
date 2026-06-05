@@ -1,8 +1,134 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+try {
+  document.documentElement.classList.add('desktop-shell')
+} catch {
+  /* ignore */
+}
+
+function installDesktopPerson5FixCss(): void {
+  const styleId = 'hermes-desktop-person5-fix'
+  if (document.getElementById(styleId)) return
+  const style = document.createElement('style')
+  style.id = styleId
+  style.textContent = `
+html.person5.desktop-shell,
+html.person5.desktop-shell body,
+html.person5.desktop-shell #app {
+  width: 100% !important;
+  height: 100vh !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+
+html.person5.desktop-shell body::before {
+  opacity: 0.18 !important;
+  pointer-events: none !important;
+}
+
+html.person5.desktop-shell .app-layout:not(.no-sidebar) {
+  width: 100% !important;
+  height: calc(100vh - var(--p5-top-height, 86px)) !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+
+html.person5.desktop-shell .app-main {
+  position: relative !important;
+  z-index: 1 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+html.person5.desktop-shell .app-main::before,
+html.person5.desktop-shell .app-main::after,
+html.person5.desktop-shell .chat-panel::before,
+html.person5.desktop-shell .chat-panel::after,
+html.person5.desktop-shell .chat-content-wrapper::before,
+html.person5.desktop-shell .chat-content-wrapper::after {
+  pointer-events: none !important;
+}
+
+html.person5.desktop-shell .p5-command-bar {
+  position: relative !important;
+  z-index: 60 !important;
+  width: 100% !important;
+}
+
+html.person5.desktop-shell .sidebar {
+  position: relative !important;
+  z-index: 40 !important;
+  height: calc(100vh - var(--p5-top-height, 86px)) !important;
+}
+
+html.person5.desktop-shell .chat-view,
+html.person5.desktop-shell .chat-panel,
+html.person5.desktop-shell .chat-main {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+html.person5.desktop-shell .chat-content-wrapper {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
+}
+
+html.person5.desktop-shell .session-backdrop:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+html.person5.desktop-shell .session-list.collapsed {
+  pointer-events: none !important;
+}
+
+html.person5.desktop-shell button,
+html.person5.desktop-shell a,
+html.person5.desktop-shell input,
+html.person5.desktop-shell textarea,
+html.person5.desktop-shell select,
+html.person5.desktop-shell .n-button,
+html.person5.desktop-shell .nav-group-label,
+html.person5.desktop-shell .nav-item,
+html.person5.desktop-shell .p5-session-handle,
+html.person5.desktop-shell .chat-input-area {
+  pointer-events: auto !important;
+}
+`
+  document.head.appendChild(style)
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', installDesktopPerson5FixCss, { once: true })
+} else {
+  installDesktopPerson5FixCss()
+}
+
 contextBridge.exposeInMainWorld('hermesDesktop', {
   getToken: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:get-token'),
   retryBootstrap: (source?: 'cf' | 'github'): Promise<void> => ipcRenderer.invoke('hermes-desktop:retry-bootstrap', source),
+  enterRemoteMode: (): Promise<void> => ipcRenderer.invoke('hermes-desktop:enter-remote-mode'),
   platform: process.platform,
   isDesktop: true,
 })
