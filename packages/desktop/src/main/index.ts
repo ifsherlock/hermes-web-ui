@@ -226,7 +226,7 @@ function runtimeSourceHtml(errorMessage?: string): string {
   .brand{display:flex;align-items:center;gap:10px;color:#f6f6f6}
   .mark{width:32px;height:32px;border-radius:7px;background:#f0f0f0;color:#171717;display:grid;place-items:center;font-weight:700;font-size:16px}
   h1{font-weight:560;margin:0;font-size:22px;line-height:1.25}
-  .label{max-width:620px;font-size:14px;line-height:1.6;color:#b9b9b9;margin:0}
+  .label{max-width:680px;font-size:14px;line-height:1.6;color:#b9b9b9;margin:0}
   .actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   button{min-height:92px;border:1px solid #4c4c4c;border-radius:8px;background:#242424;color:#f2f2f2;cursor:pointer;padding:16px;text-align:left;display:flex;flex-direction:column;gap:7px;transition:background .14s ease,border-color .14s ease,transform .14s ease}
   button:hover{background:#2d2d2d;border-color:#747474;transform:translateY(-1px)}
@@ -242,12 +242,12 @@ function runtimeSourceHtml(errorMessage?: string): string {
   @media (max-width:720px){body{padding:24px}.actions{grid-template-columns:1fr}button{min-height:78px}}
 </style></head><body><main class="wrap">
 <div class="brand"><div class="mark">H</div><h1>Hermes Studio</h1></div>
-<p class="label">璇烽€夋嫨鍚姩鏂瑰紡銆傛湰鍦扮増缁х画浠庝笅杞芥簮瀹夎 Hermes 杩愯鏃讹紱杩滅▼妯″紡浼氭墦寮€鍓嶇鐧诲綍椤碉紝鏈嶅姟鍣ㄥ湴鍧€鍙渶瑕佸湪閭ｉ噷濉啓涓€娆°€?/p>
+<p class="label">&#35831;&#36873;&#25321;&#21551;&#21160;&#26041;&#24335;&#12290;&#26412;&#22320;&#27169;&#24335;&#20250;&#19979;&#36733;&#24182;&#21551;&#21160;&#20869;&#32622; Hermes &#36816;&#34892;&#26102;&#65307;&#36828;&#31243;&#27169;&#24335;&#21482;&#25171;&#24320;&#21069;&#31471;&#65292;&#29992;&#20110;&#36830;&#25509;&#20320;&#24050;&#26377;&#30340; Hermes &#26381;&#21153;&#12290;</p>
 ${errorBlock}
 <div class="actions">
   <button id="remote" class="remote-button">
-    <span class="button-title">杩滅▼妯″紡</span>
-    <span class="button-detail">杩炴帴 NAS 鎴栧眬鍩熺綉閲岀殑 Hermes 鏈嶅姟锛屼笉涓嬭浇鏈満杩愯鏃躲€?/span>
+    <span class="button-title">&#36828;&#31243;&#27169;&#24335;</span>
+    <span class="button-detail">&#36830;&#25509;&#24050;&#26377; Hermes &#26381;&#21153;&#65292;&#19981;&#19979;&#36733;&#26412;&#26426;&#36816;&#34892;&#26102;&#12290;</span>
   </button>
   <button id="cf">
     <span class="button-title">${escapeHtml(t('desktop.downloadCloudflareTitle'))}</span>
