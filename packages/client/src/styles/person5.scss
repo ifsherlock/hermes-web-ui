@@ -8070,6 +8070,10 @@ html.person5 .sidebar-nav {
   padding-bottom: 112px !important;
 }
 
+html.person5 .sidebar:not(.collapsed) .sidebar-nav {
+  padding-bottom: 0 !important;
+}
+
 html.person5 .sidebar::after {
   content: "";
   position: fixed;
@@ -8156,7 +8160,7 @@ html.person5 .sidebar-nav > .nav-group-system {
 }
 
 html.person5 .p5-sidebar-controls {
-  margin-top: -50px !important;
+  margin-top: 0 !important;
 }
 
 html.person5 .p5-control-model .p5-submenu-scroll {
@@ -8219,6 +8223,6 @@ html.person5 .p5-control-model .p5-submenu-more {
   }
 
   html.person5 .p5-sidebar-controls {
-    margin-top: -24px !important;
+    margin-top: 0 !important;
   }
 }
