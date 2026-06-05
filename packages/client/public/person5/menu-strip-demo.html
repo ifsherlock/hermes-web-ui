@@ -102,21 +102,20 @@
     .p5-star-white-large {
       --size: 43px;
       --rot: 21deg;
-      --stroke: 6px;
-      --fill: var(--p5-white);
+      --stroke: 4px;
+      --fill: var(--p5-black);
       left: 44px;
       top: 35px;
-      background: var(--p5-black);
-      filter: drop-shadow(2px 2px 0 var(--p5-line));
+      background: var(--p5-line);
+      filter: drop-shadow(3px 3px 0 var(--p5-black));
     }
 
     .p5-star-white-large::after {
       position: absolute;
-      inset: 13px;
+      inset: 10px;
       content: "";
       clip-path: inherit;
-      background: transparent;
-      border: 3px solid var(--p5-black);
+      background: var(--p5-white);
       transform: rotate(8deg);
     }
 
@@ -138,6 +137,17 @@
       left: 63px;
       top: 5px;
       background: var(--p5-black);
+    }
+
+    .p5-star-white-tiny {
+      --size: 12px;
+      --rot: -8deg;
+      --stroke: 2px;
+      --fill: var(--p5-white);
+      left: 32px;
+      top: 2px;
+      background: var(--p5-black);
+      opacity: 0.86;
     }
 
     .p5-z-line,
@@ -251,6 +261,7 @@
         <span class="p5-star p5-star-white-large"></span>
         <span class="p5-star p5-star-red-small"></span>
         <span class="p5-star p5-star-white-small"></span>
+        <span class="p5-star p5-star-white-tiny"></span>
       </div>
 
       <svg class="p5-seven-line" viewBox="0 0 136 50" aria-hidden="true">
