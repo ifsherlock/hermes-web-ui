@@ -1,14 +1,26 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 
-const { isDark, isComic, toggleBrightness, toggleStyle } = useTheme()
+const { isDark, isComic, isPerson5, toggleBrightness, toggleStyle } = useTheme()
+
+const nextStyleTitle = computed(() => {
+  if (isPerson5.value) return 'Ink style'
+  if (isComic.value) return 'PERSON5 style'
+  return 'Comic style'
+})
 </script>
 
 <template>
   <div class="theme-switch-container" style="display: flex; gap: 4px; align-items: center;">
-    <button class="theme-switch" :title="isComic ? 'Ink style' : 'Comic style'" @click="toggleStyle">
+    <button class="theme-switch" :class="{ 'person5-active': isPerson5 }" :title="nextStyleTitle" @click="toggleStyle">
+      <!-- Persona-style mark -->
+      <svg v-if="isPerson5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 17L9 4l3 9 4-7 4 14" />
+        <path d="M7 14h10" />
+      </svg>
       <!-- Palette icon for comic toggle -->
-      <svg v-if="isComic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg v-else-if="isComic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
       </svg>
       <!-- Sparkle icon for ink mode -->

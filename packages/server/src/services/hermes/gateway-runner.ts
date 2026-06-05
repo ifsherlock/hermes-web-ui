@@ -1,5 +1,6 @@
 import { getActiveProfileDir } from './hermes-profile'
 import { spawnHermesWithBin } from './hermes-process'
+import { logger } from '../logger'
 
 export function startGatewayRunManaged(
   hermesBin: string,
@@ -14,6 +15,16 @@ export function startGatewayRunManaged(
       ...process.env,
       HERMES_HOME: profileDir,
     },
+  })
+  child.once('error', (err) => {
+    logger.warn(
+      err,
+      '[gateway-runner] failed to spawn Hermes gateway process; Web UI will continue without gateway autostart',
+    )
+    console.warn(
+      '[gateway-runner] failed to spawn Hermes gateway process; Web UI will continue without gateway autostart:',
+      err instanceof Error ? err.message : err,
+    )
   })
   child.unref()
 

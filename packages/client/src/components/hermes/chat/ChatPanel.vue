@@ -26,6 +26,7 @@ import MessageList from "./MessageList.vue";
 import SessionListItem from "./SessionListItem.vue";
 import DrawerPanel from "./DrawerPanel.vue";
 import OutlinePanel from "./OutlinePanel.vue";
+import { useTheme } from "@/composables/useTheme";
 
 const chatStore = useChatStore();
 const appStore = useAppStore();
@@ -34,6 +35,7 @@ const sessionBrowserPrefsStore = useSessionBrowserPrefsStore();
 const router = useRouter();
 const message = useMessage();
 const { t } = useI18n();
+const { isPerson5 } = useTheme();
 
 const showDrawer = ref(false);
 const drawerActiveTab = ref<"terminal" | "files">("files");
@@ -56,10 +58,19 @@ const isBatchDeleting = ref(false);
 // moment" — that was the race).
 const showSessions = ref(
   typeof window === "undefined" ||
-    !window.matchMedia("(max-width: 768px)").matches,
+    (!window.matchMedia("(max-width: 768px)").matches &&
+      !document.documentElement.classList.contains("person5")),
 );
 let mobileQuery: MediaQueryList | null = null;
 const isMobile = ref(false);
+
+function syncSessionsForTheme() {
+  if (isMobile.value || isPerson5.value) {
+    showSessions.value = false;
+    return;
+  }
+  showSessions.value = true;
+}
 
 function sessionHref(sessionId: string) {
   return router.resolve({
@@ -87,9 +98,7 @@ async function handleSessionClick(sessionId: string) {
 
 function handleMobileChange(e: MediaQueryListEvent | MediaQueryList) {
   isMobile.value = e.matches;
-  if (e.matches && showSessions.value) {
-    showSessions.value = false;
-  }
+  syncSessionsForTheme();
 }
 
 onMounted(() => {
@@ -103,6 +112,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   mobileQuery?.removeEventListener("change", handleMobileChange);
+});
+
+watch(isPerson5, () => {
+  syncSessionsForTheme();
 });
 const showRenameModal = ref(false);
 const renameValue = ref("");
@@ -1092,6 +1105,20 @@ async function handleSessionModelCustomSubmit() {
     </NModal>
 
     <div class="chat-main">
+      <button
+        v-if="currentMode === 'chat'"
+        class="p5-session-handle"
+        :class="{ open: showSessions }"
+        type="button"
+        :aria-pressed="showSessions"
+        aria-label="切换会话栏"
+        @click="showSessions = !showSessions"
+      >
+        <span>会话</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
       <header class="chat-header">
         <div class="header-left">
           <NButton
@@ -2347,4 +2374,5 @@ async function handleSessionModelCustomSubmit() {
     }
   }
 }
+
 </style>

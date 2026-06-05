@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { NButton, NModal, useMessage } from "naive-ui";
 import { useAppStore } from "@/stores/hermes/app";
+import { useProfilesStore } from "@/stores/hermes/profiles";
+import ProfileAvatarView from "@/components/hermes/profiles/ProfileAvatar.vue";
 import ModelSelector from "./ModelSelector.vue";
 import ProfileSelector from "./ProfileSelector.vue";
 import LanguageSwitch from "./LanguageSwitch.vue";
 import ThemeSwitch from "./ThemeSwitch.vue";
 import { useSessionSearch } from '@/composables/useSessionSearch'
 import { usePersistentRecord } from '@/composables/usePersistentRecord'
+import { useTheme } from '@/composables/useTheme'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import { changelog } from "@/data/changelog";
 import { isStoredSuperAdmin } from "@/api/client";
@@ -19,6 +22,8 @@ const message = useMessage();
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
+const profilesStore = useProfilesStore();
+const { isPerson5 } = useTheme();
 const { openSessionSearch } = useSessionSearch();
 const selectedKey = computed(() => {
   if (route.name === "hermes.session") return "hermes.chat";
@@ -40,18 +45,148 @@ const logoPath = '/logo.png';
 const { record: collapsedGroups, persist: persistCollapsedGroups } = usePersistentRecord('hermes.sidebar.collapsedGroups');
 
 type SidebarGroupKey = "Conversation" | "Agent" | "Monitoring" | "Tools" | "System";
+type Person5ControlKey = "profile" | "model";
+
+const person5GroupLabels: Record<SidebarGroupKey, string> = {
+  Conversation: "作战会议室",
+  Agent: "心之怪盗团",
+  Monitoring: "潜入记录",
+  Tools: "黑匣子终端",
+  System: "系统面板",
+};
+
+const person5GroupMeta: Record<SidebarGroupKey, { subtitle: string; hot?: string }> = {
+  Conversation: { subtitle: "作战 / 潜入" },
+  Agent: { subtitle: "成员 / 侧写", hot: "心" },
+  Monitoring: { subtitle: "会话 / 档案", hot: "入" },
+  Tools: { subtitle: "终端 / 黑箱", hot: "黑" },
+  System: { subtitle: "控制 / 状态" },
+};
+
+const person5ControlMeta: Record<Person5ControlKey, { title: string; subtitle: string; hot?: string }> = {
+  profile: { title: "人格面具", subtitle: "Persona / 侧写", hot: "面" },
+  model: { title: "模型", subtitle: "Model / 调度" },
+};
+
+const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
+  profile: true,
+  model: true,
+});
+const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
+const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
+const p5ModelSubmenuRef = ref<HTMLElement | null>(null);
+
+const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
+const activeProfileModels = computed(() => {
+  const profileModels = appStore.profileModelGroups.find(entry => entry.profile === activeProfileName.value);
+  return profileModels?.groups || appStore.modelGroups || [];
+});
+const p5ModelItems = computed(() => activeProfileModels.value.flatMap(group => {
+  const models = [
+    ...group.models,
+    ...(appStore.customModels[group.provider] || []).filter(model => !group.models.includes(model)),
+  ];
+  return models.map(model => ({
+    provider: group.provider,
+    providerLabel: group.label,
+    model,
+    label: appStore.displayModelName(model, group.provider),
+  }));
+}));
+const p5SelectedModelLabel = computed(() => (
+  appStore.selectedModel
+    ? appStore.displayModelName(appStore.selectedModel, appStore.selectedProvider)
+    : "未选择"
+));
 
 function groupLabel(key: SidebarGroupKey) {
+  if (isPerson5.value) {
+    return person5GroupLabels[key];
+  }
   return t(`sidebar.group${key}${appStore.sidebarCollapsed ? "Short" : ""}`);
 }
 
+function groupSubtitle(key: SidebarGroupKey) {
+  return person5GroupMeta[key].subtitle;
+}
+
+function groupTitleChars(key: SidebarGroupKey) {
+  const title = person5GroupLabels[key];
+  const hot = person5GroupMeta[key].hot;
+  return titleChars(title, hot);
+}
+
+function controlTitleChars(key: Person5ControlKey) {
+  const meta = person5ControlMeta[key];
+  return titleChars(meta.title, meta.hot);
+}
+
+function titleChars(title: string, hot?: string) {
+  if (!hot) return Array.from(title).map((text) => ({ text, hot: false }));
+  const index = title.indexOf(hot);
+  if (index < 0) return Array.from(title).map((text) => ({ text, hot: false }));
+  return Array.from(title).map((text, charIndex) => ({
+    text,
+    hot: charIndex >= index && charIndex < index + hot.length,
+  }));
+}
+
 function toggleGroup(key: string) {
-  collapsedGroups[key] = !collapsedGroups[key];
+  collapsedGroups[key] = !isGroupCollapsed(key);
   persistCollapsedGroups();
 }
 
 function isGroupCollapsed(key: string) {
+  if (isPerson5.value && collapsedGroups[key] === undefined) {
+    return true;
+  }
   return !!collapsedGroups[key];
+}
+
+function toggleP5Control(key: Person5ControlKey) {
+  p5ControlCollapsed.value[key] = !p5ControlCollapsed.value[key];
+}
+
+function isP5ControlCollapsed(key: Person5ControlKey) {
+  return p5ControlCollapsed.value[key];
+}
+
+function scrollP5Submenu(key: Person5ControlKey) {
+  const el = key === "profile" ? p5ProfileSubmenuRef.value : p5ModelSubmenuRef.value;
+  if (!el) return;
+  const firstItem = el.querySelector<HTMLElement>(".nav-item");
+  const itemHeight = firstItem?.offsetHeight || 64;
+  el.scrollBy({
+    top: itemHeight * 4,
+    behavior: "smooth",
+  });
+}
+
+function scrollP5AgentSubmenu() {
+  const el = p5AgentSubmenuRef.value;
+  if (!el) return;
+  const firstItem = el.querySelector<HTMLElement>(".nav-item");
+  const itemHeight = firstItem?.offsetHeight || 64;
+  el.scrollBy({
+    top: itemHeight * 4,
+    behavior: "smooth",
+  });
+}
+
+async function handleP5ProfileSwitch(name: string) {
+  if (name === activeProfileName.value) return;
+  const ok = await profilesStore.switchProfile(name);
+  if (ok) {
+    message.success(`人格面具已切换：${name}`);
+  } else {
+    message.error("人格面具切换失败");
+  }
+}
+
+async function handleP5ModelSwitch(model: string, provider: string) {
+  if (model === appStore.selectedModel && provider === appStore.selectedProvider) return;
+  await appStore.switchModel(model, provider);
+  message.success(`模型已切换：${appStore.displayModelName(model, provider)}`);
 }
 
 
@@ -79,13 +214,25 @@ const showChangelog = ref(false);
 function openChangelog() {
   showChangelog.value = true;
 }
+
+onMounted(() => {
+  if (profilesStore.profiles.length === 0) {
+    void profilesStore.fetchProfiles();
+  }
+  void appStore.loadModels();
+});
 </script>
 
 <template>
   <aside class="sidebar" :class="{ open: appStore.sidebarOpen, collapsed: appStore.sidebarCollapsed }">
+    <div v-if="isPerson5" class="p5-sidebar-title">COMMAND MENU</div>
     <RouteLinkItem class="sidebar-logo" :to="{ name: 'hermes.chat' }">
       <img :src="logoPath" alt="Hermes Studio" class="logo-img" />
-      <span class="logo-text">Hermes Studio</span>
+      <span class="logo-copy">
+        <span class="p5-logo-title">卢布朗咖啡店</span>
+        <span class="logo-text">Hermes Studio</span>
+        <span class="p5-logo-subtitle">CAFÉ LEBLANC / HERMES STUDIO</span>
+      </span>
       <!-- <video class="logo-dance" :src="isDark ? danceVideoDark : danceVideoLight" autoplay loop muted playsinline /> -->
     </RouteLinkItem>
 
@@ -98,14 +245,41 @@ function openChangelog() {
 
     <nav class="sidebar-nav">
       <!-- Conversation -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-conversation" :class="{ expanded: !isGroupCollapsed('conversation') }">
         <div class="nav-group-label" @click="toggleGroup('conversation')">
-          <span>{{ groupLabel("Conversation") }}</span>
+          <template v-if="isPerson5">
+            <span class="p5-hero-card-media" aria-hidden="true"></span>
+            <span class="p5-menu-stars" aria-hidden="true"></span>
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-full">{{ groupLabel("Conversation") }}</span>
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in groupTitleChars('Conversation')"
+                  :key="`conversation-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ groupSubtitle("Conversation") }}</span>
+            </span>
+            <span class="p5-menu-gear" aria-hidden="true"></span>
+          </template>
+          <span v-else>{{ groupLabel("Conversation") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('conversation') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('conversation')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('conversation') }">
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.chat' }" :active="isNavActive('hermes.chat', 'hermes.session')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -139,14 +313,39 @@ function openChangelog() {
       </div>
 
       <!-- Agent -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-agent" :class="{ expanded: !isGroupCollapsed('agent') }">
         <div class="nav-group-label" @click="toggleGroup('agent')">
-          <span>{{ groupLabel("Agent") }}</span>
+          <template v-if="isPerson5">
+            <span class="p5-menu-stars" aria-hidden="true"></span>
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-full">{{ groupLabel("Agent") }}</span>
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in groupTitleChars('Agent')"
+                  :key="`agent-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ groupSubtitle("Agent") }}</span>
+            </span>
+          </template>
+          <span v-else>{{ groupLabel("Agent") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('agent') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('agent')" class="nav-group-items">
+        <div ref="p5AgentSubmenuRef" class="nav-group-items p5-limited-submenu" :class="{ collapsed: isGroupCollapsed('agent') }">
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.jobs' }" :active="selectedKey === 'hermes.jobs'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -217,17 +416,50 @@ function openChangelog() {
             <span>{{ t("sidebar.models") }}</span>
           </RouteLinkItem>
         </div>
+        <button
+          v-if="isPerson5 && !isGroupCollapsed('agent')"
+          class="p5-submenu-more p5-nav-submenu-more"
+          type="button"
+          @click.stop="scrollP5AgentSubmenu"
+        >
+          更多 ↓
+        </button>
       </div>
 
       <!-- Monitoring -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-monitoring" :class="{ expanded: !isGroupCollapsed('monitoring') }">
         <div class="nav-group-label" @click="toggleGroup('monitoring')">
-          <span>{{ groupLabel("Monitoring") }}</span>
+          <template v-if="isPerson5">
+            <span class="p5-menu-stars" aria-hidden="true"></span>
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-full">{{ groupLabel("Monitoring") }}</span>
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in groupTitleChars('Monitoring')"
+                  :key="`monitoring-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ groupSubtitle("Monitoring") }}</span>
+            </span>
+          </template>
+          <span v-else>{{ groupLabel("Monitoring") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('monitoring') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('monitoring')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('monitoring') }">
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.logs' }" :active="selectedKey === 'hermes.logs'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -263,14 +495,39 @@ function openChangelog() {
       </div>
 
       <!-- Tools -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-tools" :class="{ expanded: !isGroupCollapsed('tools') }">
         <div class="nav-group-label" @click="toggleGroup('tools')">
-          <span>{{ groupLabel("Tools") }}</span>
+          <template v-if="isPerson5">
+            <span class="p5-menu-stars" aria-hidden="true"></span>
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-full">{{ groupLabel("Tools") }}</span>
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in groupTitleChars('Tools')"
+                  :key="`tools-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ groupSubtitle("Tools") }}</span>
+            </span>
+          </template>
+          <span v-else>{{ groupLabel("Tools") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('tools') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('tools')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('tools') }">
           <RouteLinkItem v-if="hasRoute('hermes.codingAgents')" class="nav-item" :to="{ name: 'hermes.codingAgents' }" :active="selectedKey === 'hermes.codingAgents'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="16 18 22 12 16 6" />
@@ -294,14 +551,39 @@ function openChangelog() {
       </div>
 
       <!-- System -->
-      <div class="nav-group">
+      <div class="nav-group nav-group-system" :class="{ expanded: !isGroupCollapsed('system') }">
         <div class="nav-group-label" @click="toggleGroup('system')">
-          <span>{{ groupLabel("System") }}</span>
+          <template v-if="isPerson5">
+            <span class="p5-menu-stars" aria-hidden="true"></span>
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-full">{{ groupLabel("System") }}</span>
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in groupTitleChars('System')"
+                  :key="`system-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ groupSubtitle("System") }}</span>
+            </span>
+          </template>
+          <span v-else>{{ groupLabel("System") }}</span>
           <svg class="nav-group-arrow" :class="{ collapsed: isGroupCollapsed('system') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div v-show="!isGroupCollapsed('system')" class="nav-group-items">
+        <div class="nav-group-items" :class="{ collapsed: isGroupCollapsed('system') }">
           <RouteLinkItem v-if="isSuperAdmin" class="nav-item" :to="{ name: 'hermes.profiles' }" :active="selectedKey === 'hermes.profiles'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -320,11 +602,125 @@ function openChangelog() {
       </div>
     </nav>
 
-    <ProfileSelector />
-    <ModelSelector />
+    <div class="p5-sidebar-controls" :class="{ 'is-person5': isPerson5 }">
+      <template v-if="isPerson5">
+        <div class="nav-group p5-control-group p5-control-profile" :class="{ expanded: !isP5ControlCollapsed('profile') }">
+          <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('profile')">
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in controlTitleChars('profile')"
+                  :key="`profile-control-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ person5ControlMeta.profile.subtitle }}</span>
+              <span class="p5-current-value">{{ activeProfileName }}</span>
+            </span>
+            <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('profile') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <div ref="p5ProfileSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('profile') }">
+            <button
+              v-for="profile in profilesStore.profiles"
+              :key="profile.name"
+              class="nav-item p5-profile-item"
+              :class="{ active: profile.name === activeProfileName }"
+              type="button"
+              @click="handleP5ProfileSwitch(profile.name)"
+            >
+              <ProfileAvatarView :name="profile.name" :avatar="profile.avatar" :size="38" />
+              <span class="p5-submenu-main">{{ profile.name }}</span>
+            </button>
+          </div>
+          <button
+            v-if="profilesStore.profiles.length > 4 && !isP5ControlCollapsed('profile')"
+            class="p5-submenu-more"
+            type="button"
+            @click.stop="scrollP5Submenu('profile')"
+          >
+            更多人格面具 ↓
+          </button>
+        </div>
+
+        <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">
+          <button class="nav-group-label p5-control-label-main" type="button" @click="toggleP5Control('model')">
+            <span class="p5-notch-stars" aria-hidden="true">
+              <span class="p5-star p5-star-red p5-star-large"></span>
+              <span class="p5-star p5-star-white p5-star-large"></span>
+              <span class="p5-star p5-star-red p5-star-small"></span>
+              <span class="p5-star p5-star-white p5-star-small"></span>
+            </span>
+            <span class="p5-z-stripe" aria-hidden="true"></span>
+            <span class="p5-seven-stripe" aria-hidden="true"></span>
+            <span class="p5-menu-copy">
+              <span class="p5-menu-title">
+                <span
+                  v-for="(part, index) in controlTitleChars('model')"
+                  :key="`model-control-${part.text}-${index}`"
+                  class="p5-menu-char"
+                  :class="{ 'p5-menu-hot': part.hot }"
+                >
+                  {{ part.text }}
+                </span>
+              </span>
+              <span class="p5-menu-subtitle">{{ person5ControlMeta.model.subtitle }}</span>
+              <span class="p5-current-value">{{ p5SelectedModelLabel }}</span>
+            </span>
+            <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('model') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <div ref="p5ModelSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('model') }">
+            <button
+              v-for="item in p5ModelItems"
+              :key="`${item.provider}:${item.model}`"
+              class="nav-item p5-model-item"
+              :class="{ active: item.model === appStore.selectedModel && item.provider === appStore.selectedProvider }"
+              type="button"
+              @click="handleP5ModelSwitch(item.model, item.provider)"
+            >
+              <span class="p5-model-mark">M</span>
+              <span class="p5-submenu-main">{{ item.label }}</span>
+              <span class="p5-submenu-sub">{{ item.providerLabel }}</span>
+            </button>
+          </div>
+          <button
+            v-if="p5ModelItems.length > 4 && !isP5ControlCollapsed('model')"
+            class="p5-submenu-more"
+            type="button"
+            @click.stop="scrollP5Submenu('model')"
+          >
+            更多模型 ↓
+          </button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="p5-control-strip p5-control-profile">
+          <span class="p5-control-label">人格面具</span>
+          <ProfileSelector />
+        </div>
+        <div class="p5-control-strip p5-control-model">
+          <span class="p5-control-label">模型</span>
+          <ModelSelector />
+        </div>
+      </template>
+    </div>
 
     <div class="sidebar-footer">
-      <button class="nav-item logout-item" @click="handleLogout">
+      <button class="nav-item logout-item" :class="{ 'p5-logout-strip': isPerson5 }" @click="handleLogout">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
           <polyline points="16 17 21 12 16 7" />
@@ -467,6 +863,14 @@ function openChangelog() {
   border-top: 1px solid $border-color;
 }
 
+.p5-sidebar-controls {
+  display: contents;
+}
+
+.p5-control-label {
+  display: none;
+}
+
 .nav-group {
   display: flex;
   flex-direction: column;
@@ -483,6 +887,10 @@ function openChangelog() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+
+  &.collapsed {
+    display: none;
+  }
 }
 
 .nav-group-label {

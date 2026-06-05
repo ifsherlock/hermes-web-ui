@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" role="img" aria-label="PERSON5 command hero card background">
+  <defs>
+    <pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="1.8" fill="#050505" opacity=".45"/>
+    </pattern>
+    <filter id="rough" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency=".055" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="2.5"/>
+    </filter>
+    <filter id="hardShadow" x="-18%" y="-18%" width="136%" height="136%">
+      <feDropShadow dx="16" dy="18" stdDeviation="0" flood-color="#050505" flood-opacity="1"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#hardShadow)">
+    <path d="M44 116 128 42 236 50 280 18 602 30 706 118 615 194 355 214 208 190 108 220 68 168 8 174Z" fill="#050505"/>
+    <path d="M2 126 122 38 210 58 278 10 604 25 742 118 606 210 352 220 204 196 92 232 58 171Z" fill="#f5f1e6"/>
+    <path d="M42 119 136 59 242 64 302 32 588 38 700 114 590 184 344 198 206 175 116 206 83 160Z" fill="#d0001c" filter="url(#rough)"/>
+  </g>
+
+  <path d="M24 146 132 82 228 82 294 48 614 52 704 114 584 174 352 184 212 162 118 185 72 147Z" fill="#050505" opacity=".18"/>
+  <path d="M414 86 668 68 722 112 642 158 430 140Z" fill="url(#dots)" opacity=".95"/>
+  <path d="M92 72 172 38 192 54 122 110Z" fill="#f5f1e6"/>
+  <path d="M485 32 612 30 642 53 510 65Z" fill="#f5f1e6"/>
+  <path d="M118 196 219 173 332 192 212 211Z" fill="#050505"/>
+  <path d="M554 188 650 152 704 165 610 210Z" fill="#050505"/>
+
+  <g transform="translate(12 97) rotate(-12)">
+    <path d="M36 0 45 27 74 27 50 43 60 72 36 54 12 72 22 43 0 27 28 27Z" fill="#d0001c" stroke="#f5f1e6" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M76 36 83 56 104 56 87 68 94 90 76 77 58 90 65 68 48 56 69 56Z" fill="#f5f1e6" stroke="#050505" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M4 76 15 66 28 69 15 82 26 85 6 100 13 86Z" fill="#d0001c"/>
+  </g>
+
+  <g transform="translate(660 93)">
+    <circle cx="36" cy="36" r="32" fill="#050505" stroke="#f5f1e6" stroke-width="8"/>
+    <circle cx="36" cy="36" r="16" fill="#f5f1e6" stroke="#050505" stroke-width="7"/>
+    <path d="M36 0v18M36 54v18M0 36h18M54 36h18M11 11l13 13M48 48l13 13M61 11 48 24M24 48 11 61" stroke="#050505" stroke-width="10" stroke-linecap="square"/>
+    <path d="M36 0v18M36 54v18M0 36h18M54 36h18M11 11l13 13M48 48l13 13M61 11 48 24M24 48 11 61" stroke="#f5f1e6" stroke-width="5" stroke-linecap="square"/>
+  </g>
+
+  <path d="M74 152 190 139 174 153 332 136" fill="none" stroke="#f5f1e6" stroke-width="8" stroke-linecap="square"/>
+  <path d="M350 55 586 51 616 70" fill="none" stroke="#050505" stroke-width="13" stroke-linecap="square"/>
+  <path d="M350 55 586 51 616 70" fill="none" stroke="#f5f1e6" stroke-width="6" stroke-linecap="square"/>
+</svg>
