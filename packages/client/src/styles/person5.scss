@@ -49,7 +49,6 @@ html.person5 .sidebar {
   overscroll-behavior: contain;
   background:
     linear-gradient(115deg, rgba(6, 0, 0, 0.88), rgba(116, 0, 18, 0.44) 42%, rgba(5, 0, 0, 0.9) 72%),
-    url('/person5/p5x-bg.webp') center / cover no-repeat,
     #050505;
   scrollbar-width: thin;
   scrollbar-color: var(--p5-red) #050505;
@@ -2886,7 +2885,6 @@ html.person5 {
 html.person5 body {
   background:
     linear-gradient(112deg, rgba(0, 0, 0, 0.92) 0 33%, rgba(41, 0, 8, 0.82) 33% 58%, rgba(0, 0, 0, 0.88) 58% 100%),
-    url('/person5/p5x-bg.webp') center / cover fixed no-repeat,
     #050505;
 }
 
@@ -4220,7 +4218,6 @@ html.person5 .sidebar {
   overscroll-behavior: contain;
   background:
     linear-gradient(115deg, rgba(6, 0, 0, 0.88), rgba(116, 0, 18, 0.44) 42%, rgba(5, 0, 0, 0.9) 72%),
-    url('/person5/p5x-bg.webp') center / cover no-repeat,
     #050505;
   scrollbar-width: thin;
   scrollbar-color: var(--p5-red) #050505;
