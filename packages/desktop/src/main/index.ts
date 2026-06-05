@@ -131,7 +131,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'Hermes Studio',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0b0003',
     autoHideMenuBar: true,
     show: !START_HIDDEN,
     ...(process.platform === 'linux' ? { icon: desktopIcon() } : {}),

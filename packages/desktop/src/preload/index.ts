@@ -25,6 +25,24 @@ html.person5.desktop-shell #app {
   overflow: hidden !important;
 }
 
+html.person5.desktop-shell,
+html.person5.desktop-shell body {
+  background:
+    radial-gradient(circle at 76% 16%, rgba(227, 0, 18, 0.24), transparent 24rem),
+    linear-gradient(135deg, #050001 0 38%, #260006 38% 58%, #050001 58% 100%) !important;
+}
+
+html.person5.desktop-shell #app,
+html.person5.desktop-shell .app-layout:not(.no-sidebar) {
+  background: transparent !important;
+}
+
+html.person5.desktop-shell .app-layout:not(.no-sidebar)::before,
+html.person5.desktop-shell .app-layout:not(.no-sidebar)::after {
+  display: none !important;
+  content: none !important;
+}
+
 html.person5.desktop-shell body::before {
   opacity: 0.18 !important;
   pointer-events: none !important;
@@ -36,6 +54,7 @@ html.person5.desktop-shell .app-layout:not(.no-sidebar) {
   min-width: 0 !important;
   padding: 0 !important;
   gap: 0 !important;
+  background: transparent !important;
   overflow: hidden !important;
 }
 
