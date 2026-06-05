@@ -65,7 +65,7 @@ const person5GroupMeta: Record<SidebarGroupKey, { subtitle: string; hot?: string
 
 const person5ControlMeta: Record<Person5ControlKey, { title: string; subtitle: string; hot?: string }> = {
   profile: { title: "人格面具", subtitle: "Persona / 侧写", hot: "面" },
-  model: { title: "模型", subtitle: "Model / 调度" },
+  model: { title: "模型中枢", subtitle: "Model / 调度" },
 };
 
 const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
@@ -713,7 +713,7 @@ onMounted(() => {
           <ProfileSelector />
         </div>
         <div class="p5-control-strip p5-control-model">
-          <span class="p5-control-label">模型</span>
+          <span class="p5-control-label">模型中枢</span>
           <ModelSelector />
         </div>
       </template>
