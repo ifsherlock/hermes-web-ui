@@ -5307,10 +5307,14 @@ html.person5 .p5-profile-action:disabled {
 }
 
 html.person5 .nav-group-conversation .p5-hero-card-media {
-  transform: translateX(54px) scale(0.7) !important;
+  transform: translateX(104px) scale(0.7) !important;
   transform-origin: left center !important;
 }
 
+html.person5 .sidebar-nav {
+  gap: 9px !important;
+}
+
 html.person5 .sidebar-nav .nav-group {
-  margin-bottom: 9px !important;
+  margin-bottom: 0 !important;
 }
