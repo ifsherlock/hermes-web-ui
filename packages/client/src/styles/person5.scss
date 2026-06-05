@@ -865,7 +865,7 @@ html.person5 .nav-group-agent .p5-limited-submenu {
   overscroll-behavior: contain !important;
   pointer-events: auto !important;
   scrollbar-width: thin;
-  scrollbar-color: var(--p5-red) #050505;
+  scrollbar-color: transparent transparent;
   opacity: 1 !important;
   transform: none !important;
   grid-template-rows: none !important;
@@ -881,12 +881,12 @@ html.person5 .nav-group-agent .p5-limited-submenu::-webkit-scrollbar {
 }
 
 html.person5 .nav-group-agent .p5-limited-submenu::-webkit-scrollbar-thumb {
-  background: var(--p5-red);
-  border: 2px solid #050505;
+  background: transparent;
+  border: 2px solid transparent;
 }
 
 html.person5 .nav-group-agent .p5-limited-submenu::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.68);
+  background: transparent;
 }
 
 html.person5 .nav-group-agent .p5-limited-submenu .nav-item {
@@ -5040,15 +5040,38 @@ html.person5 .p5-submenu-scroll,
 html.person5 .p5-control-group .p5-submenu-scroll {
   width: min(310px, calc(100% - 128px)) !important;
   max-height: calc((92px * 4) + 54px) !important;
+  margin: 14px auto 0 !important;
   padding: 14px 12px 20px !important;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
 html.person5 .nav-group-agent .p5-limited-submenu {
-  margin-left: 118px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
 }
 
 html.person5 .p5-control-group .p5-submenu-scroll {
-  margin-left: 118px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+html.person5 .p5-limited-submenu::-webkit-scrollbar,
+html.person5 .p5-submenu-scroll::-webkit-scrollbar,
+html.person5 .p5-control-group .p5-submenu-scroll::-webkit-scrollbar {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+html.person5 .p5-limited-submenu::-webkit-scrollbar-thumb,
+html.person5 .p5-limited-submenu::-webkit-scrollbar-track,
+html.person5 .p5-submenu-scroll::-webkit-scrollbar-thumb,
+html.person5 .p5-submenu-scroll::-webkit-scrollbar-track,
+html.person5 .p5-control-group .p5-submenu-scroll::-webkit-scrollbar-thumb,
+html.person5 .p5-control-group .p5-submenu-scroll::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 html.person5 .p5-profile-item .profile-avatar-view,
@@ -5106,8 +5129,8 @@ html.person5 .p5-control-group .p5-submenu-more {
   html.person5 .p5-submenu-scroll,
   html.person5 .p5-control-group .p5-submenu-scroll {
     width: min(300px, calc(100% - 48px)) !important;
-    margin-left: 24px !important;
-    margin-right: 12px !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
   }
 
   html.person5 .nav-group-items:not(.collapsed) .nav-item:not(.logout-item),
