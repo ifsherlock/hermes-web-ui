@@ -24,6 +24,11 @@ const naiveTheme = computed(() => isDark.value ? darkTheme : null)
 
 const isLoginPage = computed(() => route.name === 'login')
 
+const p5RouteClass = computed(() => {
+  const routeName = typeof route.name === 'string' ? route.name : 'unknown'
+  return `p5-page-${routeName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+})
+
 const nodeVersionLow = computed(() => {
   const v = appStore.nodeVersion
   const major = parseInt(v.split('.')[0], 10)
@@ -194,7 +199,7 @@ watch(isPerson5, (active) => {
             </button>
             <div v-if="!isLoginPage && appStore.sidebarOpen" class="mobile-backdrop" @click="appStore.closeSidebar" />
             <AppSidebar v-if="!isLoginPage" />
-            <main class="app-main">
+            <main class="app-main" :class="isPerson5 ? p5RouteClass : undefined">
               <router-view />
             </main>
           </div>

@@ -8377,3 +8377,74 @@ html.person5 .session-model-item-name,
 html.person5 .session-model-item-id {
   color: inherit !important;
 }
+
+/* PERSON5 page backdrops: replace the large solid red stage with local P5 wallpaper layers. */
+html.person5 .app-main {
+  --p5-stage-wallpaper: url('/person5/login-wallpaper.webp');
+  --p5-stage-wallpaper-position: center center;
+  background:
+    radial-gradient(circle at 82% 16%, rgba(255, 247, 236, 0.14) 0 8px, transparent 9px 19rem),
+    repeating-linear-gradient(116deg, transparent 0 26px, rgba(255, 255, 255, 0.075) 26px 29px, transparent 29px 68px),
+    linear-gradient(108deg, rgba(0, 0, 0, 0.86) 0 28%, rgba(0, 0, 0, 0.62) 28% 64%, rgba(0, 0, 0, 0.88) 64% 100%),
+    var(--p5-stage-wallpaper) var(--p5-stage-wallpaper-position) / cover no-repeat,
+    #050505 !important;
+}
+
+html.person5 .app-main.p5-page-hermes-chat,
+html.person5 .app-main.p5-page-hermes-session,
+html.person5 .app-main.p5-page-hermes-history,
+html.person5 .app-main.p5-page-hermes-historysession,
+html.person5 .app-main.p5-page-hermes-terminal,
+html.person5 .app-main.p5-page-hermes-groupchat,
+html.person5 .app-main.p5-page-hermes-groupchatroom {
+  --p5-stage-wallpaper-position: center top;
+}
+
+html.person5 .app-main.p5-page-hermes-jobs,
+html.person5 .app-main.p5-page-hermes-kanban,
+html.person5 .app-main.p5-page-hermes-usage,
+html.person5 .app-main.p5-page-hermes-skillsusage,
+html.person5 .app-main.p5-page-hermes-performance {
+  --p5-stage-wallpaper-position: 58% center;
+}
+
+html.person5 .app-main.p5-page-hermes-models,
+html.person5 .app-main.p5-page-hermes-profiles,
+html.person5 .app-main.p5-page-hermes-settings,
+html.person5 .app-main.p5-page-hermes-mcp,
+html.person5 .app-main.p5-page-hermes-plugins,
+html.person5 .app-main.p5-page-hermes-memory,
+html.person5 .app-main.p5-page-hermes-files,
+html.person5 .app-main.p5-page-hermes-codingagents,
+html.person5 .app-main.p5-page-hermes-channels,
+html.person5 .app-main.p5-page-hermes-versionpreview {
+  --p5-stage-wallpaper-position: 42% center;
+}
+
+html.person5 .chat-main-content {
+  background:
+    linear-gradient(90deg, rgba(210, 0, 12, 0.10), rgba(0, 0, 0, 0.22)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.26)),
+    url('/person5/p5r-chat-bg.webp') center / cover no-repeat,
+    #d90b10 !important;
+}
+
+html.person5 .chat-main-content .virtual-message-list,
+html.person5 .chat-main-content .virtual-message-list-host,
+html.person5 .chat-main-content .virtual-message-list-empty {
+  background:
+    radial-gradient(circle at 76% 15%, rgba(255, 255, 255, 0.16) 0 5px, transparent 6px),
+    radial-gradient(circle at 70% 76%, rgba(255, 255, 255, 0.11) 0 7px, transparent 8px),
+    linear-gradient(90deg, rgba(208, 15, 7, 0.28), rgba(0, 0, 0, 0.42)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.34)) !important;
+}
+
+html.person5 .history-main-content,
+html.person5 .terminal-container,
+html.person5 .files-main-panel,
+html.person5 .files-tree-panel {
+  background:
+    linear-gradient(112deg, rgba(0, 0, 0, 0.76), rgba(0, 0, 0, 0.44)),
+    url('/person5/login-wallpaper.webp') center / cover no-repeat,
+    #050505 !important;
+}
