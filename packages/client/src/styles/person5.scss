@@ -1827,6 +1827,30 @@ html.person5 .hljs-code-block.hljs-unified-diff .diff-line-removed {
   background: rgba(230, 0, 18, 0.24) !important;
 }
 
+html.person5 .message-bubble .markdown-body a {
+  color: #ffd433 !important;
+  font-weight: 900;
+  text-decoration-color: currentColor !important;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-shadow: 1px 1px 0 #050505;
+}
+
+html.person5 .message-bubble .markdown-body a:hover {
+  color: #ffffff !important;
+  background: #e60012;
+}
+
+html.person5 .message.user .message-bubble .markdown-body a {
+  color: #d6001c !important;
+  text-shadow: none;
+}
+
+html.person5 .message.user .message-bubble .markdown-body a:hover {
+  color: #050505 !important;
+  background: #ffd433;
+}
+
 html.person5 .terminal-panel-drawer {
   color: #fff7e8 !important;
   background: #080808 !important;
