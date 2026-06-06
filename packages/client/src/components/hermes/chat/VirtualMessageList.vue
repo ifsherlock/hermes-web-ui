@@ -66,6 +66,8 @@ let keepBottomUntil = 0;
 let bottomFrame: number | null = null;
 let bottomFrameRemaining = 0;
 let bottomFrameAttempts = 0;
+let programmaticScrollUntil = 0;
+let userDetachedFromBottom = false;
 let anchorFrame: number | null = null;
 let anchorToken = 0;
 let activeAnchorTarget: AnchorTarget | null = null;
@@ -89,10 +91,47 @@ function syncViewport() {
   viewportHeight.value = el.clientHeight;
 }
 
+function markProgrammaticScroll(ms = 120) {
+  programmaticScrollUntil = Date.now() + ms;
+}
+
+function isProgrammaticScroll(): boolean {
+  return Date.now() < programmaticScrollUntil;
+}
+
+function cancelBottomScroll() {
+  keepBottomUntil = 0;
+  if (bottomFrame != null) {
+    cancelAnimationFrame(bottomFrame);
+    bottomFrame = null;
+  }
+  bottomFrameRemaining = 0;
+  bottomFrameAttempts = 0;
+}
+
 function handleScroll() {
+  const previousScrollTop = scrollTop.value;
   syncViewport();
+  if (!isProgrammaticScroll()) {
+    const delta = scrollTop.value - previousScrollTop;
+    if (delta < -1) {
+      userDetachedFromBottom = true;
+    } else if (isNearBottom(32)) {
+      userDetachedFromBottom = false;
+    }
+    if (userDetachedFromBottom || !isNearBottom(96)) {
+      cancelBottomScroll();
+    }
+  }
   emit("scroll");
   if (scrollTop.value <= props.topThreshold) emit("topReach");
+}
+
+function handleWheel(event: WheelEvent) {
+  if (event.deltaY < -1) {
+    userDetachedFromBottom = true;
+    cancelBottomScroll();
+  }
 }
 
 function handleResize() {
@@ -107,9 +146,14 @@ function isNearBottom(threshold = 200): boolean {
   return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
 }
 
+function shouldAutoFollowBottom(threshold = 200): boolean {
+  return !userDetachedFromBottom && isNearBottom(threshold);
+}
+
 function scrollToBottom(options: BottomScrollOptions = {}) {
-  const frames = typeof options === "number" ? options : options.frames ?? 5;
-  const keepAliveMs = typeof options === "number" ? 700 : options.keepAliveMs ?? 700;
+  const frames = typeof options === "number" ? options : options.frames ?? 2;
+  const keepAliveMs = typeof options === "number" ? 400 : options.keepAliveMs ?? 400;
+  userDetachedFromBottom = false;
   keepBottomUntil = Date.now() + keepAliveMs;
   nextTick(() => {
     scheduleScrollToBottom(frames);
@@ -118,6 +162,7 @@ function scrollToBottom(options: BottomScrollOptions = {}) {
 
 function setScrollToBottomNow(): boolean {
   const el = getScrollerElement();
+  markProgrammaticScroll();
   scrollerRef.value?.scrollToBottom();
   if (el) {
     el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
@@ -139,7 +184,7 @@ function scheduleScrollToBottom(frames = 1) {
     } else {
       bottomFrameAttempts += 1;
     }
-    if (bottomFrameRemaining <= 0) {
+    if (bottomFrameRemaining <= 0 && Date.now() >= keepBottomUntil) {
       bottomFrame = null;
       bottomFrameRemaining = 0;
       bottomFrameAttempts = 0;
@@ -181,12 +226,14 @@ function alignElement(targetEl: HTMLElement, align: AnchorAlign) {
     : targetRect.top - scrollerRect.top - 24;
 
   if (Math.abs(delta) > 1) {
+    markProgrammaticScroll();
     el.scrollTop = Math.max(0, el.scrollTop + delta);
   }
   syncViewport();
 }
 
 function scrollToItem(index: number, options?: ScrollToOptions) {
+  markProgrammaticScroll();
   scrollerRef.value?.scrollToItem(index, options);
   syncViewport();
 }
@@ -286,6 +333,7 @@ function restoreScrollPosition(snapshot: { scrollTop: number; scrollHeight: numb
     const el = getScrollerElement();
     if (!el) return;
     const nextScrollTop = Math.max(0, el.scrollHeight - snapshot.scrollHeight + snapshot.scrollTop);
+    markProgrammaticScroll();
     scrollerRef.value?.scrollToPosition(nextScrollTop);
     el.scrollTop = nextScrollTop;
     syncViewport();
@@ -305,13 +353,8 @@ function captureViewportPosition(): ViewportScrollSnapshot | null {
 
 function restoreViewportPosition(snapshot: ViewportScrollSnapshot | null, frames = 4) {
   if (!snapshot) return;
-  keepBottomUntil = 0;
-  if (bottomFrame != null) {
-    cancelAnimationFrame(bottomFrame);
-    bottomFrame = null;
-    bottomFrameRemaining = 0;
-    bottomFrameAttempts = 0;
-  }
+  cancelBottomScroll();
+  userDetachedFromBottom = !snapshot.wasNearBottom;
   if (viewportRestoreFrame != null) cancelAnimationFrame(viewportRestoreFrame);
 
   nextTick(() => {
@@ -324,6 +367,7 @@ function restoreViewportPosition(snapshot: ViewportScrollSnapshot | null, frames
       }
       const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
       const nextScrollTop = Math.min(maxScrollTop, Math.max(0, snapshot.scrollTop));
+      markProgrammaticScroll();
       scrollerRef.value?.scrollToPosition(nextScrollTop);
       el.scrollTop = nextScrollTop;
       syncViewport();
@@ -353,9 +397,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  if (bottomFrame != null) cancelAnimationFrame(bottomFrame);
-  bottomFrameRemaining = 0;
-  bottomFrameAttempts = 0;
+  cancelBottomScroll();
   if (anchorFrame != null) cancelAnimationFrame(anchorFrame);
   if (viewportRestoreFrame != null) cancelAnimationFrame(viewportRestoreFrame);
   resizeObserver?.disconnect();
@@ -368,6 +410,7 @@ watch(messageKeys, () => {
 
 defineExpose({
   isNearBottom,
+  shouldAutoFollowBottom,
   scrollToBottom,
   scrollToMessage,
   scrollToAnchor,
@@ -394,6 +437,7 @@ defineExpose({
       :flow-mode="true"
       :prerender="overscan"
       @scroll.passive="handleScroll"
+      @wheel.passive="handleWheel"
       @resize="handleResize"
       @visible="syncViewport"
     >

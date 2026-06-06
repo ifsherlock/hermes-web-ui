@@ -135,6 +135,16 @@ function createWindow() {
     backgroundColor: '#e60012',
     autoHideMenuBar: true,
     show: !START_HIDDEN,
+    ...(process.platform === 'win32'
+      ? {
+          titleBarStyle: 'hidden',
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: '#ffffff',
+            height: 36,
+          },
+        }
+      : {}),
     ...(process.platform === 'linux' ? { icon: desktopIcon() } : {}),
     webPreferences: {
       preload: join(__dirname, '..', 'preload', 'index.js'),
