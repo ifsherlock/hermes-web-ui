@@ -6,8 +6,8 @@ let initialized = false
 let checking = false
 let updateDownloaded = false
 
-const LATEST_RELEASE_DOWNLOAD_URL = 'https://github.com/EKKOLearnAI/hermes-web-ui/releases/latest/download'
-const CLOUDFLARE_DOWNLOAD_BASE_URL = 'https://download.ekkolearnai.com'
+const LATEST_RELEASE_DOWNLOAD_URL = 'https://github.com/ifsherlock/hermes-web-ui/releases/latest/download'
+const GITHUB_RELEASE_DOWNLOAD_BASE_URL = 'https://github.com/ifsherlock/hermes-web-ui/releases/download'
 
 class MissingUpdateInfoError extends Error {
   constructor(public readonly url: string) {
@@ -64,7 +64,7 @@ async function assertUpdateManifestExists(feedUrl: string): Promise<void> {
 
 async function configureFeedFromLatestRelease(): Promise<void> {
   const tag = await getLatestReleaseTag(updateManifestFile())
-  const feedUrl = `${CLOUDFLARE_DOWNLOAD_BASE_URL}/${tag}`
+  const feedUrl = `${GITHUB_RELEASE_DOWNLOAD_BASE_URL}/${encodeURIComponent(tag)}`
   await assertUpdateManifestExists(feedUrl)
   autoUpdater.setFeedURL({
     provider: 'generic',
