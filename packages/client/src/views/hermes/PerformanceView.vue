@@ -9,12 +9,40 @@ const message = useMessage()
 const snapshot = ref<PerformanceRuntimeSnapshot | null>(null)
 const loading = ref(false)
 const autoRefresh = ref(true)
+const showProfileDrawer = ref(true)
+const selectedProfile = ref('')
 let timer: ReturnType<typeof setInterval> | undefined
 
 const brokerMemory = computed(() => snapshot.value?.bridge.broker.process?.memoryRssBytes ?? null)
 const webRssMemory = computed(() => snapshot.value?.web.memory.rss ?? null)
 const workerCount = computed(() => snapshot.value?.bridge.workers.length ?? 0)
 const runningWorkerCount = computed(() => snapshot.value?.bridge.workers.filter(worker => worker.running).length ?? 0)
+const profileRows = computed(() => {
+  const counts = new Map<string, { sessions: number; workers: number }>()
+  const sessionsByProfile = snapshot.value?.sessions.byProfile || {}
+  for (const [profile, count] of Object.entries(sessionsByProfile)) {
+    const name = profile || '-'
+    counts.set(name, { sessions: Number(count) || 0, workers: 0 })
+  }
+  for (const worker of snapshot.value?.bridge.workers || []) {
+    const name = worker.profile || '-'
+    const row = counts.get(name) || { sessions: 0, workers: 0 }
+    row.workers += 1
+    counts.set(name, row)
+  }
+  return Array.from(counts.entries())
+    .map(([profile, row]) => ({ profile, ...row }))
+    .sort((a, b) => a.profile.localeCompare(b.profile))
+})
+const visibleWorkers = computed(() => {
+  const workers = snapshot.value?.bridge.workers || []
+  if (!selectedProfile.value) return workers
+  return workers.filter(worker => (worker.profile || '-') === selectedProfile.value)
+})
+const selectedProfileSessionCount = computed(() => {
+  if (!selectedProfile.value) return snapshot.value?.sessions.active ?? 0
+  return profileRows.value.find(row => row.profile === selectedProfile.value)?.sessions ?? 0
+})
 
 function formatBytes(value?: number | null): string {
   if (value == null || !Number.isFinite(value)) return '-'
@@ -73,6 +101,10 @@ function setAutoRefresh(enabled: boolean) {
   }
 }
 
+function selectProfile(profile: string) {
+  selectedProfile.value = profile
+}
+
 onMounted(() => {
   loadRuntime()
   setAutoRefresh(true)
@@ -97,6 +129,47 @@ onBeforeUnmount(() => {
 
     <NSpin :show="loading && !snapshot" class="performance-spin">
       <main v-if="snapshot" class="performance-content">
+        <div class="performance-layout">
+          <aside class="performance-profile-drawer" :class="{ collapsed: !showProfileDrawer }">
+            <div class="profile-drawer-header">
+              <span>Profile 筛选</span>
+              <NButton size="tiny" quaternary @click="showProfileDrawer = false">收起</NButton>
+            </div>
+            <div class="session-list performance-profile-list">
+              <button
+                class="session-row profile-filter-row"
+                :class="{ active: !selectedProfile }"
+                type="button"
+                @click="selectProfile('')"
+              >
+                <span>{{ t('common.all') }}</span>
+                <strong>{{ snapshot.sessions.active }}</strong>
+              </button>
+              <button
+                v-for="row in profileRows"
+                :key="row.profile"
+                class="session-row profile-filter-row"
+                :class="{ active: selectedProfile === row.profile }"
+                type="button"
+                @click="selectProfile(row.profile)"
+              >
+                <span>{{ row.profile }}</span>
+                <strong>{{ row.sessions }}</strong>
+              </button>
+            </div>
+          </aside>
+
+          <button
+            class="performance-profile-handle"
+            :class="{ open: showProfileDrawer }"
+            type="button"
+            :aria-pressed="showProfileDrawer"
+            @click="showProfileDrawer = !showProfileDrawer"
+          >
+            <span>{{ showProfileDrawer ? '收起筛选' : '筛选 Profile' }}</span>
+          </button>
+
+          <div class="performance-main">
         <section class="summary-grid">
           <div class="summary-item">
             <span class="summary-label">{{ t('performance.systemCpu') }}</span>
@@ -170,10 +243,10 @@ onBeforeUnmount(() => {
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="snapshot.bridge.workers.length === 0">
+                <tr v-if="visibleWorkers.length === 0">
                   <td colspan="7" class="empty-cell">{{ t('performance.noWorkers') }}</td>
                 </tr>
-                <tr v-for="worker in snapshot.bridge.workers" :key="worker.profile || worker.pid">
+                <tr v-for="worker in visibleWorkers" :key="worker.profile || worker.pid">
                   <td>{{ worker.profile || '-' }}</td>
                   <td>{{ worker.pid || '-' }}</td>
                   <td>{{ formatPercent(worker.cpuPercent) }}</td>
@@ -190,6 +263,7 @@ onBeforeUnmount(() => {
         <section class="runtime-section">
           <div class="section-header">
             <h3>{{ t('performance.sessionsByProfile') }}</h3>
+            <span v-if="selectedProfile">{{ selectedProfile }} · {{ selectedProfileSessionCount }}</span>
           </div>
           <div class="session-list">
             <div v-if="Object.keys(snapshot.sessions.byProfile).length === 0" class="session-empty">
@@ -201,6 +275,8 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </section>
+          </div>
+        </div>
       </main>
     </NSpin>
   </div>
@@ -255,6 +331,64 @@ onBeforeUnmount(() => {
   padding: 20px;
   padding-bottom: 56px;
   box-sizing: border-box;
+}
+
+.performance-layout {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.performance-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.performance-profile-drawer {
+  width: 220px;
+  flex: 0 0 220px;
+  overflow: hidden;
+  border: 1px solid $border-color;
+  border-radius: $radius-sm;
+  background: $bg-card;
+  transition: width $transition-normal, flex-basis $transition-normal, opacity $transition-fast;
+
+  &.collapsed {
+    width: 0;
+    flex-basis: 0;
+    border-width: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.profile-drawer-header {
+  min-height: 42px;
+  padding: 9px 10px 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid $border-light;
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.performance-profile-handle {
+  position: sticky;
+  top: 8px;
+  z-index: 4;
+  min-width: 58px;
+  min-height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid $border-color;
+  border-radius: $radius-sm;
+  color: $text-primary;
+  background: $bg-card;
+  cursor: pointer;
 }
 
 .summary-grid {
@@ -455,12 +589,46 @@ onBeforeUnmount(() => {
   }
 }
 
+.profile-filter-row {
+  width: 100%;
+  padding: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+
+  &.active {
+    color: $text-primary;
+    background: $bg-secondary;
+  }
+}
+
 .session-empty {
   padding: 18px 0;
   font-size: 13px;
 }
 
 @media (max-width: 960px) {
+  .performance-layout {
+    display: block;
+  }
+
+  .performance-profile-drawer {
+    width: 100%;
+    margin-bottom: 12px;
+
+    &.collapsed {
+      width: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  .performance-profile-handle {
+    margin-bottom: 12px;
+  }
+
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

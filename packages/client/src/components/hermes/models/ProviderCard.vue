@@ -38,6 +38,20 @@ const visibilityRule = computed(() => appStore.getProviderVisibility(props.provi
 const isFiltered = computed(() => visibilityRule.value.mode === 'include')
 const visibleCountLabel = computed(() => `${props.provider.models.length}/${allModels.value.length}`)
 const isDefaultProvider = computed(() => modelsStore.defaultProvider === props.provider.provider)
+const displayedModels = computed(() => {
+  const defaultModel = modelsStore.defaultModel
+  const firstModels = props.provider.models.slice(0, 20)
+  if (
+    isDefaultProvider.value &&
+    defaultModel &&
+    props.provider.models.includes(defaultModel) &&
+    !firstModels.includes(defaultModel)
+  ) {
+    return [defaultModel, ...firstModels.slice(0, 19)]
+  }
+  return firstModels
+})
+const hiddenModelsCount = computed(() => Math.max(0, props.provider.models.length - displayedModels.value.length))
 
 function isDefaultModel(model: string) {
   return isDefaultProvider.value && modelsStore.defaultModel === model
@@ -187,7 +201,7 @@ async function handleDelete() {
       </div>
       <div class="models-list">
         <button
-          v-for="model in provider.models.slice(0, 20)"
+          v-for="model in displayedModels"
           :key="model"
           class="model-tag model-tag-button"
           :class="{ default: isDefaultModel(model) }"
@@ -199,8 +213,8 @@ async function handleDelete() {
           <span v-if="isDefaultModel(model)" class="model-tag-default">{{ t('models.defaultShort') }}</span>
           <span v-if="modelAlias(model)" class="model-tag-id">{{ model }}</span>
         </button>
-        <span v-if="provider.models.length > 20" class="model-tag model-tag-more">
-          +{{ provider.models.length - 20 }} {{ t('models.more') }}
+        <span v-if="hiddenModelsCount > 0" class="model-tag model-tag-more">
+          +{{ hiddenModelsCount }} {{ t('models.more') }}
         </span>
       </div>
     </div>
