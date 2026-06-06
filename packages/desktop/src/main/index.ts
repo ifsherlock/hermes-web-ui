@@ -7,6 +7,7 @@ import { checkForDesktopUpdates, initAutoUpdater } from './updater'
 import { t } from './desktop-i18n'
 import { installHermesStudioCliShim } from './cli-shim'
 import { parseHermesCliArgs, runBundledHermesCli } from './hermes-cli'
+import { readDesktopSettings, saveDesktopSettings, type DesktopThemeStyle } from './desktop-settings'
 import {
   cachedRuntimeNeedsPackagedReleaseUpdate,
   ensureDesktopRuntime,
@@ -131,7 +132,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'Hermes Studio',
-    backgroundColor: '#0b0003',
+    backgroundColor: '#e60012',
     autoHideMenuBar: true,
     show: !START_HIDDEN,
     ...(process.platform === 'linux' ? { icon: desktopIcon() } : {}),
@@ -353,6 +354,7 @@ async function bootstrap(source?: RuntimeDownloadSource) {
   try {
     const url = await startWebUiServer(PORT)
     serverUrl = url
+    saveDesktopSettings({ launchMode: 'local' })
     if (mainWindow) await mainWindow.loadURL(url)
   } catch (err) {
     console.error('Failed to start Web UI server:', err)
@@ -370,10 +372,31 @@ async function bootstrap(source?: RuntimeDownloadSource) {
 }
 
 ipcMain.handle('hermes-desktop:get-token', () => getToken())
-ipcMain.handle('hermes-desktop:enter-remote-mode', async () => {
+ipcMain.on('hermes-desktop:get-web-preferences', (event) => {
+  const settings = readDesktopSettings()
+  event.returnValue = {
+    remoteServerUrl: settings.remoteServerUrl || '',
+    themeStyle: settings.themeStyle || '',
+  }
+})
+ipcMain.on('hermes-desktop:set-web-preference', (_event, key: string, value: string | null) => {
+  if (key === 'hermes_server_url') {
+    saveDesktopSettings({ remoteServerUrl: value && value.trim() ? value.trim() : null })
+  }
+  if (key === 'hermes_style') {
+    const style = value === 'ink' || value === 'comic' || value === 'person5' ? value as DesktopThemeStyle : null
+    saveDesktopSettings({ themeStyle: style })
+  }
+})
+async function enterRemoteMode() {
   const url = await startStaticClientServer()
   serverUrl = url
+  saveDesktopSettings({ launchMode: 'remote' })
   await mainWindow?.loadURL(url)
+}
+
+ipcMain.handle('hermes-desktop:enter-remote-mode', async () => {
+  await enterRemoteMode()
 })
 ipcMain.handle('hermes-desktop:retry-bootstrap', async (_event, source?: RuntimeDownloadSource) => {
   if (serverUrl) {
@@ -381,6 +404,7 @@ ipcMain.handle('hermes-desktop:retry-bootstrap', async (_event, source?: Runtime
     return
   }
   const selectedSource = source === 'cf' || source === 'github' ? source : undefined
+  saveDesktopSettings({ launchMode: 'local' })
   await mainWindow?.loadURL(splashHtml())
   await bootstrap(selectedSource)
 })
@@ -422,7 +446,17 @@ function runDesktopApp() {
     }
     createTray()
     createWindow()
-    bootstrap()
+    if (readDesktopSettings().launchMode === 'remote') {
+      enterRemoteMode().catch(async err => {
+        console.error('Failed to enter remote mode:', err)
+        if (mainWindow) {
+          const msg = String(err instanceof Error ? err.message : err)
+          await mainWindow.loadURL(runtimeSourceHtml(`${t('desktop.failedStartServices')}\n\n${msg}`))
+        }
+      })
+    } else {
+      bootstrap()
+    }
     initAutoUpdater({
       beforeQuitAndInstall: () => {
         isQuitting = true

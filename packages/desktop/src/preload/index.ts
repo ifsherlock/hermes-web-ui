@@ -6,6 +6,43 @@ try {
   /* ignore */
 }
 
+const DESKTOP_SYNC_KEYS = new Set(['hermes_server_url', 'hermes_style'])
+
+function installDesktopPreferenceSync(): void {
+  try {
+    const prefs = ipcRenderer.sendSync('hermes-desktop:get-web-preferences') as {
+      remoteServerUrl?: string
+      themeStyle?: string
+    }
+    if (prefs?.remoteServerUrl) localStorage.setItem('hermes_server_url', prefs.remoteServerUrl)
+    if (prefs?.themeStyle) localStorage.setItem('hermes_style', prefs.themeStyle)
+  } catch {
+    /* ignore */
+  }
+
+  const originalSetItem = Storage.prototype.setItem
+  const originalRemoveItem = Storage.prototype.removeItem
+  Storage.prototype.setItem = function (key: string, value: string) {
+    originalSetItem.call(this, key, value)
+    if (this === localStorage && DESKTOP_SYNC_KEYS.has(key)) {
+      ipcRenderer.send('hermes-desktop:set-web-preference', key, value)
+    }
+  }
+  Storage.prototype.removeItem = function (key: string) {
+    originalRemoveItem.call(this, key)
+    if (this === localStorage && DESKTOP_SYNC_KEYS.has(key)) {
+      ipcRenderer.send('hermes-desktop:set-web-preference', key, null)
+    }
+  }
+
+  for (const key of DESKTOP_SYNC_KEYS) {
+    const value = localStorage.getItem(key)
+    if (value) ipcRenderer.send('hermes-desktop:set-web-preference', key, value)
+  }
+}
+
+installDesktopPreferenceSync()
+
 function installDesktopPerson5FixCss(): void {
   const styleId = 'hermes-desktop-person5-fix'
   if (document.getElementById(styleId)) return
@@ -13,8 +50,11 @@ function installDesktopPerson5FixCss(): void {
   style.id = styleId
   style.textContent = `
 html.person5.desktop-shell,
+html.p5-login-active.desktop-shell,
 html.person5.desktop-shell body,
-html.person5.desktop-shell #app {
+html.p5-login-active.desktop-shell body,
+html.person5.desktop-shell #app,
+html.p5-login-active.desktop-shell #app {
   width: 100% !important;
   height: 100vh !important;
   min-width: 0 !important;
@@ -26,14 +66,19 @@ html.person5.desktop-shell #app {
 }
 
 html.person5.desktop-shell,
-html.person5.desktop-shell body {
+html.p5-login-active.desktop-shell,
+html.person5.desktop-shell body,
+html.p5-login-active.desktop-shell body {
   background:
-    radial-gradient(circle at 76% 16%, rgba(227, 0, 18, 0.24), transparent 24rem),
-    linear-gradient(135deg, #050001 0 38%, #260006 38% 58%, #050001 58% 100%) !important;
+    radial-gradient(circle at 72% 18%, rgba(255, 247, 232, 0.16), transparent 22rem),
+    linear-gradient(116deg, #050001 0 28%, #e60012 28% 43%, #050001 43% 58%, #8e0011 58% 70%, #050001 70% 100%) !important;
+  background-color: #e60012 !important;
 }
 
 html.person5.desktop-shell #app,
-html.person5.desktop-shell .app-layout:not(.no-sidebar) {
+html.p5-login-active.desktop-shell #app,
+html.person5.desktop-shell .app-layout:not(.no-sidebar),
+html.p5-login-active.desktop-shell .app-layout.no-sidebar {
   background: transparent !important;
 }
 
@@ -50,12 +95,15 @@ html.person5.desktop-shell body::before {
 
 html.person5.desktop-shell .app-layout:not(.no-sidebar) {
   width: 100% !important;
+  max-width: none !important;
   height: calc(100vh - var(--p5-top-height, 86px)) !important;
   min-width: 0 !important;
+  min-height: 0 !important;
   padding: 0 !important;
   gap: 0 !important;
   background: transparent !important;
   overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 html.person5.desktop-shell .app-main {

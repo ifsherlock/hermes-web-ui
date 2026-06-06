@@ -54,15 +54,19 @@ async function handleLogin() {
   await handlePasswordLogin();
 }
 
+function persistServerUrl() {
+  const normalizedServerUrl = normalizeServerUrlValue(serverUrl.value);
+  setServerUrl(normalizedServerUrl);
+  serverUrl.value = normalizedServerUrl;
+}
+
 async function handlePasswordLogin() {
   if (!username.value.trim() || !password.value) {
     errorMsg.value = t("login.credentialsRequired");
     return;
   }
 
-  const normalizedServerUrl = normalizeServerUrlValue(serverUrl.value);
-  setServerUrl(normalizedServerUrl);
-  serverUrl.value = normalizedServerUrl;
+  persistServerUrl();
 
   loading.value = true;
   errorMsg.value = "";
@@ -126,10 +130,12 @@ async function handlePasswordLogin() {
             v-model="serverUrl"
             type="text"
             class="login-input"
-            placeholder="留空使用当前地址，例：http://10.10.10.189:6060"
+            placeholder="留空使用当前地址，例如：http://nas-host:6060"
             autocomplete="url"
             autocapitalize="off"
             spellcheck="false"
+            @blur="persistServerUrl"
+            @change="persistServerUrl"
           />
         </label>
         <input
