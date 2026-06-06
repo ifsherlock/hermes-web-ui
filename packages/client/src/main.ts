@@ -8,7 +8,7 @@ import 'katex/dist/katex.min.css'
 
 // Apply theme classes before mount to prevent FOUC (Flash of Unstyled Content)
 const savedBrightness = localStorage.getItem('hermes_brightness') || 'system'
-const savedStyle = localStorage.getItem('hermes_style') || 'ink'
+const savedStyle = localStorage.getItem('hermes_style') || 'person5'
 
 // Resolve dark mode
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches

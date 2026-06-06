@@ -11,7 +11,7 @@ const brightness = ref<BrightnessMode>(
 )
 
 const style = ref<ThemeStyle>(
-  (localStorage.getItem(STYLE_KEY) as ThemeStyle) || 'ink',
+  (localStorage.getItem(STYLE_KEY) as ThemeStyle) || 'person5',
 )
 
 const isDark = ref(false)

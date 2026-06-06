@@ -16,7 +16,7 @@ import { usePersistentRecord } from '@/composables/usePersistentRecord'
 import { useTheme } from '@/composables/useTheme'
 import RouteLinkItem from '@/components/common/RouteLinkItem.vue'
 import { changelog } from "@/data/changelog";
-import { isStoredSuperAdmin } from "@/api/client";
+import { clearApiKey, isStoredSuperAdmin } from "@/api/client";
 
 const { t } = useI18n();
 const message = useMessage();
@@ -460,7 +460,7 @@ function handleReloadClient() {
 }
 
 function handleLogout() {
-  localStorage.clear();
+  clearApiKey();
   router.replace({ name: 'login' });
 }
 
