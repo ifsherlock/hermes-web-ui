@@ -8,14 +8,29 @@ try {
 
 const DESKTOP_SYNC_KEYS = new Set(['hermes_server_url', 'hermes_style'])
 
+function getSafeLocalStorage(): Storage | null {
+  try {
+    const storage = window.localStorage
+    const probeKey = '__hermes_desktop_storage_probe__'
+    storage.setItem(probeKey, '1')
+    storage.removeItem(probeKey)
+    return storage
+  } catch {
+    return null
+  }
+}
+
 function installDesktopPreferenceSync(): void {
+  const storage = getSafeLocalStorage()
+  if (!storage) return
+
   try {
     const prefs = ipcRenderer.sendSync('hermes-desktop:get-web-preferences') as {
       remoteServerUrl?: string
       themeStyle?: string
     }
-    if (prefs?.remoteServerUrl) localStorage.setItem('hermes_server_url', prefs.remoteServerUrl)
-    if (prefs?.themeStyle) localStorage.setItem('hermes_style', prefs.themeStyle)
+    if (prefs?.remoteServerUrl) storage.setItem('hermes_server_url', prefs.remoteServerUrl)
+    if (prefs?.themeStyle) storage.setItem('hermes_style', prefs.themeStyle)
   } catch {
     /* ignore */
   }
@@ -36,7 +51,7 @@ function installDesktopPreferenceSync(): void {
   }
 
   for (const key of DESKTOP_SYNC_KEYS) {
-    const value = localStorage.getItem(key)
+    const value = storage.getItem(key)
     if (value) ipcRenderer.send('hermes-desktop:set-web-preference', key, value)
   }
 }
