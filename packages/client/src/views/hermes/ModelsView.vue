@@ -100,9 +100,11 @@ async function handleRefreshModelCache() {
 @use '@/styles/variables' as *;
 
 .models-view {
-  height: calc(100 * var(--vh));
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .model-cache-overlay {
@@ -118,8 +120,11 @@ async function handleRefreshModelCache() {
 
 .models-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: 56px;
+  box-sizing: border-box;
 }
 
 .header-actions {

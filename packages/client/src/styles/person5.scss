@@ -8448,3 +8448,345 @@ html.person5 .files-tree-panel {
     url('/person5/login-wallpaper.webp') center / cover no-repeat,
     #050505 !important;
 }
+
+/* PERSON5 page polish: readable modal cards, fixed drawers and calmer login mask. */
+html.person5 .models-view .models-content {
+  padding-bottom: 48px !important;
+}
+
+html.person5 .providers-grid {
+  gap: 20px !important;
+  padding-bottom: 36px !important;
+  align-items: start !important;
+}
+
+html.person5 .provider-card {
+  overflow: visible !important;
+  padding-bottom: 22px !important;
+  background:
+    linear-gradient(118deg, rgba(5, 5, 5, 0.94), rgba(35, 0, 5, 0.88)),
+    url('/person5/p5x-bg.webp') center / 100% 100% no-repeat !important;
+  border: 3px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow: 8px 8px 0 #050505, 11px 11px 0 rgba(214, 0, 28, 0.85) !important;
+}
+
+html.person5 .provider-card .models-list {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc((28px * 4) + (8px * 3) + 18px) !important;
+  padding: 2px 4px 14px 0 !important;
+  row-gap: 8px !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  align-content: flex-start !important;
+}
+
+html.person5 .provider-card .model-tag {
+  min-height: 28px !important;
+  padding: 4px 8px 5px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 1px solid rgba(255, 255, 255, 0.78) !important;
+  box-shadow: 3px 3px 0 rgba(214, 0, 28, 0.72) !important;
+}
+
+html.person5 .provider-card .model-tag:hover {
+  color: var(--p5-white) !important;
+  background: var(--p5-red) !important;
+}
+
+html.person5 .provider-card .model-tag.default {
+  position: relative !important;
+  min-height: 32px !important;
+  padding: 5px 10px 6px 42px !important;
+  color: #050505 !important;
+  background: var(--p5-white) !important;
+  border: 2px solid #050505 !important;
+  outline: 2px solid var(--p5-white) !important;
+  box-shadow:
+    4px 4px 0 var(--p5-red),
+    7px 7px 0 #050505 !important;
+}
+
+html.person5 .provider-card .model-tag.default::before {
+  content: "当前";
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  padding: 2px 5px 3px;
+  color: var(--p5-white);
+  background: var(--p5-red);
+  border: 1px solid #050505;
+  font-family: var(--font-display, inherit);
+  font-size: 10px;
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 1px 1px 0 #050505;
+}
+
+html.person5 .provider-card .model-tag.default .model-tag-name,
+html.person5 .provider-card .model-tag.default .model-tag-id {
+  color: #050505 !important;
+  text-shadow: none !important;
+}
+
+html.person5 .provider-card .model-tag-default,
+html.person5 .provider-card .alias-row-default {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 16px !important;
+  padding: 1px 5px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 1px solid var(--p5-white) !important;
+  box-shadow: 2px 2px 0 var(--p5-red) !important;
+  font-weight: 1000 !important;
+}
+
+html.person5 .provider-card .model-tag-id,
+html.person5 .provider-card .info-label,
+html.person5 .provider-card .info-value,
+html.person5 .provider-card .models-count {
+  color: rgba(255, 247, 236, 0.82) !important;
+}
+
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card),
+html.person5 .n-dialog.n-modal {
+  color: var(--p5-white) !important;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255, 247, 236, 0.13), transparent 24%),
+    linear-gradient(134deg, rgba(214, 0, 28, 0.88), rgba(5, 5, 5, 0.98) 32%, rgba(18, 0, 4, 0.98)) !important;
+  border: 4px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow:
+    0 0 0 3px #050505,
+    12px 12px 0 rgba(214, 0, 28, 0.95),
+    18px 18px 0 #050505 !important;
+}
+
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-card-header,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-card-header__main,
+html.person5 .n-dialog.n-modal .n-dialog__title,
+html.person5 .n-dialog.n-modal .n-dialog__content,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-card__content,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-card__footer,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) p,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) code,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) span,
+html.person5 .n-dialog.n-modal p,
+html.person5 .n-dialog.n-modal span {
+  color: var(--p5-white) !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-card-header__main,
+html.person5 .n-dialog.n-modal .n-dialog__title {
+  width: max-content !important;
+  max-width: 100% !important;
+  padding: 5px 14px 6px !important;
+  background: var(--p5-red) !important;
+  border: 3px solid var(--p5-white) !important;
+  box-shadow: 4px 4px 0 #050505 !important;
+  font-weight: 1000 !important;
+}
+
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-input,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-base-selection,
+html.person5 .n-dialog.n-modal .n-input,
+html.person5 .n-dialog.n-modal .n-base-selection {
+  --n-color: #050505 !important;
+  --n-color-focus: #050505 !important;
+  --n-text-color: #fff7ec !important;
+  --n-placeholder-color: rgba(255, 247, 236, 0.62) !important;
+  --n-border: 2px solid #ffffff !important;
+  --n-border-hover: 2px solid #e30012 !important;
+  --n-border-focus: 2px solid #e30012 !important;
+  --n-box-shadow-focus: 0 0 0 2px #050505, 5px 5px 0 #e30012 !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+}
+
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .alias-row,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .visibility-list {
+  color: var(--p5-white) !important;
+  background: rgba(5, 5, 5, 0.78) !important;
+  border: 2px solid rgba(255, 255, 255, 0.78) !important;
+  border-radius: 0 !important;
+}
+
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .n-checkbox__label,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .visibility-model code,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .alias-row-name,
+html.person5 .n-card.n-modal:not(.changelog-modal):not(.session-search-card) .alias-row-id {
+  color: var(--p5-white) !important;
+}
+
+html.person5 .performance-view .session-list {
+  position: static !important;
+  z-index: auto !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 6px 14px !important;
+  color: var(--p5-white) !important;
+  background: transparent !important;
+  border-right: 0 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+html.person5 .terminal-panel > .p5-session-handle,
+html.person5 .history-panel > .p5-session-handle {
+  z-index: 360 !important;
+  left: 20px !important;
+  top: 150px !important;
+  min-width: 108px !important;
+  min-height: 50px !important;
+  padding: 10px 17px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 3px solid var(--p5-white) !important;
+  outline: 3px solid #050505 !important;
+  box-shadow:
+    0 0 0 3px var(--p5-white),
+    7px 7px 0 var(--p5-red),
+    11px 11px 0 #050505 !important;
+  clip-path: polygon(0 10%, 88% 0, 100% 50%, 88% 100%, 0 90%) !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+html.person5 .terminal-panel > .p5-session-handle.open,
+html.person5 .history-panel > .p5-session-handle.open {
+  transform: translateX(calc(var(--p5-stage-drawer, 320px) - 10px)) rotate(-2deg) skewX(-6deg) !important;
+}
+
+html.person5 .history-panel > .session-list.collapsed,
+html.person5 .terminal-panel > .session-list.collapsed,
+html.person5 .chat-panel > .session-list.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-right: 0 !important;
+  box-shadow: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(calc(-100% - 24px)) !important;
+}
+
+html.person5 .history-panel > .session-backdrop:not(.active),
+html.person5 .terminal-panel > .session-backdrop:not(.active),
+html.person5 .chat-panel > .session-backdrop:not(.active) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+html.person5 .version-preview-view .page-content,
+html.person5 .github-preview-settings .settings-section,
+html.person5 .github-preview-settings .log-output,
+html.person5 .github-preview-settings .log-box,
+html.person5 .github-preview-settings .status-table {
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(118deg, rgba(5, 5, 5, 0.90), rgba(35, 0, 5, 0.72)),
+    url('/person5/login-wallpaper.webp') 42% center / cover no-repeat,
+    #050505 !important;
+  border-color: rgba(255, 255, 255, 0.78) !important;
+}
+
+html.person5 .version-preview-view,
+html.person5 .mcp-view,
+html.person5 .performance-view,
+html.person5 .models-view {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+html.person5 .version-preview-view .page-content,
+html.person5 .mcp-view .mcp-content,
+html.person5 .performance-view .performance-content,
+html.person5 .models-view .models-content {
+  min-height: 0 !important;
+  scrollbar-color: rgba(255, 255, 255, 0.62) rgba(0, 0, 0, 0.28) !important;
+}
+
+html.person5 .github-preview-settings,
+html.person5 .github-preview-settings .section-description,
+html.person5 .github-preview-settings .log-output-header,
+html.person5 .github-preview-settings .log-title,
+html.person5 .github-preview-settings pre,
+html.person5 .github-preview-settings code,
+html.person5 .github-preview-settings a,
+html.person5 .github-preview-settings .n-descriptions,
+html.person5 .github-preview-settings .n-descriptions-table,
+html.person5 .github-preview-settings .n-descriptions-table-content,
+html.person5 .github-preview-settings .n-descriptions-table-header {
+  color: var(--p5-white) !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+html.person5 .github-preview-settings .status-table,
+html.person5 .github-preview-settings .status-table .n-descriptions,
+html.person5 .github-preview-settings .status-table .n-descriptions-table-wrapper,
+html.person5 .github-preview-settings .status-table .n-descriptions-table,
+html.person5 .github-preview-settings .status-table .n-descriptions-table-header,
+html.person5 .github-preview-settings .status-table .n-descriptions-table-content {
+  --n-border-color: rgba(255, 255, 255, 0.78) !important;
+  --n-th-color: rgba(5, 5, 5, 0.92) !important;
+  --n-td-color: rgba(5, 5, 5, 0.78) !important;
+  --n-th-text-color: var(--p5-white) !important;
+  --n-td-text-color: var(--p5-white) !important;
+  color: var(--p5-white) !important;
+  background-color: rgba(5, 5, 5, 0.82) !important;
+}
+
+html.person5 .github-preview-settings .status-table th,
+html.person5 .github-preview-settings .status-table td,
+html.person5 .github-preview-settings .status-table .n-descriptions-table-header,
+html.person5 .github-preview-settings .status-table .n-descriptions-table-content {
+  color: var(--p5-white) !important;
+  background-color: rgba(5, 5, 5, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.72) !important;
+}
+
+html.person5 .github-preview-settings .preview-note,
+html.person5 .github-preview-settings .n-alert {
+  --n-color: rgba(5, 5, 5, 0.82) !important;
+  --n-title-text-color: var(--p5-white) !important;
+  --n-content-text-color: var(--p5-white) !important;
+  color: var(--p5-white) !important;
+  background: rgba(5, 5, 5, 0.82) !important;
+  border: 2px solid rgba(255, 255, 255, 0.72) !important;
+}
+
+html.person5 .github-preview-settings .n-tag {
+  --n-text-color: var(--p5-white) !important;
+  --n-color: #050505 !important;
+  --n-border: 1px solid rgba(255, 255, 255, 0.78) !important;
+}
+
+html.person5 .github-preview-settings .n-base-selection {
+  --n-color: #050505 !important;
+  --n-color-active: #050505 !important;
+  --n-text-color: var(--p5-white) !important;
+  --n-placeholder-color: rgba(255, 247, 236, 0.72) !important;
+  --n-border: 2px solid rgba(255, 255, 255, 0.78) !important;
+  --n-border-hover: 2px solid var(--p5-red) !important;
+  --n-border-focus: 2px solid var(--p5-red) !important;
+}
+
+html.person5 .github-preview-settings .log-box pre {
+  background: rgba(5, 5, 5, 0.88) !important;
+  border: 2px solid rgba(255, 255, 255, 0.72) !important;
+}
+
+html.p5-login-active .login-view.p5-login-view {
+  background:
+    linear-gradient(98deg, rgba(0, 0, 0, 0.78) 0 29%, rgba(230, 0, 18, 0.36) 29% 54%, rgba(0, 0, 0, 0.74) 54% 100%),
+    url('/person5/login-wallpaper.webp') center / cover no-repeat,
+    #050505 !important;
+}

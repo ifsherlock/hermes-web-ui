@@ -241,12 +241,20 @@ onBeforeUnmount(() => {
 .performance-spin {
   flex: 1;
   min-height: 0;
+
+  :deep(.n-spin-content) {
+    height: 100%;
+    min-height: 0;
+  }
 }
 
 .performance-content {
   height: 100%;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: 56px;
+  box-sizing: border-box;
 }
 
 .summary-grid {
