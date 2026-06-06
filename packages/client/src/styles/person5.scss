@@ -8226,3 +8226,130 @@ html.person5 .p5-control-model .p5-submenu-more {
     margin-top: 0 !important;
   }
 }
+
+/* PERSON5 chat session context menu and session-model picker readability. */
+html.person5 .n-dropdown-menu {
+  --n-color: #070707 !important;
+  --n-option-text-color: #fff7e8 !important;
+  --n-option-text-color-hover: #ffffff !important;
+  --n-option-text-color-active: #ffffff !important;
+  --n-option-color-hover: #b5141c !important;
+  --n-option-color-active: #b5141c !important;
+  --n-divider-color: rgba(255, 255, 255, 0.28) !important;
+  min-width: 176px !important;
+  padding: 7px !important;
+  border: 2px solid #ffffff !important;
+  outline: 2px solid #111111 !important;
+  background:
+    linear-gradient(135deg, rgba(209, 16, 31, 0.34), transparent 38%),
+    #070707 !important;
+  box-shadow:
+    8px 8px 0 #d7101f,
+    11px 11px 0 #000000 !important;
+  transform: rotate(-1deg) skewX(-2deg);
+}
+
+html.person5 .n-dropdown-menu .n-dropdown-option {
+  margin: 3px 0 !important;
+}
+
+html.person5 .n-dropdown-menu .n-dropdown-option-body {
+  min-height: 34px !important;
+  padding: 6px 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #fff7e8 !important;
+  transform: skewX(2deg);
+}
+
+html.person5 .n-dropdown-menu .n-dropdown-option-body::before {
+  display: none !important;
+}
+
+html.person5 .n-dropdown-menu .n-dropdown-option-body__label,
+html.person5 .n-dropdown-menu .n-dropdown-option-body__suffix {
+  color: #fff7e8 !important;
+  font-family: "Arial Black", "Microsoft YaHei", system-ui, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+  text-shadow:
+    1px 0 #000,
+    -1px 0 #000,
+    0 1px #000,
+    0 -1px #000 !important;
+}
+
+html.person5 .n-dropdown-menu .n-dropdown-option:hover .n-dropdown-option-body,
+html.person5 .n-dropdown-menu .n-dropdown-option--pending .n-dropdown-option-body,
+html.person5 .n-dropdown-menu .n-dropdown-option--active .n-dropdown-option-body {
+  border-color: #ffffff !important;
+  background: #d7101f !important;
+  color: #ffffff !important;
+}
+
+html.person5 .n-dropdown-menu .n-dropdown-option:hover .n-dropdown-option-body__label,
+html.person5 .n-dropdown-menu .n-dropdown-option--pending .n-dropdown-option-body__label,
+html.person5 .n-dropdown-menu .n-dropdown-option--active .n-dropdown-option-body__label,
+html.person5 .n-dropdown-menu .n-dropdown-option:hover .n-dropdown-option-body__suffix,
+html.person5 .n-dropdown-menu .n-dropdown-option--pending .n-dropdown-option-body__suffix,
+html.person5 .n-dropdown-menu .n-dropdown-option--active .n-dropdown-option-body__suffix {
+  color: #ffffff !important;
+}
+
+html.person5 .session-model-search .n-input,
+html.person5 .session-model-custom-input .n-input,
+html.person5 .session-model-custom-provider .n-base-selection {
+  --n-color: #0a0a0a !important;
+  --n-color-focus: #0a0a0a !important;
+  --n-text-color: #fff7e8 !important;
+  --n-placeholder-color: rgba(255, 247, 232, 0.62) !important;
+  --n-border: 2px solid #ffffff !important;
+  --n-border-hover: 2px solid #d7101f !important;
+  --n-border-focus: 2px solid #d7101f !important;
+  --n-box-shadow-focus: 0 0 0 2px #000000, 5px 5px 0 #d7101f !important;
+  background: #0a0a0a !important;
+}
+
+html.person5 .session-model-list {
+  color: #fff7e8 !important;
+}
+
+html.person5 .session-model-group-header {
+  color: #fff7e8 !important;
+  background: #050505 !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius: 0 !important;
+}
+
+html.person5 .session-model-group-header:hover {
+  background: #d7101f !important;
+  color: #ffffff !important;
+}
+
+html.person5 .session-model-group-count,
+html.person5 .session-model-item-id,
+html.person5 .session-model-custom-hint,
+html.person5 .session-model-empty {
+  color: rgba(255, 247, 232, 0.78) !important;
+}
+
+html.person5 .session-model-item {
+  color: #fff7e8 !important;
+  background: #111111 !important;
+  border: 1px solid rgba(255, 255, 255, 0.48) !important;
+  border-radius: 0 !important;
+}
+
+html.person5 .session-model-item:hover,
+html.person5 .session-model-item.active {
+  color: #ffffff !important;
+  background: #d7101f !important;
+  border-color: #ffffff !important;
+}
+
+html.person5 .session-model-item-name,
+html.person5 .session-model-item-id {
+  color: inherit !important;
+}
