@@ -357,6 +357,11 @@ function scrollP5AgentSubmenu() {
   });
 }
 
+function isP5CurrentModelItem(item: { provider: string; model: string }) {
+  if (!appStore.selectedModel || item.model !== appStore.selectedModel) return false;
+  return appStore.selectedProvider ? item.provider === appStore.selectedProvider : true;
+}
+
 function isP5ProfileActionsOpen(name: string) {
   return !!p5ProfileActionsOpen.value[name];
 }
@@ -938,13 +943,14 @@ onMounted(() => {
               v-for="item in p5ModelItems"
               :key="`${item.provider}:${item.model}`"
               class="nav-item p5-model-item"
-              :class="{ active: item.model === appStore.selectedModel && item.provider === appStore.selectedProvider }"
+              :class="{ active: isP5CurrentModelItem(item) }"
               type="button"
               :title="`${item.providerLabel} / ${item.label} (${item.model})`"
               @click="handleP5ModelSwitch(item.model, item.provider)"
             >
               <span class="p5-model-mark">M</span>
               <span class="p5-submenu-main">{{ item.label }}</span>
+              <span v-if="isP5CurrentModelItem(item)" class="p5-current-model-badge">当前</span>
               <span class="p5-submenu-sub">{{ item.providerLabel }}</span>
             </button>
           </div>

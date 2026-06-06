@@ -8214,9 +8214,24 @@ html.person5 .p5-control-model .p5-model-item .p5-model-mark {
 }
 
 html.person5 .p5-control-model .p5-model-item .p5-submenu-main {
-  max-width: calc(100% - 182px) !important;
+  max-width: calc(100% - 246px) !important;
   min-width: 0 !important;
   text-align: left !important;
+}
+
+html.person5 .p5-control-model .p5-current-model-badge {
+  flex: 0 0 auto !important;
+  min-width: 46px !important;
+  padding: 4px 8px !important;
+  color: var(--p5-white) !important;
+  background: var(--p5-red) !important;
+  border: 2px solid var(--p5-white) !important;
+  box-shadow: 2px 2px 0 #050505 !important;
+  font-size: 15px !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  transform: rotate(-3deg) skewX(-7deg) !important;
 }
 
 html.person5 .p5-control-model .p5-model-item .p5-submenu-sub {
@@ -8471,6 +8486,16 @@ html.person5 .provider-card {
   box-shadow: 8px 8px 0 #050505, 11px 11px 0 rgba(214, 0, 28, 0.85) !important;
 }
 
+html.person5 .provider-card .type-badge.default {
+  color: #050505 !important;
+  background: var(--p5-white) !important;
+  border: 2px solid #050505 !important;
+  outline: 2px solid var(--p5-red) !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 var(--p5-red), 6px 6px 0 #050505 !important;
+  font-weight: 1000 !important;
+}
+
 html.person5 .provider-card .models-list {
   height: auto !important;
   min-height: 0 !important;
@@ -8637,6 +8662,57 @@ html.person5 .performance-view .session-list {
   pointer-events: auto !important;
   transform: none !important;
   overflow: visible !important;
+}
+
+html.person5 .performance-profile-drawer {
+  color: var(--p5-white) !important;
+  background:
+    linear-gradient(135deg, rgba(5, 5, 5, 0.96), rgba(54, 0, 6, 0.90)),
+    repeating-linear-gradient(116deg, transparent 0 24px, rgba(255, 255, 255, 0.08) 24px 27px, transparent 27px 58px) !important;
+  border: 3px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 #050505, 10px 10px 0 var(--p5-red) !important;
+}
+
+html.person5 .performance-profile-drawer.collapsed {
+  border-width: 0 !important;
+  box-shadow: none !important;
+}
+
+html.person5 .performance-profile-drawer .profile-drawer-header {
+  color: var(--p5-white) !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.72) !important;
+  background: rgba(5, 5, 5, 0.72) !important;
+  text-shadow: 1px 1px 0 #050505 !important;
+}
+
+html.person5 .performance-profile-drawer .profile-filter-row {
+  min-height: 40px !important;
+  padding: 0 10px !important;
+  color: var(--p5-white) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.32) !important;
+  background: rgba(5, 5, 5, 0.46) !important;
+}
+
+html.person5 .performance-profile-drawer .profile-filter-row.active,
+html.person5 .performance-profile-drawer .profile-filter-row:hover {
+  color: var(--p5-white) !important;
+  background: var(--p5-red) !important;
+  box-shadow: inset 5px 0 0 var(--p5-white) !important;
+}
+
+html.person5 .performance-profile-handle {
+  min-width: 76px !important;
+  min-height: 42px !important;
+  padding: 8px 12px !important;
+  color: var(--p5-white) !important;
+  background: #050505 !important;
+  border: 3px solid var(--p5-white) !important;
+  border-radius: 0 !important;
+  box-shadow: 5px 5px 0 var(--p5-red), 8px 8px 0 #050505 !important;
+  clip-path: polygon(0 12%, 88% 0, 100% 50%, 88% 100%, 0 88%) !important;
+  font-weight: 1000 !important;
+  text-shadow: 1px 1px 0 #050505 !important;
 }
 
 html.person5 .terminal-panel > .p5-session-handle,
