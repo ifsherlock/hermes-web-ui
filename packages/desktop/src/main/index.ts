@@ -2,10 +2,10 @@ import { app, BrowserWindow, Menu, Tray, shell, ipcMain, nativeImage } from 'ele
 import { join } from 'node:path'
 import { startWebUiServer, stopWebUiServer, getToken } from './webui-server'
 import { startStaticClientServer, stopStaticClientServer } from './static-client-server'
-import { desktopIcon, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin } from './paths'
+import { bundledNode, desktopIcon, desktopTrayTemplateIcon, desktopWindowsTrayIcon, hermesBinExists, hermesBin, webuiDir } from './paths'
 import { checkForDesktopUpdates, initAutoUpdater } from './updater'
 import { t } from './desktop-i18n'
-import { installHermesStudioCliShim } from './cli-shim'
+import { installHermesStudioCliShim, installHermesStudioMcpShim } from './cli-shim'
 import { parseHermesCliArgs, runBundledHermesCli } from './hermes-cli'
 import { readDesktopSettings, saveDesktopSettings, type DesktopThemeStyle } from './desktop-settings'
 import {
@@ -25,15 +25,52 @@ let serverUrl: string | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let isBootstrapping = false
+let windowFadeTimer: NodeJS.Timeout | null = null
+
+function cancelWindowFade() {
+  if (windowFadeTimer) {
+    clearInterval(windowFadeTimer)
+    windowFadeTimer = null
+  }
+}
+
+function showWindowWithFade(focus = true) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+
+  cancelWindowFade()
+  if (process.platform !== 'win32' || mainWindow.isVisible()) {
+    mainWindow.setOpacity(1)
+    mainWindow.show()
+    if (focus) mainWindow.focus()
+    return
+  }
+
+  const durationMs = 180
+  const startedAt = Date.now()
+  mainWindow.setOpacity(0)
+  mainWindow.show()
+  if (focus) mainWindow.focus()
+  windowFadeTimer = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      cancelWindowFade()
+      return
+    }
+    const progress = Math.min(1, (Date.now() - startedAt) / durationMs)
+    mainWindow.setOpacity(progress)
+    if (progress >= 1) {
+      mainWindow.setOpacity(1)
+      cancelWindowFade()
+    }
+  }, 16)
+}
 
 function showMainWindow() {
   if (!mainWindow) {
     createWindow()
   }
   if (!mainWindow) return
-  if (mainWindow.isMinimized()) mainWindow.restore()
-  mainWindow.show()
-  mainWindow.focus()
+  showWindowWithFade(true)
 }
 
 function quitApp() {
@@ -134,7 +171,7 @@ function createWindow() {
     title: 'Hermes Studio',
     backgroundColor: '#e60012',
     autoHideMenuBar: true,
-    show: !START_HIDDEN,
+    show: false,
     ...(process.platform === 'win32'
       ? {
           titleBarStyle: 'hidden',
@@ -154,9 +191,14 @@ function createWindow() {
     },
   })
 
+  mainWindow.once('ready-to-show', () => {
+    if (!START_HIDDEN) showWindowWithFade(true)
+  })
+
   mainWindow.on('close', (event) => {
     if (isQuitting) return
     event.preventDefault()
+    cancelWindowFade()
     mainWindow?.hide()
     updateTrayMenu()
   })
@@ -453,6 +495,17 @@ function runDesktopApp() {
       }).catch(err => {
         console.warn(`[cli-shim] failed to install hermes-studio command: ${err instanceof Error ? err.message : String(err)}`)
       })
+      installHermesStudioMcpShim({
+        nodePath: bundledNode(),
+        scriptPath: join(webuiDir(), 'bin', 'hermes-web-ui-mcp.mjs'),
+        webUiUrl: `http://127.0.0.1:${PORT}`,
+      }).then(result => {
+        if (result.status === 'skipped') {
+          console.warn(`[cli-shim] ${result.reason}: ${result.shimPath}`)
+        }
+      }).catch(err => {
+        console.warn(`[cli-shim] failed to install hermes-studio-mcp command: ${err instanceof Error ? err.message : String(err)}`)
+      })
     }
     createTray()
     createWindow()
@@ -493,6 +546,7 @@ function runDesktopApp() {
       return
     }
     e.preventDefault()
+    cancelWindowFade()
     await stopWebUiServer().catch(() => undefined)
     await stopStaticClientServer().catch(() => undefined)
     app.exit(0)

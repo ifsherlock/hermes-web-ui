@@ -7,7 +7,7 @@ import { homedir } from 'os'
  * Server/listen:
  * - PORT: Web UI listen port. Default: 8648.
  * - BIND_HOST: Web UI bind host. Default: 0.0.0.0.
- * - CORS_ORIGINS: Koa CORS origin setting. Default: *.
+ * - CORS_ORIGINS: Comma/space-separated cross-origin allowlist. Default: same host only.
  *
  * Web UI storage:
  * - HERMES_WEB_UI_HOME: Web UI data home for auth token, credentials, logs, DB, and default uploads.
@@ -23,6 +23,8 @@ import { homedir } from 'os'
  * - PROFILE: Initial Hermes profile name. Default: default.
  * - GATEWAY_HOST: Default gateway host written into profile config. Default: 127.0.0.1.
  * - HERMES_WEB_UI_STOP_GATEWAYS_ON_SHUTDOWN: Whether Web UI shutdown also stops gateways.
+ * - HERMES_LAN_DISCOVERY_ENABLED: Set false/0/off to disable UDP LAN discovery responder.
+ * - HERMES_LAN_DISCOVERY_HTTP_PORTS: HTTP ports to probe during UDP discovery scans. Default: 8648,8748 plus current PORT.
  * - WORKSPACE_BASE: Base directory for workspace browsing. Default: /opt/data/workspace.
  *
  * Limits/logging:
@@ -46,6 +48,10 @@ export function shouldCreateWebUiDataDir(env: Record<string, string | undefined>
   return env.NODE_ENV !== 'production'
 }
 
+export function getCorsOrigins(env: Record<string, string | undefined> = process.env): string {
+  return env.CORS_ORIGINS?.trim() || ''
+}
+
 const appHome = getWebUiHome()
 
 export const config = {
@@ -55,5 +61,5 @@ export const config = {
   appHome,
   uploadDir: process.env.UPLOAD_DIR || join(appHome, 'upload'),
   dataDir: resolve(__dirname, '..', 'data'),
-  corsOrigins: process.env.CORS_ORIGINS || '*',
+  corsOrigins: getCorsOrigins(),
 }

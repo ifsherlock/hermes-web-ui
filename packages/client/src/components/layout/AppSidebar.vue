@@ -63,7 +63,7 @@ const p5CollapsedGroups: Array<{ key: P5CollapsedGroupKey; label: string; active
   { key: "conversation", label: "对话", active: () => isNavActive("hermes.chat", "hermes.session", "hermes.history", "hermes.historySession", "hermes.groupChat", "hermes.groupChatRoom") },
   { key: "agent", label: "代理", active: () => isNavActive("hermes.jobs", "hermes.kanban", "hermes.channels", "hermes.skills", "hermes.plugins", "hermes.mcp", "hermes.memory", "hermes.models") },
   { key: "monitoring", label: "监控", active: () => isNavActive("hermes.logs", "hermes.usage", "hermes.performance", "hermes.skillsUsage") },
-  { key: "tools", label: "工具", active: () => isNavActive("hermes.codingAgents", "hermes.versionPreview") },
+  { key: "tools", label: "工具", active: () => isNavActive("hermes.codingAgents", "hermes.versionPreview", "hermes.devices") },
   { key: "system", label: "系统", active: () => isNavActive("hermes.profiles", "hermes.settings") },
 ];
 
@@ -93,6 +93,7 @@ const p5CollapsedItems: Record<P5CollapsedGroupKey, P5CollapsedIconItem[]> = {
   tools: [
     { key: "codingAgents", label: "编码代理", icon: "code", routeName: "hermes.codingAgents" },
     { key: "versionPreview", label: "版本预览", icon: "box", routeName: "hermes.versionPreview", superAdminOnly: true, hidden: () => isVersionPreview },
+    { key: "devices", label: "设备", icon: "server", routeName: "hermes.devices" },
   ],
   system: [
     { key: "profiles", label: "用户", icon: "user", routeName: "hermes.profiles", superAdminOnly: true },
@@ -820,6 +821,16 @@ onMounted(() => {
               <line x1="12" y1="22.08" x2="12" y2="12" />
             </svg>
             <span>{{ t("sidebar.versionPreview") }}</span>
+          </RouteLinkItem>
+          <RouteLinkItem class="nav-item" :to="{ name: 'hermes.devices' }" :active="selectedKey === 'hermes.devices'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="12" rx="2" />
+              <path d="M8 20h8" />
+              <path d="M12 16v4" />
+              <path d="M6 8h.01" />
+              <path d="M10 8h.01" />
+            </svg>
+            <span>{{ t("sidebar.devices") }}</span>
           </RouteLinkItem>
         </div>
       </div>
