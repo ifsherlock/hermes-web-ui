@@ -15,7 +15,7 @@ import {
   copyTextToClipboard,
   extractUnifiedDiffPayload,
   handleCodeBlockCopyClick,
-  isUnifiedDiffContent,
+  inferStructuredLanguage,
   renderHighlightedCodeBlock,
 } from "./highlight";
 import { useGlobalSpeech } from "@/composables/useSpeech";
@@ -441,41 +441,59 @@ function truncateJsonValue(value: unknown, marker: string): unknown {
   return { [JSON_TRUNCATED_KEY]: marker };
 }
 
-function formatToolPayload(raw?: string, extractDiff = false): ToolPayload {
-  if (!raw) {
+function normalizeToolPayload(raw: unknown): string {
+  if (raw === null || raw === undefined || raw === "") return "";
+  if (typeof raw === "string") return raw;
+  try {
+    const serialized = JSON.stringify(raw);
+    if (serialized !== undefined) return serialized;
+  } catch {
+    // Fall through to String(raw) for non-serializable runtime payloads.
+  }
+  return String(raw);
+}
+
+function formatToolPayload(raw?: unknown, extractDiff = false): ToolPayload {
+  const text = normalizeToolPayload(raw);
+  if (!text) {
     return { full: "", display: "" };
   }
 
-  try {
-    const parsed = JSON.parse(raw);
-    const full = JSON.stringify(parsed, null, 2);
-    const extractedDiff = extractDiff ? extractUnifiedDiffPayload(parsed) : null;
-    if (extractedDiff) {
+  const shouldParseJson = typeof raw !== "string" || /^[\[{]/.test(text.trim());
+  if (shouldParseJson) {
+    try {
+      const parsed = JSON.parse(text);
+      const full = JSON.stringify(parsed, null, 2);
+      const extractedDiff = extractDiff ? extractUnifiedDiffPayload(parsed) : null;
+      if (extractedDiff) {
+        return {
+          full,
+          display: extractedDiff,
+          language: "diff",
+        };
+      }
+      const display = full.length > TOOL_PAYLOAD_DISPLAY_LIMIT
+        ? JSON.stringify(truncateJsonValue(parsed, t("chat.truncated")), null, 2)
+        : full;
       return {
         full,
-        display: extractedDiff,
-        language: "diff",
+        display,
+        language: "json",
       };
+    } catch {
+      // Fall through to text rendering for non-JSON strings.
     }
-    const display = full.length > TOOL_PAYLOAD_DISPLAY_LIMIT
-      ? JSON.stringify(truncateJsonValue(parsed, t("chat.truncated")), null, 2)
-      : full;
-    return {
-      full,
-      display,
-      language: "json",
-    };
-  } catch {
-    const language = isUnifiedDiffContent(raw) ? "diff" : undefined;
-    return {
-      full: raw,
-      display:
-        language === "diff" || raw.length <= TOOL_PAYLOAD_DISPLAY_LIMIT
-          ? raw
-          : raw.slice(0, TOOL_PAYLOAD_DISPLAY_LIMIT) + "\n" + t("chat.truncated"),
-      language,
-    };
   }
+
+  const language = inferStructuredLanguage(text);
+  return {
+    full: text,
+    display:
+      language === "diff" || text.length <= TOOL_PAYLOAD_DISPLAY_LIMIT
+        ? text
+        : text.slice(0, TOOL_PAYLOAD_DISPLAY_LIMIT) + "\n" + t("chat.truncated"),
+    language,
+  };
 }
 
 function renderToolPayload(content: string, language?: string): string {
@@ -517,12 +535,12 @@ const hasAttachments = computed(
   () => (props.message.attachments?.length ?? 0) > 0,
 );
 
-const hasToolDetails = computed(
-  () => !!(props.message.toolArgs || props.message.toolResult),
-);
-
 const toolArgsPayload = computed(() => formatToolPayload(props.message.toolArgs));
 const toolResultPayload = computed(() => formatToolPayload(props.message.toolResult, true));
+
+const hasToolDetails = computed(
+  () => !!(toolArgsPayload.value.full || toolResultPayload.value.full),
+);
 
 const fullToolArgs = computed(() => toolArgsPayload.value.full);
 const formattedToolArgs = computed(() => toolArgsPayload.value.display);
@@ -585,6 +603,7 @@ function handleSpeechToggle() {
       return
     }
     speech.openaiToggle(props.message.id, content, {
+      provider: 'openai',
       baseUrl: voiceSettings.openaiBaseUrl.value,
       apiKey: voiceSettings.openaiApiKey.value,
       model: voiceSettings.openaiModel.value,
@@ -601,6 +620,7 @@ function handleSpeechToggle() {
       return
     }
     speech.openaiToggle(props.message.id, content, {
+      provider: 'custom',
       baseUrl: voiceSettings.customUrl.value,
       apiKey: voiceSettings.customApiKey.value || undefined,
     })
@@ -612,6 +632,7 @@ function handleSpeechToggle() {
     // URL 为空时使用内建后端代理
     const apiUrl = voiceSettings.edgeUrl.value || '/api/tts/proxy'
     speech.openaiToggle(props.message.id, content, {
+      provider: 'edge',
       baseUrl: apiUrl,
       voice: voiceSettings.edgeVoice.value,
       rate: speedToEdgeRate(voiceSettings.edgeRate.value),
@@ -630,9 +651,13 @@ function handleSpeechToggle() {
     speech.mimoToggle(props.message.id, content, {
       baseUrl: voiceSettings.mimoBaseUrl.value,
       apiKey,
+      authMode: voiceSettings.mimoAuthMode.value,
       model: voiceSettings.mimoModel.value,
+      voiceMode: voiceSettings.mimoModel.value === 'mimo-v2.5-tts-voicedesign' ? 'voiceDesign' : voiceSettings.mimoModel.value === 'mimo-v2.5-tts-voiceclone' ? 'voiceClone' : 'preset',
       voice: voiceSettings.mimoVoice.value,
       voiceDesignDesc: voiceSettings.mimoVoiceDesignDesc.value || undefined,
+      voiceCloneDataUri: voiceSettings.mimoVoiceCloneDataUri.value || undefined,
+      voiceCloneFormat: voiceSettings.mimoVoiceCloneFormat.value,
       stylePrompt: voiceSettings.mimoStylePrompt.value || undefined,
     })
     return
@@ -653,6 +678,11 @@ function handleSpeechToggle() {
 // 监听自动播放事件
 let autoPlayHandler: ((e: Event) => void) | null = null
 
+function handleAutoplayTtsError(err: unknown) {
+  if (err instanceof Error && err.name === 'AbortError') return
+  console.warn('[MessageItem] TTS autoplay failed:', err)
+}
+
 onMounted(() => {
   autoPlayHandler = (e: Event) => {
     const customEvent = e as CustomEvent<{ messageId: string; content: string }>
@@ -660,36 +690,43 @@ onMounted(() => {
       const content = customEvent.detail.content || props.message.content || ''
       if (voiceSettings.provider.value === 'openai') {
         const apiUrl = voiceSettings.openaiBaseUrl.value
-        if (apiUrl) speech.openaiPlay(props.message.id, content, {
+        if (apiUrl) void speech.openaiPlay(props.message.id, content, {
+          provider: 'openai',
           baseUrl: voiceSettings.openaiBaseUrl.value,
           apiKey: voiceSettings.openaiApiKey.value,
           model: voiceSettings.openaiModel.value,
           voice: voiceSettings.openaiVoice.value,
-        })
+        }).catch(handleAutoplayTtsError)
       } else if (voiceSettings.provider.value === 'custom') {
         const apiUrl = voiceSettings.customUrl.value
-        if (apiUrl) speech.openaiPlay(props.message.id, content, {
+        if (apiUrl) void speech.openaiPlay(props.message.id, content, {
+          provider: 'custom',
           baseUrl: voiceSettings.customUrl.value,
           apiKey: voiceSettings.customApiKey.value || undefined,
-        })
+        }).catch(handleAutoplayTtsError)
       } else if (voiceSettings.provider.value === 'edge') {
-        speech.openaiPlay(props.message.id, content, {
+        void speech.openaiPlay(props.message.id, content, {
+          provider: 'edge',
           baseUrl: '/api/tts/proxy',
           voice: voiceSettings.edgeVoice.value,
           rate: speedToEdgeRate(voiceSettings.edgeRate.value),
           pitch: hzToEdgePitch(voiceSettings.edgePitchHz.value),
-        })
+        }).catch(handleAutoplayTtsError)
       } else if (voiceSettings.provider.value === 'mimo') {
         const apiKey = voiceSettings.mimoApiKey.value
         if (apiKey) {
-          speech.mimoPlay(props.message.id, content, {
+          void speech.mimoPlay(props.message.id, content, {
             baseUrl: voiceSettings.mimoBaseUrl.value,
             apiKey,
+            authMode: voiceSettings.mimoAuthMode.value,
             model: voiceSettings.mimoModel.value,
+            voiceMode: voiceSettings.mimoModel.value === 'mimo-v2.5-tts-voicedesign' ? 'voiceDesign' : voiceSettings.mimoModel.value === 'mimo-v2.5-tts-voiceclone' ? 'voiceClone' : 'preset',
             voice: voiceSettings.mimoVoice.value,
             voiceDesignDesc: voiceSettings.mimoVoiceDesignDesc.value || undefined,
+            voiceCloneDataUri: voiceSettings.mimoVoiceCloneDataUri.value || undefined,
+            voiceCloneFormat: voiceSettings.mimoVoiceCloneFormat.value,
             stylePrompt: voiceSettings.mimoStylePrompt.value || undefined,
-          })
+          }).catch(handleAutoplayTtsError)
         }
       } else if (voiceSettings.provider.value === 'webspeech') {
         const text = speech.extractReadableText(content)
@@ -712,7 +749,7 @@ onBeforeUnmount(() => {
   if (autoPlayHandler) {
     window.removeEventListener('auto-play-speech', autoPlayHandler)
   }
-  if (speech.currentMessageId.value === props.message.id) {
+  if (speech.currentMessageId.value === props.message.id || speech.currentCustomMessageId.value === props.message.id) {
     speech.stop();
   }
 });

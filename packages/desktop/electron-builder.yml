@@ -38,6 +38,7 @@ extraResources:
     to: "webui"
     filter:
       - "package.json"
+      - "bin/**"
       - "dist/**"
       # The server build is bundled into dist/server/index.js. Keep only the
       # native dependency that cannot be bundled, otherwise NSIS has to unpack
