@@ -21,14 +21,19 @@ const { t } = useI18n()
 @use "@/styles/variables" as *;
 
 .version-preview-view {
-  height: calc(100 * var(--vh));
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .page-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: 56px;
+  box-sizing: border-box;
 }
 </style>

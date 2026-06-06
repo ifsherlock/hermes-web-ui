@@ -650,15 +650,20 @@ async function saveToolsVisibility() {
 @use '@/styles/variables' as *;
 
 .mcp-view {
-  height: calc(100 * var(--vh));
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .mcp-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: 56px;
+  box-sizing: border-box;
 }
 
 .page-header {

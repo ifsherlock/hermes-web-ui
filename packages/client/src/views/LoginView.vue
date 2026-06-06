@@ -320,7 +320,7 @@ async function handlePasswordLogin() {
   }
 }
 
-:global(html.person5) .p5-login-view {
+:global(html.person5 .p5-login-view){
   width: 100% !important;
   min-width: 100% !important;
   height: calc(100 * var(--vh)) !important;
@@ -332,21 +332,21 @@ async function handlePasswordLogin() {
     #050505 !important;
 }
 
-:global(html.person5) .p5-login-scene,
-:global(html.person5) .p5-login-noise,
-:global(html.person5) .p5-login-slash,
-:global(html.person5) .p5-login-slogan {
+:global(html.person5 .p5-login-scene),
+:global(html.person5 .p5-login-noise),
+:global(html.person5 .p5-login-slash),
+:global(html.person5 .p5-login-slogan){
   position: absolute;
   pointer-events: none;
 }
 
-:global(html.person5) .p5-login-scene {
+:global(html.person5 .p5-login-scene){
   inset: 0;
   z-index: 0;
   overflow: hidden;
 }
 
-:global(html.person5) .p5-login-noise {
+:global(html.person5 .p5-login-noise){
   inset: 0;
   opacity: 0.84;
   background:
@@ -356,7 +356,7 @@ async function handlePasswordLogin() {
   mix-blend-mode: screen;
 }
 
-:global(html.person5) .p5-login-slash {
+:global(html.person5 .p5-login-slash){
   background: #e60012;
   box-shadow:
     14px 14px 0 #050505,
@@ -364,7 +364,7 @@ async function handlePasswordLogin() {
   clip-path: polygon(6% 0, 100% 15%, 91% 100%, 0 82%);
 }
 
-:global(html.person5) .p5-login-slash-one {
+:global(html.person5 .p5-login-slash-one){
   left: -9vw;
   top: 16vh;
   width: 46vw;
@@ -372,7 +372,7 @@ async function handlePasswordLogin() {
   transform: rotate(-15deg);
 }
 
-:global(html.person5) .p5-login-slash-two {
+:global(html.person5 .p5-login-slash-two){
   right: -8vw;
   bottom: 8vh;
   width: 52vw;
@@ -380,7 +380,7 @@ async function handlePasswordLogin() {
   transform: rotate(-12deg);
 }
 
-:global(html.person5) .p5-login-slogan {
+:global(html.person5 .p5-login-slogan){
   left: -3vw;
   bottom: 4vh;
   color: rgba(230, 0, 18, 0.48);
@@ -393,7 +393,7 @@ async function handlePasswordLogin() {
   white-space: nowrap;
 }
 
-:global(html.person5) .p5-login-brand {
+:global(html.person5 .p5-login-brand){
   position: absolute;
   left: clamp(48px, 5vw, 108px);
   top: clamp(34px, 5vh, 76px);
@@ -404,13 +404,13 @@ async function handlePasswordLogin() {
   transform: rotate(-2deg);
 }
 
-:global(html.person5) .p5-login-kanji {
+:global(html.person5 .p5-login-kanji){
   display: flex;
   gap: 2px;
   align-items: center;
 }
 
-:global(html.person5) .p5-login-char {
+:global(html.person5 .p5-login-char){
   display: inline-grid;
   min-width: clamp(30px, 2.45vw, 48px);
   min-height: clamp(34px, 2.7vw, 54px);
@@ -427,16 +427,16 @@ async function handlePasswordLogin() {
   transform: skewX(-8deg);
 }
 
-:global(html.person5) .p5-login-char:nth-child(even) {
+:global(html.person5 .p5-login-char:nth-child(even)){
   background: #050505;
   outline-color: #e60012;
 }
 
-:global(html.person5) .p5-login-char:nth-child(3n) {
+:global(html.person5 .p5-login-char:nth-child(3n)){
   transform: translateY(7px) skewX(-8deg) rotate(2deg);
 }
 
-:global(html.person5) .p5-login-en {
+:global(html.person5 .p5-login-en){
   margin-left: -4px;
   padding: 10px 28px 12px;
   border-top: 3px solid #fff7e8;
@@ -453,7 +453,7 @@ async function handlePasswordLogin() {
   transform: translateY(12px) skewX(-12deg);
 }
 
-:global(html.person5) .p5-login-view .login-card {
+:global(html.person5 .p5-login-view .login-card){
   width: min(560px, calc(100vw - 40px)) !important;
   margin-left: clamp(280px, 25vw, 520px) !important;
   padding: 50px 54px 48px !important;
@@ -470,19 +470,19 @@ async function handlePasswordLogin() {
   transform: rotate(-1.2deg) skewX(-3deg) !important;
 }
 
-:global(html.person5) .p5-login-view .login-card > * {
+:global(html.person5 .p5-login-view .login-card > *){
   position: relative;
   z-index: 2;
   transform: skewX(3deg);
 }
 
-:global(html.person5) .p5-login-shard {
+:global(html.person5 .p5-login-shard){
   position: absolute !important;
   z-index: 1 !important;
   pointer-events: none;
 }
 
-:global(html.person5) .p5-login-shard-red {
+:global(html.person5 .p5-login-shard-red){
   left: -54px;
   top: 26px;
   width: 168px;
@@ -491,7 +491,7 @@ async function handlePasswordLogin() {
   clip-path: polygon(0 20%, 100% 0, 76% 100%, 18% 78%);
 }
 
-:global(html.person5) .p5-login-shard-white {
+:global(html.person5 .p5-login-shard-white){
   right: -42px;
   bottom: 42px;
   width: 132px;
@@ -501,7 +501,7 @@ async function handlePasswordLogin() {
   clip-path: polygon(12% 0, 100% 20%, 82% 88%, 0 100%);
 }
 
-:global(html.person5) .p5-login-view .login-logo {
+:global(html.person5 .p5-login-view .login-logo){
   display: grid;
   width: 128px;
   height: 128px;
@@ -514,13 +514,13 @@ async function handlePasswordLogin() {
   clip-path: polygon(0 10%, 90% 0, 100% 18%, 92% 100%, 12% 92%, 0 74%);
 }
 
-:global(html.person5) .p5-login-view .login-logo img {
+:global(html.person5 .p5-login-view .login-logo img){
   width: 88px;
   height: 88px;
   object-fit: contain;
 }
 
-:global(html.person5) .p5-login-title-wrap {
+:global(html.person5 .p5-login-title-wrap){
   display: grid;
   width: max-content;
   max-width: 100%;
@@ -529,7 +529,7 @@ async function handlePasswordLogin() {
   justify-items: center;
 }
 
-:global(html.person5) .p5-login-title-main {
+:global(html.person5 .p5-login-title-main){
   padding: 8px 18px 11px;
   border: 4px solid #050505;
   outline: 3px solid #fff7e8;
@@ -543,7 +543,7 @@ async function handlePasswordLogin() {
   transform: rotate(-2deg) skewX(-6deg);
 }
 
-:global(html.person5) .p5-login-title-sub {
+:global(html.person5 .p5-login-title-sub){
   padding: 4px 14px 5px;
   border: 2px solid #fff7e8;
   background: #050505;
@@ -556,14 +556,14 @@ async function handlePasswordLogin() {
   transform: rotate(1deg) skewX(-8deg);
 }
 
-:global(html.person5) .p5-login-view .login-desc,
-:global(html.person5) .p5-login-view .login-default-hint,
-:global(html.person5) .p5-login-view .login-server-label {
+:global(html.person5 .p5-login-view .login-desc),
+:global(html.person5 .p5-login-view .login-default-hint),
+:global(html.person5 .p5-login-view .login-server-label){
   color: #fff7e8 !important;
   text-shadow: 2px 2px 0 #050505;
 }
 
-:global(html.person5) .p5-login-view .login-default-hint {
+:global(html.person5 .p5-login-view .login-default-hint){
   display: inline-block;
   padding: 5px 12px;
   border: 2px solid #fff7e8;
@@ -571,7 +571,7 @@ async function handlePasswordLogin() {
   box-shadow: 4px 4px 0 #e60012;
 }
 
-:global(html.person5) .p5-login-view .login-input {
+:global(html.person5 .p5-login-view .login-input){
   position: relative;
   z-index: 3;
   min-height: 58px;
@@ -589,11 +589,11 @@ async function handlePasswordLogin() {
   font-weight: 900 !important;
 }
 
-:global(html.person5) .p5-login-view .login-input::placeholder {
+:global(html.person5 .p5-login-view .login-input::placeholder){
   color: rgba(5, 5, 5, 0.62) !important;
 }
 
-:global(html.person5) .p5-login-view .login-btn {
+:global(html.person5 .p5-login-view .login-btn){
   position: relative;
   z-index: 3;
   min-height: 62px;
@@ -611,13 +611,13 @@ async function handlePasswordLogin() {
   transform: rotate(-1deg) skewX(-5deg) !important;
 }
 
-:global(html.person5) .p5-login-view .login-btn:hover:not(:disabled) {
+:global(html.person5 .p5-login-view .login-btn:hover:not(:disabled)){
   opacity: 1;
   transform: translateY(-2px) rotate(-1deg) skewX(-5deg) !important;
 }
 
-:global(html.person5) .p5-login-view .login-error,
-:global(html.person5) .p5-login-view .login-lock-hint {
+:global(html.person5 .p5-login-view .login-error),
+:global(html.person5 .p5-login-view .login-lock-hint){
   border: 2px solid #fff7e8 !important;
   background: #050505 !important;
   box-shadow: 4px 4px 0 #e60012 !important;
@@ -625,19 +625,19 @@ async function handlePasswordLogin() {
 }
 
 @media (max-width: 900px) {
-  :global(html.person5) .p5-login-brand {
+  :global(html.person5 .p5-login-brand){
     left: 16px;
     top: 18px;
     transform: scale(0.72) rotate(-2deg);
     transform-origin: left top;
   }
 
-  :global(html.person5) .p5-login-view {
+  :global(html.person5 .p5-login-view){
     align-items: flex-end;
     padding: 132px 18px 34px;
   }
 
-  :global(html.person5) .p5-login-view .login-card {
+  :global(html.person5 .p5-login-view .login-card){
     width: min(100%, 520px) !important;
     margin-left: 0 !important;
     padding: 38px 26px 34px !important;
