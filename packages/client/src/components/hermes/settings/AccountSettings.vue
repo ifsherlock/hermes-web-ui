@@ -366,7 +366,8 @@ onMounted(() => { loadLockedIps(); });
 
 .action-label {
   font-size: 14px;
-  color: $text-secondary;
+  color: $text-primary;
+  font-weight: 500;
 }
 
 .action-buttons {
