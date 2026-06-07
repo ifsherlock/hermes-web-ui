@@ -258,17 +258,30 @@ const activeProfileModels = computed(() => {
   const profileModels = appStore.profileModelGroups.find(entry => entry.profile === activeProfileName.value);
   return profileModels?.groups || appStore.modelGroups || [];
 });
+
+function p5CompactModelName(label: string) {
+  const segments = label
+    .split("/")
+    .map(part => part.trim())
+    .filter(Boolean);
+  return segments[segments.length - 1] || label;
+}
+
 const p5ModelItems = computed(() => activeProfileModels.value.flatMap(group => {
   const models = [
     ...group.models,
     ...(appStore.customModels[group.provider] || []).filter(model => !group.models.includes(model)),
   ];
-  return models.map(model => ({
-    provider: group.provider,
-    providerLabel: group.label,
-    model,
-    label: appStore.displayModelName(model, group.provider),
-  }));
+  return models.map(model => {
+    const label = appStore.displayModelName(model, group.provider);
+    return {
+      provider: group.provider,
+      providerLabel: group.label,
+      model,
+      label,
+      compactLabel: p5CompactModelName(label),
+    };
+  });
 }));
 function groupLabel(key: SidebarGroupKey) {
   if (isPerson5.value) {
@@ -959,9 +972,10 @@ onMounted(() => {
               :title="`${item.providerLabel} / ${item.label} (${item.model})`"
               @click="handleP5ModelSwitch(item.model, item.provider)"
             >
-              <span class="p5-model-mark">M</span>
-              <span class="p5-submenu-main">{{ item.label }}</span>
-              <span v-if="isP5CurrentModelItem(item)" class="p5-current-model-badge">当前</span>
+              <span class="p5-model-mark" :class="{ current: isP5CurrentModelItem(item) }">
+                {{ isP5CurrentModelItem(item) ? '当前' : 'M' }}
+              </span>
+              <span class="p5-submenu-main">{{ item.compactLabel }}</span>
               <span class="p5-submenu-sub">{{ item.providerLabel }}</span>
             </button>
           </div>

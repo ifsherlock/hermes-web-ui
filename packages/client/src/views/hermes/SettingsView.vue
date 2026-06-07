@@ -138,4 +138,8 @@ onMounted(() => {
   overflow-y: auto;
   padding: 20px;
 }
+
+.settings-view :deep(.n-tabs-tab) {
+  color: $text-primary;
+}
 </style>
