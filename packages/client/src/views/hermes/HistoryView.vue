@@ -9,6 +9,8 @@ import { NButton, NDropdown, NPopconfirm, NTooltip, useMessage, type DropdownOpt
 import { useI18n } from 'vue-i18n'
 import { getSourceLabel } from '@/shared/session-display'
 import { copyToClipboard } from '@/utils/clipboard'
+import { useTheme } from '@/composables/useTheme'
+import { useP5PageDrawer } from '@/composables/useP5PageDrawer'
 import HistoryMessageList from '@/components/hermes/chat/HistoryMessageList.vue'
 import SessionListItem from '@/components/hermes/chat/SessionListItem.vue'
 import OutlinePanel from '@/components/hermes/chat/OutlinePanel.vue'
@@ -21,6 +23,7 @@ const message = useMessage()
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { isPerson5 } = useTheme()
 
 const routeSessionId = computed(() => {
   const value = route.params.sessionId
@@ -82,6 +85,33 @@ const showSessions = ref(
 )
 let mobileQuery: MediaQueryList | null = null
 const isMobile = ref(false)
+const isDesktop = computed(() => !isMobile.value)
+const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
+const { drawerOpen, reserveDrawerSlot, toggleDrawer } = useP5PageDrawer({
+  isPerson5,
+  isDesktop,
+  sidebarCollapsed,
+})
+const isP5Desktop = computed(() => isPerson5.value && isDesktop.value)
+const effectiveShowSessions = computed(() =>
+  isP5Desktop.value ? drawerOpen.value : showSessions.value,
+)
+
+function setSessionsVisible(open: boolean) {
+  if (isP5Desktop.value) {
+    drawerOpen.value = open
+    return
+  }
+  showSessions.value = open
+}
+
+function toggleSessions() {
+  if (isP5Desktop.value) {
+    toggleDrawer()
+    return
+  }
+  showSessions.value = !showSessions.value
+}
 
 function findHistorySession(sessionId: string): SessionSummary | undefined {
   return hermesSessions.value.find(session => session.id === sessionId)
@@ -660,13 +690,13 @@ function handleBatchDeleteConfirm() {
 </script>
 
 <template>
-  <div class="history-panel">
-    <div class="session-backdrop" :class="{ active: showSessions }" @click="showSessions = false" />
-    <aside class="session-list" :class="{ collapsed: !showSessions }">
+  <div class="history-panel" :class="{ 'p5-reserve-drawer-slot': reserveDrawerSlot }">
+    <div class="session-backdrop" :class="{ active: effectiveShowSessions }" @click="setSessionsVisible(false)" />
+    <aside class="session-list" :class="{ collapsed: !effectiveShowSessions }">
       <div class="session-list-header">
-        <span v-if="showSessions" class="session-list-title">{{ t('chat.hermesHistory') }}</span>
+        <span v-if="effectiveShowSessions" class="session-list-title">{{ t('chat.hermesHistory') }}</span>
         <div class="session-list-actions">
-          <button class="session-close-btn" @click="showSessions = false">
+          <button class="session-close-btn" @click="setSessionsVisible(false)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
           <NButton
@@ -731,10 +761,10 @@ function handleBatchDeleteConfirm() {
           </NButton>
         </div>
       </div>
-      <div v-if="showSessions" class="session-scope-note">
+      <div v-if="effectiveShowSessions" class="session-scope-note">
         {{ t('chat.historyScopeHint') }}
       </div>
-      <div v-if="showSessions" class="session-items">
+      <div v-if="effectiveShowSessions" class="session-items">
         <div v-if="hermesSessionsLoading && hermesSessions.length === 0" class="session-loading">{{ t('common.loading') }}</div>
         <div v-else-if="hermesSessions.length === 0" class="session-empty">{{ t('chat.noSessions') }}</div>
 
@@ -791,13 +821,13 @@ function handleBatchDeleteConfirm() {
 
     <button
       class="p5-session-handle"
-      :class="{ open: showSessions }"
+      :class="{ open: effectiveShowSessions }"
       type="button"
-      :aria-pressed="showSessions"
+      :aria-pressed="effectiveShowSessions"
       aria-label="切换历史会话栏"
-      @click="showSessions = !showSessions"
+      @click="toggleSessions"
     >
-      <span>{{ showSessions ? '收起' : '历史' }}</span>
+      <span>{{ effectiveShowSessions ? '收起' : '历史' }}</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6" />
       </svg>
@@ -817,7 +847,7 @@ function handleBatchDeleteConfirm() {
     <div class="chat-main">
       <header class="chat-header">
         <div class="header-left">
-          <NButton quaternary size="small" @click="showSessions = !showSessions" circle>
+          <NButton v-if="!isPerson5" quaternary size="small" @click="toggleSessions" circle>
             <template #icon>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </template>
