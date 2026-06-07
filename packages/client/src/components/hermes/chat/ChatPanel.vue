@@ -27,6 +27,7 @@ import SessionListItem from "./SessionListItem.vue";
 import DrawerPanel from "./DrawerPanel.vue";
 import OutlinePanel from "./OutlinePanel.vue";
 import { useTheme } from "@/composables/useTheme";
+import { useP5PageDrawer } from "@/composables/useP5PageDrawer";
 
 const chatStore = useChatStore();
 const appStore = useAppStore();
@@ -63,13 +64,41 @@ const showSessions = ref(
 );
 let mobileQuery: MediaQueryList | null = null;
 const isMobile = ref(false);
+const isDesktop = computed(() => !isMobile.value);
+const sidebarCollapsed = computed(() => appStore.sidebarCollapsed);
+const { drawerOpen, reserveDrawerSlot, toggleDrawer } = useP5PageDrawer({
+  isPerson5,
+  isDesktop,
+  sidebarCollapsed,
+});
+const isP5Desktop = computed(() => isPerson5.value && isDesktop.value);
+const effectiveShowSessions = computed(() =>
+  isP5Desktop.value ? drawerOpen.value : showSessions.value,
+);
 
 function syncSessionsForTheme() {
-  if (isMobile.value || isPerson5.value) {
+  if (isMobile.value) {
     showSessions.value = false;
     return;
   }
+  if (isPerson5.value) return;
   showSessions.value = true;
+}
+
+function setSessionsVisible(open: boolean) {
+  if (isP5Desktop.value) {
+    drawerOpen.value = open;
+    return;
+  }
+  showSessions.value = open;
+}
+
+function toggleSessions() {
+  if (isP5Desktop.value) {
+    toggleDrawer();
+    return;
+  }
+  showSessions.value = !showSessions.value;
 }
 
 function sessionHref(sessionId: string) {
@@ -710,24 +739,24 @@ async function handleSessionModelCustomSubmit() {
 </script>
 
 <template>
-  <div class="chat-panel">
+  <div class="chat-panel" :class="{ 'p5-reserve-drawer-slot': reserveDrawerSlot }">
     <div
       v-if="currentMode === 'chat'"
       class="session-backdrop"
-      :class="{ active: showSessions }"
-      @click="showSessions = false"
+      :class="{ active: effectiveShowSessions }"
+      @click="setSessionsVisible(false)"
     />
     <aside
       v-if="currentMode === 'chat'"
       class="session-list"
-      :class="{ collapsed: !showSessions }"
+      :class="{ collapsed: !effectiveShowSessions }"
     >
       <div class="session-list-header">
-        <span v-if="showSessions" class="session-list-title">{{
+        <span v-if="effectiveShowSessions" class="session-list-title">{{
           t("chat.webUiSessions")
         }}</span>
         <div class="session-list-actions">
-          <button class="session-close-btn" @click="showSessions = false">
+          <button class="session-close-btn" @click="setSessionsVisible(false)">
             <svg
               width="14"
               height="14"
@@ -847,7 +876,7 @@ async function handleSessionModelCustomSubmit() {
           </NButton>
         </div>
       </div>
-      <div v-if="showSessions" class="session-profile-filter">
+      <div v-if="effectiveShowSessions" class="session-profile-filter">
         <NSelect
           :value="sessionProfileFilter || '__all__'"
           :options="profileFilterOptions"
@@ -856,7 +885,7 @@ async function handleSessionModelCustomSubmit() {
           @update:value="handleProfileFilterChange"
         />
       </div>
-      <div v-if="showSessions" class="session-items">
+      <div v-if="effectiveShowSessions" class="session-items">
         <div
           v-if="chatStore.isLoadingSessions && chatStore.sessions.length === 0"
           class="session-loading"
@@ -1107,13 +1136,13 @@ async function handleSessionModelCustomSubmit() {
     <button
       v-if="currentMode === 'chat'"
       class="p5-session-handle"
-      :class="{ open: showSessions }"
+      :class="{ open: effectiveShowSessions }"
       type="button"
-      :aria-pressed="showSessions"
+      :aria-pressed="effectiveShowSessions"
       aria-label="切换会话栏"
-      @click="showSessions = !showSessions"
+      @click="toggleSessions"
     >
-      <span>{{ showSessions ? '收起' : '会话' }}</span>
+      <span>{{ effectiveShowSessions ? '收起' : '会话' }}</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6" />
       </svg>
@@ -1126,7 +1155,7 @@ async function handleSessionModelCustomSubmit() {
             v-if="currentMode === 'chat' && !isPerson5"
             quaternary
             size="small"
-            @click="showSessions = !showSessions"
+            @click="toggleSessions"
             circle
           >
             <template #icon>

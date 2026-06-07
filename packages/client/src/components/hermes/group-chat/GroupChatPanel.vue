@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useMessage, NInput, NButton, NSpace, NSelect, NPopover, NPopconfirm, NInputNumber, NDropdown, type DropdownOption } from 'naive-ui'
@@ -12,14 +12,32 @@ import ProfileAvatar from '@/components/hermes/profiles/ProfileAvatar.vue'
 import { copyToClipboard } from '@/utils/clipboard'
 import type { Attachment } from '@/stores/hermes/chat'
 import type { RoomAgent } from '@/api/hermes/group-chat'
+import { useAppStore } from '@/stores/hermes/app'
+import { useTheme } from '@/composables/useTheme'
+import { useP5PageDrawer } from '@/composables/useP5PageDrawer'
 
 const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const store = useGroupChatStore()
+const appStore = useAppStore()
 const profilesStore = useProfilesStore()
+const { isPerson5 } = useTheme()
 
-const showSidebar = ref(window.innerWidth > 768)
+const showSidebar = ref(typeof window === 'undefined' || window.innerWidth > 768)
+let mobileQuery: MediaQueryList | null = null
+const isMobile = ref(false)
+const isDesktop = computed(() => !isMobile.value)
+const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
+const { drawerOpen, reserveDrawerSlot, toggleDrawer } = useP5PageDrawer({
+    isPerson5,
+    isDesktop,
+    sidebarCollapsed,
+})
+const isP5Desktop = computed(() => isPerson5.value && isDesktop.value)
+const effectiveShowSidebar = computed(() =>
+    isP5Desktop.value ? drawerOpen.value : showSidebar.value,
+)
 const showCreateModal = ref(false)
 const showCloneModal = ref(false)
 const showAddAgentModal = ref(false)
@@ -72,7 +90,19 @@ function formatTokens(tokens: number): string {
 }
 
 function toggleSidebar() {
+    if (isP5Desktop.value) {
+        toggleDrawer()
+        return
+    }
     showSidebar.value = !showSidebar.value
+}
+
+function setSidebarVisible(open: boolean) {
+    if (isP5Desktop.value) {
+        drawerOpen.value = open
+        return
+    }
+    showSidebar.value = open
 }
 
 function generateCode(): string {
@@ -216,7 +246,7 @@ async function handleClearRoomContext() {
 async function handleSelectRoom(roomId: string) {
     try {
         await router.push({ name: 'hermes.groupChatRoom', params: { roomId } })
-        if (window.innerWidth <= 768) showSidebar.value = false
+        if (isMobile.value) setSidebarVisible(false)
     } catch {
         message.error(t('groupChat.joinFailed'))
     }
@@ -235,10 +265,22 @@ async function handleAddAgent() {
     showAddAgentModal.value = true
 }
 
+function handleMobileChange(e: MediaQueryListEvent | MediaQueryList) {
+    isMobile.value = e.matches
+    if (e.matches) showSidebar.value = false
+}
+
 onMounted(() => {
+    mobileQuery = window.matchMedia('(max-width: 768px)')
+    handleMobileChange(mobileQuery)
+    mobileQuery.addEventListener('change', handleMobileChange)
     if (profilesStore.profiles.length === 0) {
         void profilesStore.fetchProfiles()
     }
+})
+
+onUnmounted(() => {
+    mobileQuery?.removeEventListener('change', handleMobileChange)
 })
 
 async function confirmAddAgent() {
@@ -333,11 +375,11 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
 </script>
 
 <template>
-    <div class="group-chat-panel">
+    <div class="group-chat-panel" :class="{ 'p5-reserve-drawer-slot': reserveDrawerSlot }">
         <!-- Mobile backdrop -->
-        <div class="sidebar-backdrop" :class="{ active: showSidebar }" @click="showSidebar = false" />
+        <div class="sidebar-backdrop" :class="{ active: effectiveShowSidebar }" @click="setSidebarVisible(false)" />
         <!-- Room sidebar -->
-        <div v-if="showSidebar" class="room-sidebar">
+        <div v-if="effectiveShowSidebar" class="room-sidebar">
             <div class="sidebar-header">
                 <span class="sidebar-title">{{ t('groupChat.title') }}</span>
                 <div class="sidebar-actions">
@@ -380,6 +422,20 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
             </div>
         </div>
 
+        <button
+            class="p5-session-handle"
+            :class="{ open: effectiveShowSidebar }"
+            type="button"
+            :aria-pressed="effectiveShowSidebar"
+            aria-label="切换房间栏"
+            @click="toggleSidebar"
+        >
+            <span>{{ effectiveShowSidebar ? '收起' : '群聊' }}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+            </svg>
+        </button>
+
         <NDropdown
             placement="bottom-start"
             trigger="manual"
@@ -394,7 +450,7 @@ async function handleApproval(choice: 'once' | 'session' | 'always' | 'deny') {
         <!-- Main chat area -->
         <div class="chat-main">
             <div class="chat-header">
-                <button class="icon-btn" @click="toggleSidebar">
+                <button v-if="!isP5Desktop" class="icon-btn" @click="toggleSidebar">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="9" y1="3" x2="9" y2="21" />
                     </svg>
