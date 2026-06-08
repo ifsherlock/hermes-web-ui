@@ -155,6 +155,7 @@ jobs:
         shell: bash
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          EVENT_NAME: ${{ github.event_name }}
           VARIANT: ${{ matrix.variant }}
           LATEST_TAGS: ${{ matrix.latest_tags }}
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
@@ -174,21 +175,23 @@ jobs:
           fi
           {
             echo "tags<<EOF"
-            while IFS= read -r tag; do
-              [ -n "$tag" ] && echo "${image}:${tag}"
-            done <<< "$LATEST_TAGS"
+            if [ "$EVENT_NAME" != "push" ]; then
+              while IFS= read -r tag; do
+                [ -n "$tag" ] && echo "${image}:${tag}"
+              done <<< "$LATEST_TAGS"
+            fi
             echo "${image}:${VARIANT}-${short_sha}"
             if [ -n "$ref_tag" ]; then
               echo "${image}:${VARIANT}-${ref_tag}"
             fi
-            if [ "$VARIANT" = "full" ] && [ -n "$ref_tag" ]; then
+            if [ "$EVENT_NAME" != "push" ] && [ "$VARIANT" = "full" ] && [ -n "$ref_tag" ]; then
               echo "${image}:${ref_tag}"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Log in to Docker Hub
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.push_docker)
+        if: github.event_name == 'release' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.push_docker)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -200,5 +203,5 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           platforms: ${{ inputs.docker_platforms || 'linux/amd64,linux/arm64' }}
-          push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.push_docker) }}
+          push: ${{ github.event_name == 'release' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.push_docker) }}
           tags: ${{ steps.docker-tags.outputs.tags }}
