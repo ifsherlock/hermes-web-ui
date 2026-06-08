@@ -168,6 +168,10 @@ jobs:
           fi
           short_sha="${SHA::12}"
           ref_tag="${RELEASE_TAG:-$REF_NAME}"
+          if [ -n "$ref_tag" ]; then
+            ref_tag="$(printf '%s' "$ref_tag" | sed -E 's/[^A-Za-z0-9_.-]+/-/g; s/^[.-]+//; s/[.-]+$//')"
+            ref_tag="${ref_tag:0:120}"
+          fi
           {
             echo "tags<<EOF"
             while IFS= read -r tag; do
