@@ -1,0 +1,190 @@
+name: Package EXE and Docker
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_exe:
+        description: "Build Windows desktop exe"
+        required: true
+        type: boolean
+        default: true
+      build_docker:
+        description: "Build Docker images"
+        required: true
+        type: boolean
+        default: true
+      push_docker:
+        description: "Push Docker images to Docker Hub"
+        required: true
+        type: boolean
+        default: true
+      docker_platforms:
+        description: "Docker platforms"
+        required: true
+        type: string
+        default: "linux/amd64,linux/arm64"
+      release_tag:
+        description: "Optional release tag to attach exe artifacts and tag Docker images"
+        required: false
+        type: string
+      runtime_release_tag:
+        description: "Optional Hermes desktop runtime release tag embedded into exe"
+        required: false
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: package-artifacts-${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  desktop-windows:
+    name: Windows exe
+    if: github.event_name == 'release' || inputs.build_exe
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/desktop/package-lock.json
+
+      - name: Install web UI dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild node-pty
+
+      - name: Build web UI
+        run: npm run build
+
+      - name: Keep production web UI dependencies only
+        run: npm prune --omit=dev --no-audit --no-fund
+
+      - name: Install desktop dependencies
+        run: npm ci --prefix packages/desktop --no-audit --no-fund
+
+      - name: Write runtime release metadata
+        shell: bash
+        env:
+          HERMES_DESKTOP_RUNTIME_RELEASE_TAG: ${{ inputs.runtime_release_tag || vars.HERMES_DESKTOP_RUNTIME_RELEASE_TAG }}
+        run: npm --prefix packages/desktop run write:runtime-release
+
+      - name: Build Windows exe
+        shell: bash
+        run: npm --prefix packages/desktop run dist -- --win nsis --x64 --publish never
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-x64
+          path: |
+            packages/desktop/release/*.exe
+            packages/desktop/release/*.exe.blockmap
+            packages/desktop/release/latest*.yml
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload exe artifacts to release
+        if: github.event_name == 'release' || inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || inputs.release_tag }}
+          fail_on_unmatched_files: true
+          files: |
+            packages/desktop/release/*.exe
+            packages/desktop/release/*.exe.blockmap
+            packages/desktop/release/latest*.yml
+
+  docker:
+    name: Docker ${{ matrix.variant }}
+    if: github.event_name == 'release' || inputs.build_docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: full
+            dockerfile: ./Dockerfile
+            latest_tags: |
+              full
+              latest
+          - variant: lite
+            dockerfile: ./Dockerfile.lite
+            latest_tags: |
+              lite
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve Docker tags
+        id: docker-tags
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          VARIANT: ${{ matrix.variant }}
+          LATEST_TAGS: ${{ matrix.latest_tags }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          image="hermes-web-ui"
+          if [ -n "${DOCKERHUB_USERNAME:-}" ]; then
+            image="${DOCKERHUB_USERNAME}/hermes-web-ui"
+          fi
+          short_sha="${SHA::12}"
+          ref_tag="${RELEASE_TAG:-$REF_NAME}"
+          {
+            echo "tags<<EOF"
+            while IFS= read -r tag; do
+              [ -n "$tag" ] && echo "${image}:${tag}"
+            done <<< "$LATEST_TAGS"
+            echo "${image}:${VARIANT}-${short_sha}"
+            if [ -n "$ref_tag" ]; then
+              echo "${image}:${VARIANT}-${ref_tag}"
+            fi
+            if [ "$VARIANT" = "full" ] && [ -n "$ref_tag" ]; then
+              echo "${image}:${ref_tag}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'release' || inputs.push_docker
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ inputs.docker_platforms || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name == 'release' || inputs.push_docker }}
+          tags: ${{ steps.docker-tags.outputs.tags }}

@@ -1,0 +1,47 @@
+FROM node:24-bookworm-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    make \
+    g++ \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+
+ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN npm ci --ignore-scripts && npm rebuild node-pty
+
+COPY . .
+
+RUN npm run build && npm prune --omit=dev --no-audit --no-fund
+
+FROM node:24-bookworm-slim
+
+ENV NODE_ENV=production
+ENV HOME=/home/node
+ENV PORT=6060
+ENV HERMES_WEB_UI_MANAGED_GATEWAY=0
+ENV HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /home/node/.hermes-web-ui \
+    && chown -R node:node /home/node /app
+
+COPY --from=builder --chown=node:node /app/package*.json ./
+COPY --from=builder --chown=node:node /app/bin ./bin
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+
+USER node
+
+EXPOSE 6060
+
+ENTRYPOINT ["node", "dist/server/index.js"]
+CMD []
