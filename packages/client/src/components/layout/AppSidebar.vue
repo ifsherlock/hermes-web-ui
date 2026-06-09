@@ -245,7 +245,6 @@ const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
 });
 const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
 const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
-const p5ModelSubmenuRef = ref<HTMLElement | null>(null);
 const p5ProfileActionsOpen = ref<Record<string, boolean>>({});
 const p5ProfileRestarting = ref<Record<string, boolean>>({});
 const p5GatewayRestarting = ref<Record<string, boolean>>({});
@@ -254,35 +253,6 @@ const p5AvatarProfileName = ref<string | null>(null);
 const p5AvatarInputRef = ref<HTMLInputElement | null>(null);
 
 const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
-const activeProfileModels = computed(() => {
-  const profileModels = appStore.profileModelGroups.find(entry => entry.profile === activeProfileName.value);
-  return profileModels?.groups || appStore.modelGroups || [];
-});
-
-function p5CompactModelName(label: string) {
-  const segments = label
-    .split("/")
-    .map(part => part.trim())
-    .filter(Boolean);
-  return segments[segments.length - 1] || label;
-}
-
-const p5ModelItems = computed(() => activeProfileModels.value.flatMap(group => {
-  const models = [
-    ...group.models,
-    ...(appStore.customModels[group.provider] || []).filter(model => !group.models.includes(model)),
-  ];
-  return models.map(model => {
-    const label = appStore.displayModelName(model, group.provider);
-    return {
-      provider: group.provider,
-      providerLabel: group.label,
-      model,
-      label,
-      compactLabel: p5CompactModelName(label),
-    };
-  });
-}));
 function groupLabel(key: SidebarGroupKey) {
   if (isPerson5.value) {
     return person5GroupLabels[key];
@@ -350,7 +320,7 @@ function isP5ControlCollapsed(key: Person5ControlKey) {
 }
 
 function scrollP5Submenu(key: Person5ControlKey) {
-  const el = key === "profile" ? p5ProfileSubmenuRef.value : p5ModelSubmenuRef.value;
+  const el = key === "profile" ? p5ProfileSubmenuRef.value : null;
   if (!el) return;
   const firstItem = el.querySelector<HTMLElement>(".nav-item");
   const itemHeight = firstItem?.offsetHeight || 64;
@@ -369,11 +339,6 @@ function scrollP5AgentSubmenu() {
     top: itemHeight * 4,
     behavior: "smooth",
   });
-}
-
-function isP5CurrentModelItem(item: { provider: string; model: string }) {
-  if (!appStore.selectedModel || item.model !== appStore.selectedModel) return false;
-  return appStore.selectedProvider ? item.provider === appStore.selectedProvider : true;
 }
 
 function isP5ProfileActionsOpen(name: string) {
@@ -457,13 +422,6 @@ async function handleP5RestartGateway(name: string) {
     p5GatewayRestarting.value = { ...p5GatewayRestarting.value, [name]: false };
   }
 }
-
-async function handleP5ModelSwitch(model: string, provider: string) {
-  if (model === appStore.selectedModel && provider === appStore.selectedProvider) return;
-  await appStore.switchModel(model, provider);
-  message.success(`模型已切换：${appStore.displayModelName(model, provider)}`);
-}
-
 
 async function handleUpdate() {
   const ok = await appStore.doUpdate();
@@ -955,38 +913,9 @@ onMounted(() => {
           </button>
         </div>
 
-        <div class="nav-group p5-control-group p5-control-model" :class="{ expanded: !isP5ControlCollapsed('model') }">
-          <button class="nav-group-label p5-control-label-main p5-strip-shift" type="button" @click="toggleP5Control('model')">
-            <P5MenuStrip :title="person5ControlMeta.model.title" :subtitle="person5ControlMeta.model.subtitle" :hot="person5ControlMeta.model.hot" />
-            <svg class="nav-group-arrow" :class="{ collapsed: isP5ControlCollapsed('model') }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-          <div ref="p5ModelSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('model') }">
-            <button
-              v-for="item in p5ModelItems"
-              :key="`${item.provider}:${item.model}`"
-              class="nav-item p5-model-item"
-              :class="{ active: isP5CurrentModelItem(item) }"
-              type="button"
-              :title="`${item.providerLabel} / ${item.label} (${item.model})`"
-              @click="handleP5ModelSwitch(item.model, item.provider)"
-            >
-              <span class="p5-model-mark" :class="{ current: isP5CurrentModelItem(item) }">
-                {{ isP5CurrentModelItem(item) ? '当前' : 'M' }}
-              </span>
-              <span class="p5-submenu-main">{{ item.compactLabel }}</span>
-              <span class="p5-submenu-sub">{{ item.providerLabel }}</span>
-            </button>
-          </div>
-          <button
-            v-if="p5ModelItems.length > 4 && !isP5ControlCollapsed('model')"
-            class="p5-submenu-more"
-            type="button"
-            @click.stop="scrollP5Submenu('model')"
-          >
-            更多模型 ↓
-          </button>
+        <div class="p5-control-strip p5-control-model p5-control-model-picker">
+          <span class="p5-control-label">模型中枢</span>
+          <ModelSelector />
         </div>
       </template>
       <template v-else>
