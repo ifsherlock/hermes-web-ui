@@ -35,6 +35,7 @@ const syncBridgeReasoningToMessageMock = vi.fn()
 const recordBridgeToolStartedMock = vi.fn()
 const recordBridgeToolCompletedMock = vi.fn()
 const resolveBridgeRunModelConfigMock = vi.fn()
+const resolveModelFallbackAttemptsMock = vi.fn()
 
 vi.mock('../../packages/server/src/lib/llm-prompt', () => ({
   getSystemPrompt: getSystemPromptMock,
@@ -87,6 +88,10 @@ vi.mock('../../packages/server/src/services/hermes/run-chat/model-config', () =>
   resolveBridgeRunModelConfig: resolveBridgeRunModelConfigMock,
 }))
 
+vi.mock('../../packages/server/src/services/hermes/run-chat/model-fallback', () => ({
+  resolveModelFallbackAttempts: resolveModelFallbackAttemptsMock,
+}))
+
 function makeSocket() {
   return {
     connected: true,
@@ -119,6 +124,11 @@ describe('bridge run final context usage', () => {
     getSystemPromptMock.mockReturnValue('system prompt')
     getSessionMock.mockReturnValue({ id: 'session-1', profile: 'default', model: '', provider: '' })
     resolveBridgeRunModelConfigMock.mockResolvedValue({ model: 'gpt-test', provider: 'openai' })
+    resolveModelFallbackAttemptsMock.mockResolvedValue([
+      { provider: 'openai', model: 'gpt-test', index: 0, primary: true },
+    ])
+    recordBridgeToolStartedMock.mockReturnValue({ id: 'tool-1', arguments: '{}' })
+    recordBridgeToolCompletedMock.mockReturnValue({ id: 'tool-1', output: '', duration: 0 })
     buildCompressedHistoryMock.mockResolvedValue([{ role: 'user', content: 'previous' }])
     buildDbHistoryMock.mockResolvedValue([
       { role: 'user', content: 'hello' },
@@ -625,6 +635,158 @@ describe('bridge run final context usage', () => {
       outputTokens: 7,
       contextTokens: 54321,
     }))
+  })
+
+  it('retries a bridge run with the configured fallback model after a clean provider failure', async () => {
+    const emit = vi.fn()
+    const nsp = makeNamespace(emit)
+    const socket = makeSocket()
+    const state = makeState()
+    const sessionMap = new Map([['session-1', state]])
+    resolveModelFallbackAttemptsMock.mockResolvedValue([
+      { provider: 'openai', model: 'gpt-test', index: 0, primary: true, retry_on: ['run_failed', 'empty_output'] },
+      { provider: 'anthropic', model: 'claude-test', index: 1, primary: false, retry_on: ['run_failed', 'empty_output'] },
+    ])
+    const bridge = {
+      chat: vi.fn()
+        .mockResolvedValueOnce({ run_id: 'run-1', status: 'started' })
+        .mockResolvedValueOnce({ run_id: 'run-2', status: 'started' }),
+      contextEstimate: vi.fn().mockResolvedValue({
+        token_count: 12345,
+        message_count: 2,
+        tool_count: 4,
+        system_prompt_chars: 13,
+      }),
+      streamOutput: vi.fn(async function* (runId: string) {
+        if (runId === 'run-1') {
+          yield { run_id: 'run-1', done: true, status: 'error', error: 'HTTP 503: no available channel' }
+          return
+        }
+        yield { run_id: 'run-2', done: true, status: 'completed', output: 'fallback done' }
+      }),
+    } as any
+
+    const { handleBridgeRun } = await import('../../packages/server/src/services/hermes/run-chat/handle-bridge-run')
+    await handleBridgeRun(
+      nsp,
+      socket,
+      { input: 'hello', session_id: 'session-1' },
+      'default',
+      sessionMap,
+      bridge,
+      false,
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(bridge.chat).toHaveBeenCalledTimes(2)
+    expect(bridge.chat.mock.calls[0][5]).toEqual(expect.objectContaining({ model: 'gpt-test', provider: 'openai' }))
+    expect(bridge.chat.mock.calls[1][5]).toEqual(expect.objectContaining({ model: 'claude-test', provider: 'anthropic' }))
+    expect(emit).toHaveBeenCalledWith('agent.event', expect.objectContaining({
+      kind: 'model_fallback',
+      failed_model: 'gpt-test',
+      next_model: 'claude-test',
+    }))
+    expect(updateSessionMock).toHaveBeenCalledWith('session-1', { model: 'claude-test', provider: 'anthropic' })
+    expect(emit).toHaveBeenCalledWith('run.completed', expect.objectContaining({
+      output: 'fallback done',
+    }))
+  })
+
+  it('does not fallback after tool activity has already started', async () => {
+    const emit = vi.fn()
+    const nsp = makeNamespace(emit)
+    const socket = makeSocket()
+    const state = makeState()
+    const sessionMap = new Map([['session-1', state]])
+    resolveModelFallbackAttemptsMock.mockResolvedValue([
+      { provider: 'openai', model: 'gpt-test', index: 0, primary: true, retry_on: ['run_failed', 'empty_output'] },
+      { provider: 'anthropic', model: 'claude-test', index: 1, primary: false, retry_on: ['run_failed', 'empty_output'] },
+    ])
+    const bridge = {
+      chat: vi.fn().mockResolvedValue({ run_id: 'run-1', status: 'started' }),
+      contextEstimate: vi.fn().mockResolvedValue({
+        token_count: 12345,
+        message_count: 2,
+        tool_count: 4,
+        system_prompt_chars: 13,
+      }),
+      streamOutput: vi.fn(async function* () {
+        yield {
+          run_id: 'run-1',
+          done: true,
+          status: 'error',
+          error: 'tool run failed',
+          events: [{ event: 'tool.started', id: 'tool-1', tool_name: 'read_file', args: '{}' }],
+        }
+      }),
+    } as any
+
+    const { handleBridgeRun } = await import('../../packages/server/src/services/hermes/run-chat/handle-bridge-run')
+    await handleBridgeRun(
+      nsp,
+      socket,
+      { input: 'hello', session_id: 'session-1' },
+      'default',
+      sessionMap,
+      bridge,
+      false,
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(bridge.chat).toHaveBeenCalledTimes(1)
+    expect(emit).not.toHaveBeenCalledWith('agent.event', expect.objectContaining({ kind: 'model_fallback' }))
+    expect(updateSessionMock).not.toHaveBeenCalledWith('session-1', { model: 'claude-test', provider: 'anthropic' })
+    expect(emit).toHaveBeenCalledWith('run.failed', expect.objectContaining({
+      error: 'tool run failed',
+    }))
+  })
+
+  it('retries empty bridge output once and leaves the session model unchanged when all attempts are empty', async () => {
+    const emit = vi.fn()
+    const nsp = makeNamespace(emit)
+    const socket = makeSocket()
+    const state = makeState()
+    const sessionMap = new Map([['session-1', state]])
+    resolveModelFallbackAttemptsMock.mockResolvedValue([
+      { provider: 'openai', model: 'gpt-test', index: 0, primary: true, retry_on: ['empty_output'] },
+      { provider: 'anthropic', model: 'claude-test', index: 1, primary: false, retry_on: ['empty_output'] },
+    ])
+    const bridge = {
+      chat: vi.fn()
+        .mockResolvedValueOnce({ run_id: 'run-1', status: 'started' })
+        .mockResolvedValueOnce({ run_id: 'run-2', status: 'started' }),
+      contextEstimate: vi.fn().mockResolvedValue({
+        token_count: 12345,
+        message_count: 2,
+        tool_count: 4,
+        system_prompt_chars: 13,
+      }),
+      streamOutput: vi.fn(async function* (runId: string) {
+        yield { run_id: runId, done: true, status: 'completed', output: '' }
+      }),
+    } as any
+
+    const { handleBridgeRun } = await import('../../packages/server/src/services/hermes/run-chat/handle-bridge-run')
+    await handleBridgeRun(
+      nsp,
+      socket,
+      { input: 'hello', session_id: 'session-1' },
+      'default',
+      sessionMap,
+      bridge,
+      false,
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(bridge.chat).toHaveBeenCalledTimes(2)
+    expect(emit).toHaveBeenCalledWith('agent.event', expect.objectContaining({
+      kind: 'model_fallback',
+      reason: 'Agent returned no output',
+    }))
+    expect(updateSessionMock).not.toHaveBeenCalledWith('session-1', { model: 'claude-test', provider: 'anthropic' })
   })
 
   it('emits bridge lifecycle status events so retries are visible', async () => {

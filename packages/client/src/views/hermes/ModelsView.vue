@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { NButton, NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import AuxiliaryModelsPanel from '@/components/hermes/models/AuxiliaryModelsPanel.vue'
+import FallbackModelsPanel from '@/components/hermes/models/FallbackModelsPanel.vue'
 import ProvidersPanel from '@/components/hermes/models/ProvidersPanel.vue'
 import ProviderFormModal from '@/components/hermes/models/ProviderFormModal.vue'
 import { useModelsStore } from '@/stores/hermes/models'
@@ -83,6 +84,7 @@ async function handleRefreshModelCache() {
 
     <div class="models-content">
       <AuxiliaryModelsPanel />
+      <FallbackModelsPanel />
       <NSpin :show="modelsStore.loading && modelsStore.providers.length === 0">
         <ProvidersPanel />
       </NSpin>

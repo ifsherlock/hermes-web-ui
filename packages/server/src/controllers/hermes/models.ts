@@ -5,7 +5,15 @@ import { getActiveEnvPath, getActiveAuthPath, getActiveProfileName, getProfileDi
 import { readConfigYaml, readConfigYamlForProfile, updateConfigYaml, updateConfigYamlForProfile, fetchProviderModels, buildModelGroups, PROVIDER_ENV_MAP } from '../../services/config-helpers'
 import { buildProviderModelMap, PROVIDER_PRESETS } from '../../shared/providers'
 import { getCopilotModelsDetailed, resolveCopilotOAuthToken, type CopilotModelMeta } from '../../services/hermes/copilot-models'
-import { readAppConfig, writeAppConfig, type ModelVisibilityRule } from '../../services/app-config'
+import {
+  readAppConfig,
+  writeAppConfig,
+  normalizeModelFallbackConfig,
+  type ModelFallbackConfig,
+  type ModelFallbackRule,
+  type ModelFallbackTarget,
+  type ModelVisibilityRule,
+} from '../../services/app-config'
 import { getDb } from '../../db'
 import { MODEL_CONTEXT_TABLE } from '../../db/hermes/schemas'
 import { listUserProfiles } from '../../db/hermes/users-store'
@@ -23,6 +31,13 @@ type ModelMeta = { preview?: boolean; disabled?: boolean; alias?: string }
 type AvailableGroup = { provider: string; label: string; base_url: string; models: string[]; api_key: string; builtin?: boolean; model_meta?: Record<string, ModelMeta>; available_models?: string[]; base_url_env?: string }
 type ModelVisibility = Record<string, ModelVisibilityRule>
 type CustomModels = Record<string, string[]>
+type ModelFallbackWarning = {
+  rule_id: string
+  kind: 'primary_missing' | 'fallback_missing' | 'empty_chain'
+  provider?: string
+  model?: string
+  message: string
+}
 
 const RESERVED_ALIAS_KEYS = new Set(['__proto__', 'prototype', 'constructor'])
 
@@ -161,6 +176,77 @@ function resolveVisibleDefault(defaultModel: string, defaultProvider: string, gr
   }
   const fallback = groups.find(group => group.models.length > 0)
   return { defaultModel: fallback?.models[0] || '', defaultProvider: fallback?.provider || '' }
+}
+
+function hasAvailableModel(groups: AvailableGroup[], target: ModelFallbackTarget): boolean {
+  const group = groups.find(item => item.provider === target.provider)
+  return !!group?.models.includes(target.model)
+}
+
+function groupsForFallbackValidation(
+  rule: ModelFallbackRule,
+  profileResults: Array<{ profile: string; groups: AvailableGroup[] }>,
+  mergedGroups: AvailableGroup[],
+): AvailableGroup[] {
+  if (!rule.profile) return mergedGroups
+  return profileResults.find(result => result.profile === rule.profile)?.groups || []
+}
+
+function validateModelFallbackConfig(
+  fallback: ModelFallbackConfig,
+  profileResults: Array<{ profile: string; groups: AvailableGroup[] }>,
+  mergedGroups: AvailableGroup[],
+): ModelFallbackWarning[] {
+  const warnings: ModelFallbackWarning[] = []
+  for (const rule of fallback.rules || []) {
+    const groups = groupsForFallbackValidation(rule, profileResults, mergedGroups)
+    if (!hasAvailableModel(groups, { provider: rule.provider, model: rule.model })) {
+      warnings.push({
+        rule_id: rule.id,
+        kind: 'primary_missing',
+        provider: rule.provider,
+        model: rule.model,
+        message: `Primary model is not available: ${rule.provider}/${rule.model}`,
+      })
+    }
+    if (!rule.fallbacks.length) {
+      warnings.push({
+        rule_id: rule.id,
+        kind: 'empty_chain',
+        message: 'Fallback chain is empty',
+      })
+      continue
+    }
+    for (const target of rule.fallbacks) {
+      if (!hasAvailableModel(groups, target)) {
+        warnings.push({
+          rule_id: rule.id,
+          kind: 'fallback_missing',
+          provider: target.provider,
+          model: target.model,
+          message: `Fallback model is not available: ${target.provider}/${target.model}`,
+        })
+      }
+    }
+  }
+  return warnings
+}
+
+async function buildFallbackValidationContext(ctx: any) {
+  const appConfig = await readAppConfig()
+  const modelCatalogCache = await readProviderModelCatalogCache()
+  const visibleProfiles = visibleProfileNamesForUser(ctx)
+  const profileResults = await Promise.all(
+    visibleProfiles.map(profile => buildAvailableForProfile(profile, modelCatalogCache, appConfig)),
+  )
+  const modelAliases = normalizeAliases(appConfig.modelAliases)
+  const modelVisibility = normalizeModelVisibility(appConfig.modelVisibility)
+  const visibleProfileResults = profileResults.map(result => ({
+    profile: result.profile,
+    groups: applyModelVisibility(applyModelAliases(result.groups, modelAliases), modelVisibility),
+  }))
+  const mergedGroups = mergeAvailableGroups(visibleProfileResults.flatMap(result => result.groups))
+  return { profileResults: visibleProfileResults, mergedGroups }
 }
 
 function profileEnvPath(profile: string): string {
@@ -455,6 +541,7 @@ export async function getAvailable(ctx: any) {
         model_aliases: modelAliases,
         model_visibility: modelVisibility,
         custom_models: customModels,
+        model_fallback: normalizeModelFallbackConfig(appConfig.modelFallback),
         profiles: profileResults.map(result => ({
           profile: result.profile,
           default: result.default,
@@ -485,6 +572,7 @@ export async function getAvailable(ctx: any) {
       model_aliases: modelAliasesForProfile,
       model_visibility: modelVisibilityForProfile,
       custom_models: customModelsForProfile,
+      model_fallback: normalizeModelFallbackConfig(appConfigForProfile.modelFallback),
       profiles: [{
         profile: profileResult.profile,
         default: profileResult.default,
@@ -702,6 +790,7 @@ export async function getAvailable(ctx: any) {
         model_aliases: modelAliases,
         model_visibility: modelVisibility,
         custom_models: customModels,
+        model_fallback: normalizeModelFallbackConfig(appConfig.modelFallback),
       }
       return
     }
@@ -714,6 +803,7 @@ export async function getAvailable(ctx: any) {
       model_aliases: modelAliases,
       model_visibility: modelVisibility,
       custom_models: customModels,
+      model_fallback: normalizeModelFallbackConfig(appConfig.modelFallback),
     }
   } catch (err: any) {
     ctx.status = 500
@@ -763,6 +853,41 @@ export async function removeCustomModel(ctx: any) {
     else delete customModels[providerKey]
     const saved = await writeAppConfig({ customModels })
     ctx.body = { success: true, custom_models: normalizeCustomModels(saved.customModels) }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function getModelFallback(ctx: any) {
+  try {
+    const appConfig = await readAppConfig()
+    const modelFallback = normalizeModelFallbackConfig(appConfig.modelFallback)
+    const { profileResults, mergedGroups } = await buildFallbackValidationContext(ctx)
+    ctx.body = {
+      model_fallback: modelFallback,
+      warnings: validateModelFallbackConfig(modelFallback, profileResults, mergedGroups),
+    }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+}
+
+export async function setModelFallback(ctx: any) {
+  try {
+    const body = ctx.request.body || {}
+    const modelFallback = normalizeModelFallbackConfig(
+      Object.hasOwn(body, 'model_fallback') ? body.model_fallback : body,
+    )
+    const saved = await writeAppConfig({ modelFallback })
+    const normalized = normalizeModelFallbackConfig(saved.modelFallback)
+    const { profileResults, mergedGroups } = await buildFallbackValidationContext(ctx)
+    ctx.body = {
+      success: true,
+      model_fallback: normalized,
+      warnings: validateModelFallbackConfig(normalized, profileResults, mergedGroups),
+    }
   } catch (err: any) {
     ctx.status = 500
     ctx.body = { error: err.message }

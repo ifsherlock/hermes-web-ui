@@ -8,9 +8,9 @@ import { PROVIDER_ENV_MAP } from '../../packages/server/src/services/config-help
 
 const OPENAI_CODEX_PROVIDER = 'openai-codex'
 const COPILOT_PROVIDER = 'copilot'
-const FUN_CODEX_PROVIDER = 'fun-codex'
 const KIMI_CODING_PROVIDER = 'kimi-coding'
 const KIMI_CODING_CN_PROVIDER = 'kimi-coding-cn'
+const ALIBABA_CODING_PLAN_PROVIDER = 'alibaba-coding-plan'
 const MINIMAX_PROVIDER = 'minimax'
 const MINIMAX_CN_PROVIDER = 'minimax-cn'
 const NOUS_PROVIDER = 'nous'
@@ -25,9 +25,11 @@ function modelsForProvider(providerPresets: Array<{ value: string; models: strin
 }
 
 describe('provider presets', () => {
-  it('routes apikey.fun Codex through the Responses transport', () => {
-    const preset = SERVER_PROVIDER_PRESETS.find((candidate) => candidate.value === FUN_CODEX_PROVIDER)
-    expect(preset?.api_mode).toBe('codex_responses')
+  it('does not restore apikey.fun provider presets', () => {
+    expect(SERVER_PROVIDER_PRESETS.find(candidate => candidate.value === 'fun-codex')).toBeUndefined()
+    expect(SERVER_PROVIDER_PRESETS.find(candidate => candidate.value === 'fun-claude')).toBeUndefined()
+    expect(PROVIDER_ENV_MAP).not.toHaveProperty('fun-codex')
+    expect(PROVIDER_ENV_MAP).not.toHaveProperty('fun-claude')
   })
 
   it('lists GPT-5.5 for OpenAI Codex', () => {
@@ -51,6 +53,10 @@ describe('provider presets', () => {
     expect(SERVER_PROVIDER_PRESETS.find(candidate => candidate.value === KIMI_CODING_CN_PROVIDER)?.base_url).toBe('https://api.kimi.cn/coding/v1')
     expect(SERVER_PROVIDER_PRESETS.find(candidate => candidate.value === KIMI_CODING_CN_PROVIDER)?.label).toBe('Kimi for Coding China')
     expect(SERVER_PROVIDER_PRESETS.find(candidate => candidate.value === 'moonshot')).toBeUndefined()
+  })
+
+  it('includes Qwen 3.7 Plus in the Alibaba Coding Plan fallback catalog', () => {
+    expect(modelsForProvider(SERVER_PROVIDER_PRESETS, ALIBABA_CODING_PLAN_PROVIDER)).toContain('qwen3.7-plus')
   })
 
   it('does not expose incomplete built-in provider presets', () => {

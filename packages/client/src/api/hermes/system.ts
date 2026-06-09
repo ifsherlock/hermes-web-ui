@@ -69,6 +69,35 @@ export interface ModelVisibilityRule {
 
 export type ModelVisibility = Record<string, ModelVisibilityRule>
 export type CustomModels = Record<string, string[]>
+export type ModelFallbackReason = 'run_failed' | 'empty_output'
+
+export interface ModelFallbackTarget {
+  provider: string
+  model: string
+}
+
+export interface ModelFallbackRule {
+  id: string
+  enabled?: boolean
+  profile?: string
+  provider: string
+  model: string
+  fallbacks: ModelFallbackTarget[]
+  retry_on?: ModelFallbackReason[]
+}
+
+export interface ModelFallbackConfig {
+  enabled?: boolean
+  rules?: ModelFallbackRule[]
+}
+
+export interface ModelFallbackWarning {
+  rule_id: string
+  kind: 'primary_missing' | 'fallback_missing' | 'empty_chain'
+  provider?: string
+  model?: string
+  message: string
+}
 
 export interface AvailableModelGroup {
   provider: string   // credential pool key (e.g. "zai", "custom:subrouter.ai")
@@ -102,6 +131,7 @@ export interface AvailableModelsResponse {
   model_aliases?: Record<string, Record<string, string>>
   model_visibility?: ModelVisibility
   custom_models?: CustomModels
+  model_fallback?: ModelFallbackConfig
 }
 
 export interface CustomProvider {
@@ -263,5 +293,23 @@ export async function removeCustomModel(data: {
   params.set('model', data.model)
   return request<{ success: boolean; custom_models: CustomModels }>(`/api/hermes/custom-model?${params.toString()}`, {
     method: 'DELETE',
+  })
+}
+
+export async function fetchModelFallback(): Promise<{
+  model_fallback: ModelFallbackConfig
+  warnings: ModelFallbackWarning[]
+}> {
+  return request<{ model_fallback: ModelFallbackConfig; warnings: ModelFallbackWarning[] }>('/api/hermes/model-fallback')
+}
+
+export async function saveModelFallback(data: ModelFallbackConfig): Promise<{
+  success: boolean
+  model_fallback: ModelFallbackConfig
+  warnings: ModelFallbackWarning[]
+}> {
+  return request<{ success: boolean; model_fallback: ModelFallbackConfig; warnings: ModelFallbackWarning[] }>('/api/hermes/model-fallback', {
+    method: 'PUT',
+    body: JSON.stringify({ model_fallback: data }),
   })
 }

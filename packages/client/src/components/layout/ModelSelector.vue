@@ -49,6 +49,16 @@ const selectedDisplayName = computed(() =>
     : '',
 )
 
+const selectedFallbackChain = computed(() =>
+  appStore.getFallbackChain(appStore.selectedProvider, appStore.selectedModel, activeProfileName.value),
+)
+
+const selectedFallbackLabel = computed(() =>
+  selectedFallbackChain.value
+    .map(target => appStore.displayModelName(target.model, target.provider))
+    .join(' -> '),
+)
+
 function isCustomModel(model: string, provider: string) {
   return (appStore.customModels[provider] || []).includes(model)
 }
@@ -132,6 +142,9 @@ function openModal() {
         <polyline points="6 9 12 15 18 9" />
       </svg>
     </button>
+    <div v-if="selectedFallbackChain.length > 0" class="model-fallback-summary">
+      Fallback: {{ selectedFallbackLabel }}
+    </div>
 
     <NModal
       v-model:show="showModal"
@@ -272,6 +285,16 @@ function openModal() {
 .model-arrow {
   flex-shrink: 0;
   color: $text-muted;
+}
+
+.model-fallback-summary {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: $text-muted;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .model-search {

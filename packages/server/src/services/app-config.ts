@@ -16,6 +16,28 @@ export interface GatewayAutoStartConfig {
   exclude?: string[]
 }
 
+export type ModelFallbackReason = 'run_failed' | 'empty_output'
+
+export interface ModelFallbackTarget {
+  provider: string
+  model: string
+}
+
+export interface ModelFallbackRule {
+  id: string
+  enabled?: boolean
+  profile?: string
+  provider: string
+  model: string
+  fallbacks: ModelFallbackTarget[]
+  retry_on?: ModelFallbackReason[]
+}
+
+export interface ModelFallbackConfig {
+  enabled?: boolean
+  rules?: ModelFallbackRule[]
+}
+
 function normalizeProfileList(values: unknown): string[] {
   if (!Array.isArray(values)) return []
   const seen = new Set<string>()
@@ -39,6 +61,79 @@ export function normalizeGatewayAutoStartConfig(value: unknown): GatewayAutoStar
   if (Array.isArray(raw.exclude)) normalized.exclude = normalizeProfileList(raw.exclude)
 
   return normalized
+}
+
+function normalizeConfigString(value: unknown, maxLength = 256): string {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  return trimmed.length <= maxLength ? trimmed : trimmed.slice(0, maxLength)
+}
+
+function isSafeConfigKey(value: string): boolean {
+  return !!value &&
+    value !== '__proto__' &&
+    value !== 'prototype' &&
+    value !== 'constructor'
+}
+
+function normalizeFallbackReasons(value: unknown): ModelFallbackReason[] {
+  const allowed = new Set<ModelFallbackReason>(['run_failed', 'empty_output'])
+  const raw = Array.isArray(value) ? value : ['run_failed', 'empty_output']
+  const reasons = raw
+    .map(item => String(item || '').trim())
+    .filter((item): item is ModelFallbackReason => allowed.has(item as ModelFallbackReason))
+  return reasons.length ? Array.from(new Set(reasons)) : ['run_failed', 'empty_output']
+}
+
+function normalizeFallbackTarget(value: unknown): ModelFallbackTarget | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const raw = value as Record<string, unknown>
+  const provider = normalizeConfigString(raw.provider)
+  const model = normalizeConfigString(raw.model, 512)
+  if (!isSafeConfigKey(provider) || !isSafeConfigKey(model)) return null
+  return { provider, model }
+}
+
+export function normalizeModelFallbackConfig(value: unknown): ModelFallbackConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { enabled: false, rules: [] }
+  const raw = value as Record<string, unknown>
+  const rulesInput = Array.isArray(raw.rules) ? raw.rules : []
+  const rules: ModelFallbackRule[] = []
+  const seenIds = new Set<string>()
+
+  for (let index = 0; index < rulesInput.length; index += 1) {
+    const item = rulesInput[index]
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+    const rule = item as Record<string, unknown>
+    const provider = normalizeConfigString(rule.provider)
+    const model = normalizeConfigString(rule.model, 512)
+    if (!isSafeConfigKey(provider) || !isSafeConfigKey(model)) continue
+
+    let id = normalizeConfigString(rule.id, 80).replace(/[^A-Za-z0-9_.:-]/g, '')
+    if (!id) id = `rule_${index + 1}`
+    while (seenIds.has(id)) id = `${id}_${index + 1}`
+    seenIds.add(id)
+
+    const fallbacks = (Array.isArray(rule.fallbacks) ? rule.fallbacks : [])
+      .map(normalizeFallbackTarget)
+      .filter((target): target is ModelFallbackTarget => !!target)
+      .filter(target => !(target.provider === provider && target.model === model))
+
+    rules.push({
+      id,
+      enabled: rule.enabled !== false,
+      profile: normalizeConfigString(rule.profile, 128) || undefined,
+      provider,
+      model,
+      fallbacks: Array.from(new Map(fallbacks.map(target => [`${target.provider}\n${target.model}`, target])).values()),
+      retry_on: normalizeFallbackReasons(rule.retry_on),
+    })
+  }
+
+  return {
+    enabled: raw.enabled === true,
+    rules,
+  }
 }
 
 export interface AppConfig {
@@ -67,6 +162,10 @@ export interface AppConfig {
   // Defaults to legacy behavior: all local profiles are eligible. This is a
   // Web UI-level setting, not the active Hermes profile's config.yaml.
   gatewayAutoStart?: GatewayAutoStartConfig
+
+  // Web UI-only runtime fallback model chains. These rules are evaluated by
+  // chat-run before surfacing a no-output/failed model call to the user.
+  modelFallback?: ModelFallbackConfig
 }
 
 let cache: AppConfig | null = null

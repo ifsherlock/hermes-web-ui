@@ -29,6 +29,7 @@ import { summarizeToolArguments } from './response-utils'
 import type { ContentBlock, QueuedRun, SessionState } from './types'
 import type { ChatMessage } from '../../../lib/context-compressor'
 import { resolveBridgeRunModelConfig, type RunModelGroup } from './model-config'
+import { resolveModelFallbackAttempts, type ModelFallbackAttempt } from './model-fallback'
 import { filterBridgeToolCallMarkupDelta, flushPendingToolCallMarkup } from './bridge-delta'
 import { markAbortCompleted } from './abort'
 
@@ -135,6 +136,89 @@ export function bridgeTerminalError(chunk: Pick<AgentBridgeOutput, 'status' | 'e
   if (finalResponse && looksLikeAgentFailure(finalResponse)) return finalResponse
 
   return null
+}
+
+function bridgeChunkResultText(chunk: Pick<AgentBridgeOutput, 'delta' | 'output' | 'result'>): string {
+  const result = chunk.result && typeof chunk.result === 'object' && !Array.isArray(chunk.result)
+    ? chunk.result as Record<string, unknown>
+    : null
+  return [
+    stringValue(chunk.delta),
+    stringValue(chunk.output),
+    result ? stringValue(result.final_response) : '',
+    result ? stringValue(result.output) : '',
+  ].filter(Boolean).join('\n')
+}
+
+function chunkHasRetryBlockingActivity(chunk: AgentBridgeOutput): boolean {
+  return (chunk.events || []).some((ev: any) => {
+    const type = String(ev?.event || '')
+    if (type === 'stream.delta') return !!String(ev?.delta || '').trim()
+    return type === 'tool.started' ||
+      type === 'tool.completed' ||
+      type.startsWith('subagent.') ||
+      type === 'approval.requested' ||
+      type === 'clarify.requested'
+  })
+}
+
+function stateHasRetryBlockingActivity(state: SessionState, startMessageCount: number): boolean {
+  if (String(state.bridgeOutput || '').trim()) return true
+  if (String(state.bridgePendingAssistantContent || '').trim()) return true
+  if (String(state.bridgePendingReasoningContent || '').trim()) return true
+  if ((state.bridgePendingTools || []).length > 0) return true
+  return state.messages.slice(startMessageCount).some(message =>
+    message.role === 'assistant' ||
+    message.role === 'tool' ||
+    message.role === 'command',
+  )
+}
+
+function terminalFallbackReason(
+  chunk: AgentBridgeOutput,
+  state: SessionState,
+  startMessageCount: number,
+): 'run_failed' | 'empty_output' | null {
+  const terminalError = bridgeTerminalError(chunk)
+  const hasOutput = !!bridgeChunkResultText(chunk).trim() || !!String(state.bridgeOutput || '').trim()
+  const hasBlockingActivity = chunkHasRetryBlockingActivity(chunk) || stateHasRetryBlockingActivity(state, startMessageCount)
+  if (terminalError && !hasBlockingActivity) return 'run_failed'
+  if (!terminalError && !hasOutput && !hasBlockingActivity) return 'empty_output'
+  return null
+}
+
+function resetBridgeAttemptState(state: SessionState): void {
+  state.runId = undefined
+  state.abortController = undefined
+  state.bridgeOutput = ''
+  state.bridgePendingAssistantContent = ''
+  state.bridgePendingReasoningContent = ''
+  state.bridgePendingToolCallMarkup = ''
+  state.bridgeToolCounter = 0
+  state.bridgePendingTools = []
+  state.responseRun = undefined
+}
+
+function emitModelFallbackRetry(
+  emit: (event: string, payload: any) => void,
+  failed: ModelFallbackAttempt,
+  next: ModelFallbackAttempt,
+  reason: string,
+): void {
+  emit('agent.event', {
+    event: 'agent.event',
+    kind: 'model_fallback',
+    text: `模型 ${failed.provider}/${failed.model} 调用失败，正在尝试备用模型 ${next.provider}/${next.model}`,
+    failed_provider: failed.provider,
+    failed_model: failed.model,
+    next_provider: next.provider,
+    next_model: next.model,
+    reason,
+  })
+}
+
+function fallbackAllowsReason(attempt: ModelFallbackAttempt, reason: 'run_failed' | 'empty_output'): boolean {
+  return !attempt.retry_on?.length || attempt.retry_on.includes(reason)
 }
 
 function findOpenAssistantMessage(state: SessionState, runMarker: string) {
@@ -417,153 +501,203 @@ export async function handleBridgeRun(
     }
   }
 
-  const history = await buildCompressedHistory(
-    session_id, profile,
-    '',
-    undefined,
-    emit,
-    sessionMap,
-    { model: resolvedModel, provider: resolvedProvider },
-    async (_messages, localMessageTokens) => {
-      const fixedContextTokens = await ensureBridgeFixedContext({
-        sessionId: session_id,
-        profile,
-        model: resolvedModel,
-        provider: resolvedProvider,
-        instructions: fullInstructions,
-        state,
-        bridge,
-        refresh: true,
-      })
-      const contextTokens = fixedContextTokens == null
-        ? localMessageTokens
-        : fixedContextTokens + localMessageTokens
+  const bridgeInput = isContentBlockArray(input)
+    ? await convertContentBlocksForAgent(input)
+    : input
+  const bridgeStorageInput = data.storage_message !== undefined
+    ? data.storage_message
+    : isContentBlockArray(input)
+      ? inputStr
+      : undefined
+  const attempts = await resolveModelFallbackAttempts({
+    profile,
+    model: resolvedModel,
+    provider: resolvedProvider,
+    modelGroups: data.model_groups,
+  })
+
+  for (let attemptIndex = 0; attemptIndex < attempts.length; attemptIndex += 1) {
+    const attempt = attempts[attemptIndex]
+    const attemptModel = attempt.model || resolvedModel
+    const attemptProvider = attempt.provider || resolvedProvider
+    const attemptStartMessageCount = state.messages.length
+    resetBridgeAttemptState(state)
+    state.isWorking = true
+    state.isAborting = false
+    state.profile = profile
+    state.source = 'cli'
+    state.activeRunMarker = runMarker
+
+    try {
+      const history = await buildCompressedHistory(
+        session_id, profile,
+        '',
+        undefined,
+        emit,
+        sessionMap,
+        { model: attemptModel, provider: attemptProvider },
+        async (_messages, localMessageTokens) => {
+          const fixedContextTokens = await ensureBridgeFixedContext({
+            sessionId: session_id,
+            profile,
+            model: attemptModel,
+            provider: attemptProvider,
+            instructions: fullInstructions,
+            state,
+            bridge,
+            refresh: true,
+          })
+          const contextTokens = fixedContextTokens == null
+            ? localMessageTokens
+            : fixedContextTokens + localMessageTokens
+          bridgeLogger.info({
+            sessionId: session_id,
+            profile,
+            model: attemptModel,
+            provider: attemptProvider,
+            fixedContextTokens,
+            messageTokens: localMessageTokens,
+            contextTokens,
+          }, '[chat-run-socket] local context estimate')
+          return contextTokens
+        },
+        currentInputTokens,
+      )
+
+      logger.info('[chat-run-socket] starting CLI bridge run for session %s', session_id)
       bridgeLogger.info({
         sessionId: session_id,
         profile,
-        model: resolvedModel,
-        provider: resolvedProvider,
-        fixedContextTokens,
-        messageTokens: localMessageTokens,
-        contextTokens,
-      }, '[chat-run-socket] local context estimate')
-      return contextTokens
-    },
-    currentInputTokens,
-  )
-  const bridgeHistory = history
-
-  try {
-    const bridgeInput = isContentBlockArray(input)
-      ? await convertContentBlocksForAgent(input)
-      : input
-    const bridgeStorageInput = data.storage_message !== undefined
-      ? data.storage_message
-      : isContentBlockArray(input)
-        ? inputStr
-        : undefined
-    logger.info('[chat-run-socket] starting CLI bridge run for session %s', session_id)
-    bridgeLogger.info({
-      sessionId: session_id,
-      profile,
-      inputChars: inputStr.length,
-      historyMessages: history.length,
-      hasInstructions: Boolean(fullInstructions),
-      multimodalInput: isContentBlockArray(input),
-    }, '[chat-run-socket] starting CLI bridge run')
-    const started = await bridge.chat(
-      session_id,
-      bridgeInput as AgentBridgeMessage,
-      bridgeHistory,
-      fullInstructions,
-      profile,
-      {
-        ...(bridgeStorageInput !== undefined ? { storage_message: bridgeStorageInput } : {}),
-        ...(resolvedModel ? { model: resolvedModel } : {}),
-        ...(resolvedProvider ? { provider: resolvedProvider } : {}),
-      },
-    )
-    state.runId = started.run_id
-    bridgeLogger.info({
-      sessionId: session_id,
-      runId: started.run_id,
-      status: started.status,
-    }, '[chat-run-socket] CLI bridge run started')
-    pushState(sessionMap, session_id, 'run.started', {
-      event: 'run.started',
-      run_id: started.run_id,
-      queue_length: state.queue.length || 0,
-    })
-    emit('run.started', {
-      event: 'run.started',
-      run_id: started.run_id,
-      queue_length: state.queue.length || 0,
-    })
-
-    for await (const chunk of bridge.streamOutput(started.run_id)) {
-      await applyBridgeChunkAsync(
-        nsp,
-        socket,
-        state,
+        model: attemptModel,
+        provider: attemptProvider,
+        attempt: attemptIndex + 1,
+        attempts: attempts.length,
+        inputChars: inputStr.length,
+        historyMessages: history.length,
+        hasInstructions: Boolean(fullInstructions),
+        multimodalInput: isContentBlockArray(input),
+      }, '[chat-run-socket] starting CLI bridge run')
+      const started = await bridge.chat(
         session_id,
-        runMarker,
-        chunk,
-        emit,
-        profile,
-        sessionMap,
-        bridge,
-        dequeueNextQueuedRun,
+        bridgeInput as AgentBridgeMessage,
+        history,
         fullInstructions,
-        { model: resolvedModel, provider: resolvedProvider },
-        currentInputTokens,
-        shouldPersistUserMessage && displayRole === 'user',
-        data.model_groups,
+        profile,
+        {
+          ...(bridgeStorageInput !== undefined ? { storage_message: bridgeStorageInput } : {}),
+          ...(attemptModel ? { model: attemptModel } : {}),
+          ...(attemptProvider ? { provider: attemptProvider } : {}),
+        },
       )
-      if (chunk.done) {
-        void pollBridgeGeneratedTitleAfterRun(bridge, session_id, profile, emit)
-        break
+      state.runId = started.run_id
+      bridgeLogger.info({
+        sessionId: session_id,
+        runId: started.run_id,
+        status: started.status,
+      }, '[chat-run-socket] CLI bridge run started')
+      pushState(sessionMap, session_id, 'run.started', {
+        event: 'run.started',
+        run_id: started.run_id,
+        queue_length: state.queue.length || 0,
+      })
+      emit('run.started', {
+        event: 'run.started',
+        run_id: started.run_id,
+        queue_length: state.queue.length || 0,
+      })
+
+      let retryNext = false
+      for await (const chunk of bridge.streamOutput(started.run_id)) {
+        let fallbackReason: 'run_failed' | 'empty_output' | null = null
+        let terminalError: string | null = null
+        if (chunk.done) {
+          fallbackReason = terminalFallbackReason(chunk, state, attemptStartMessageCount)
+          terminalError = bridgeTerminalError(chunk)
+          const nextAttempt = attempts[attemptIndex + 1]
+          if (fallbackReason && nextAttempt && fallbackAllowsReason(attempt, fallbackReason)) {
+            const reason = terminalError || (fallbackReason === 'empty_output' ? 'Agent returned no output' : 'Agent run failed')
+            emitModelFallbackRetry(emit, attempt, nextAttempt, reason)
+            retryNext = true
+            break
+          }
+        }
+
+        await applyBridgeChunkAsync(
+          nsp,
+          socket,
+          state,
+          session_id,
+          runMarker,
+          chunk,
+          emit,
+          profile,
+          sessionMap,
+          bridge,
+          dequeueNextQueuedRun,
+          fullInstructions,
+          { model: attemptModel, provider: attemptProvider },
+          currentInputTokens,
+          shouldPersistUserMessage && displayRole === 'user',
+          data.model_groups,
+        )
+        if (chunk.done) {
+          void pollBridgeGeneratedTitleAfterRun(bridge, session_id, profile, emit)
+          if (!attempt.primary && !fallbackReason && !terminalError) {
+            updateSession(session_id, { model: attemptModel, provider: attemptProvider })
+          }
+          return
+        }
       }
+      if (retryNext) continue
+      return
+    } catch (err: any) {
+      if (state.activeRunMarker !== runMarker) return
+      if (!state.isWorking) return
+      const message = err instanceof Error ? err.message : String(err)
+      const nextAttempt = attempts[attemptIndex + 1]
+      if (nextAttempt && fallbackAllowsReason(attempt, 'run_failed') && !stateHasRetryBlockingActivity(state, attemptStartMessageCount)) {
+        emitModelFallbackRetry(emit, attempt, nextAttempt, message)
+        continue
+      }
+
+      const queueLen = state.queue?.length ?? 0
+      state.isWorking = false
+      state.isAborting = false
+      state.profile = undefined
+      state.runId = undefined
+      state.activeRunMarker = undefined
+      state.events = []
+      state.bridgePendingToolCallMarkup = undefined
+      flushBridgePendingToDb(state, session_id)
+      updateSessionStats(session_id)
+      const errUsage = await calcAndUpdateUsage(session_id, state, emit)
+      const errContextTokens = await refreshFinalContextUsage({
+        sessionId: session_id,
+        profile,
+        model: attemptModel,
+        provider: attemptProvider,
+        instructions: fullInstructions,
+        state,
+        usage: errUsage,
+        emit,
+        bridge,
+      })
+      updateUsage(session_id, {
+        inputTokens: errUsage.inputTokens,
+        outputTokens: errUsage.outputTokens,
+        profile,
+      })
+      emit('run.failed', {
+        event: 'run.failed',
+        error: message,
+        inputTokens: errUsage.inputTokens,
+        outputTokens: errUsage.outputTokens,
+        contextTokens: errContextTokens,
+        queue_remaining: queueLen,
+      })
+      if (queueLen > 0) dequeueNextQueuedRun(socket, session_id)
+      return
     }
-  } catch (err: any) {
-    if (state.activeRunMarker !== runMarker) return
-    if (!state.isWorking) return
-    const queueLen = state.queue?.length ?? 0
-    state.isWorking = false
-    state.isAborting = false
-    state.profile = undefined
-    state.runId = undefined
-    state.activeRunMarker = undefined
-    state.events = []
-    state.bridgePendingToolCallMarkup = undefined
-    flushBridgePendingToDb(state, session_id)
-    updateSessionStats(session_id)
-    const message = err instanceof Error ? err.message : String(err)
-    const errUsage = await calcAndUpdateUsage(session_id, state, emit)
-    const errContextTokens = await refreshFinalContextUsage({
-      sessionId: session_id,
-      profile,
-      model: resolvedModel,
-      provider: resolvedProvider,
-      instructions: fullInstructions,
-      state,
-      usage: errUsage,
-      emit,
-      bridge,
-    })
-    updateUsage(session_id, {
-      inputTokens: errUsage.inputTokens,
-      outputTokens: errUsage.outputTokens,
-      profile,
-    })
-    emit('run.failed', {
-      event: 'run.failed',
-      error: message,
-      inputTokens: errUsage.inputTokens,
-      outputTokens: errUsage.outputTokens,
-      contextTokens: errContextTokens,
-      queue_remaining: queueLen,
-    })
-    if (queueLen > 0) dequeueNextQueuedRun(socket, session_id)
   }
 }
 

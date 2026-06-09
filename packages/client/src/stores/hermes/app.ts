@@ -7,11 +7,17 @@ import {
   removeCustomModel as deletePersistedCustomModel,
   updateDefaultModel,
   updateModelVisibility,
+  fetchModelFallback,
+  saveModelFallback,
   triggerUpdate,
   updateModelAlias,
   type AvailableModelGroup,
   type AvailableModelsResponse,
   type ProfileAvailableModels,
+  type ModelFallbackConfig,
+  type ModelFallbackRule,
+  type ModelFallbackTarget,
+  type ModelFallbackWarning,
   type ModelVisibility,
   type ModelVisibilityRule,
 } from '@/api/hermes/system'
@@ -41,6 +47,8 @@ export const useAppStore = defineStore('app', () => {
   const customModels = ref<Record<string, string[]>>({})
   const modelAliases = ref<Record<string, Record<string, string>>>({})
   const modelVisibility = ref<ModelVisibility>({})
+  const modelFallback = ref<ModelFallbackConfig>({ enabled: false, rules: [] })
+  const modelFallbackWarnings = ref<ModelFallbackWarning[]>([])
   const healthPollTimer = ref<ReturnType<typeof setInterval>>()
   const nodeVersion = ref('')
 
@@ -89,6 +97,7 @@ export const useAppStore = defineStore('app', () => {
     modelAliases.value = res.model_aliases || {}
     modelVisibility.value = res.model_visibility || {}
     customModels.value = res.custom_models || {}
+    if (res.model_fallback) modelFallback.value = res.model_fallback
 
     const activeProfileName = localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY) || ''
     const activeProfileModels = activeProfileName
@@ -174,6 +183,38 @@ export const useAppStore = defineStore('app', () => {
 
   async function reloadModels() {
     return loadModels(true)
+  }
+
+  async function loadModelFallback() {
+    const res = await fetchModelFallback()
+    modelFallback.value = res.model_fallback || { enabled: false, rules: [] }
+    modelFallbackWarnings.value = res.warnings || []
+    return res
+  }
+
+  async function setModelFallback(config: ModelFallbackConfig) {
+    const res = await saveModelFallback(config)
+    modelFallback.value = res.model_fallback || { enabled: false, rules: [] }
+    modelFallbackWarnings.value = res.warnings || []
+    await reloadModels()
+    return res
+  }
+
+  function fallbackRuleMatches(rule: ModelFallbackRule, target: ModelFallbackTarget, profile?: string): boolean {
+    if (rule.enabled === false) return false
+    if (rule.provider !== target.provider || rule.model !== target.model) return false
+    return !rule.profile || !profile || rule.profile === profile
+  }
+
+  function getFallbackChain(provider: string, model: string, profile?: string): ModelFallbackTarget[] {
+    if (!modelFallback.value.enabled) return []
+    const target = { provider, model }
+    const rules = modelFallback.value.rules || []
+    const exactProfile = profile
+      ? rules.find(rule => rule.profile === profile && fallbackRuleMatches(rule, target, profile))
+      : undefined
+    const rule = exactProfile || rules.find(candidate => !candidate.profile && fallbackRuleMatches(candidate, target, profile))
+    return rule?.fallbacks || []
   }
 
   function getModelAlias(modelId: string, provider?: string): string {
@@ -341,6 +382,8 @@ export const useAppStore = defineStore('app', () => {
     customModels,
     modelAliases,
     modelVisibility,
+    modelFallback,
+    modelFallbackWarnings,
     selectedModel,
     selectedProvider,
     streamEnabled,
@@ -350,6 +393,9 @@ export const useAppStore = defineStore('app', () => {
     loadModels,
     waitForModelsForRun,
     reloadModels,
+    loadModelFallback,
+    setModelFallback,
+    getFallbackChain,
     applyAvailableModelsResponse,
     switchModel,
     removeCustomModel,

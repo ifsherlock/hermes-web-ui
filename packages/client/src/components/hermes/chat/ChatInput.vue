@@ -281,7 +281,10 @@ async function loadContextLength() {
   return contextLengthRequest
 }
 
-onMounted(loadContextLength)
+onMounted(() => {
+  void loadContextLength()
+  void appStore.loadModelFallback().catch(() => {})
+})
 watch(
   () => [
     profilesStore.activeProfileName,
@@ -308,6 +311,18 @@ const remainingTokens = computed(() => Math.max(0, contextLength.value - totalTo
 
 const usagePercent = computed(() =>
   Math.min((totalTokens.value / contextLength.value) * 100, 100),
+)
+
+const activeFallbackProvider = computed(() => chatStore.activeSession?.provider || appStore.selectedProvider || '')
+const activeFallbackModel = computed(() => chatStore.activeSession?.model || appStore.selectedModel || '')
+const activeFallbackProfile = computed(() => chatStore.activeSession?.profile || profilesStore.activeProfileName || 'default')
+const activeFallbackChain = computed(() =>
+  appStore.getFallbackChain(activeFallbackProvider.value, activeFallbackModel.value, activeFallbackProfile.value),
+)
+const activeFallbackLabel = computed(() =>
+  activeFallbackChain.value
+    .map(target => appStore.displayModelName(target.model, target.provider))
+    .join(' -> '),
 )
 
 function formatTokens(n: number): string {
@@ -567,6 +582,9 @@ function isImage(type: string): boolean {
         </NTooltip>
         · {{ t('chat.contextRemaining') }} {{ formatTokens(remainingTokens) }}
       </span>
+      <span v-if="activeFallbackChain.length > 0" class="fallback-info" :title="activeFallbackLabel">
+        Fallback: {{ activeFallbackLabel }}
+      </span>
       <div v-if="totalTokens > 0" class="context-bar">
         <div
           class="context-bar-fill"
@@ -807,6 +825,15 @@ function isImage(type: string): boolean {
   &.context-warning {
     color: #e8a735;
   }
+}
+
+.fallback-info {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: $text-muted;
 }
 
 .context-limit-editable {
