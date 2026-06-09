@@ -65,14 +65,17 @@ const filteredGroups = computed(() => {
   const q = safeLower(searchQuery.value).trim()
   if (!q) return modelGroupsWithCustom.value
   return modelGroupsWithCustom.value
-    .map(g => ({
-      ...g,
-      models: g.models.filter(m => {
-        const displayName = appStore.displayModelName(m, g.provider)
-        return safeLower(m).includes(q) || safeLower(displayName).includes(q)
-      }),
-    }))
-    .filter(g => g.models.length > 0 || safeLower(g.label).includes(q))
+    .map(g => {
+      const providerMatches = safeLower(g.label).includes(q) || safeLower(g.provider).includes(q)
+      return {
+        ...g,
+        models: providerMatches ? g.models : g.models.filter(m => {
+          const displayName = appStore.displayModelName(m, g.provider)
+          return safeLower(m).includes(q) || safeLower(displayName).includes(q)
+        }),
+      }
+    })
+    .filter(g => g.models.length > 0)
 })
 
 function toggleGroup(provider: string) {
