@@ -245,12 +245,15 @@ const p5ControlCollapsed = ref<Record<Person5ControlKey, boolean>>({
 });
 const p5AgentSubmenuRef = ref<HTMLElement | null>(null);
 const p5ProfileSubmenuRef = ref<HTMLElement | null>(null);
+const p5AgentSubmenuExpanded = ref(false);
+const p5ProfileSubmenuExpanded = ref(false);
 const p5ProfileActionsOpen = ref<Record<string, boolean>>({});
 const p5ProfileRestarting = ref<Record<string, boolean>>({});
 const p5GatewayRestarting = ref<Record<string, boolean>>({});
 const p5AvatarSaving = ref<Record<string, boolean>>({});
 const p5AvatarProfileName = ref<string | null>(null);
 const p5AvatarInputRef = ref<HTMLInputElement | null>(null);
+const p5ModelSelectorRef = ref<{ openModal: () => void } | null>(null);
 
 const activeProfileName = computed(() => profilesStore.activeProfileName || "default");
 function groupLabel(key: SidebarGroupKey) {
@@ -320,6 +323,10 @@ function isP5ControlCollapsed(key: Person5ControlKey) {
 }
 
 function scrollP5Submenu(key: Person5ControlKey) {
+  if (key === "profile" && !p5ProfileSubmenuExpanded.value) {
+    p5ProfileSubmenuExpanded.value = true;
+    return;
+  }
   const el = key === "profile" ? p5ProfileSubmenuRef.value : null;
   if (!el) return;
   const firstItem = el.querySelector<HTMLElement>(".nav-item");
@@ -330,7 +337,15 @@ function scrollP5Submenu(key: Person5ControlKey) {
   });
 }
 
+function openP5ModelSelector() {
+  p5ModelSelectorRef.value?.openModal();
+}
+
 function scrollP5AgentSubmenu() {
+  if (!p5AgentSubmenuExpanded.value) {
+    p5AgentSubmenuExpanded.value = true;
+    return;
+  }
   const el = p5AgentSubmenuRef.value;
   if (!el) return;
   const firstItem = el.querySelector<HTMLElement>(".nav-item");
@@ -635,7 +650,11 @@ onMounted(() => {
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
-        <div ref="p5AgentSubmenuRef" class="nav-group-items p5-limited-submenu" :class="{ collapsed: isGroupCollapsed('agent') }">
+        <div
+          ref="p5AgentSubmenuRef"
+          class="nav-group-items p5-limited-submenu"
+          :class="{ collapsed: isGroupCollapsed('agent'), 'expanded-more': p5AgentSubmenuExpanded }"
+        >
           <RouteLinkItem class="nav-item" :to="{ name: 'hermes.jobs' }" :active="selectedKey === 'hermes.jobs'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -712,7 +731,7 @@ onMounted(() => {
           type="button"
           @click.stop="scrollP5AgentSubmenu"
         >
-          更多 ↓
+          {{ p5AgentSubmenuExpanded ? '继续 ↓' : '更多 ↓' }}
         </button>
       </div>
 
@@ -845,7 +864,11 @@ onMounted(() => {
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
-          <div ref="p5ProfileSubmenuRef" class="nav-group-items p5-submenu-scroll" :class="{ collapsed: isP5ControlCollapsed('profile') }">
+          <div
+            ref="p5ProfileSubmenuRef"
+            class="nav-group-items p5-submenu-scroll"
+            :class="{ collapsed: isP5ControlCollapsed('profile'), 'expanded-more': p5ProfileSubmenuExpanded }"
+          >
             <div
               v-for="profile in profilesStore.profiles"
               :key="profile.name"
@@ -909,13 +932,15 @@ onMounted(() => {
             type="button"
             @click.stop="scrollP5Submenu('profile')"
           >
-            更多人格面具 ↓
+            {{ p5ProfileSubmenuExpanded ? '继续 ↓' : '更多人格面具 ↓' }}
           </button>
         </div>
 
-        <div class="p5-control-strip p5-control-model p5-control-model-picker">
-          <span class="p5-control-label">模型中枢</span>
-          <ModelSelector />
+        <div class="nav-group p5-control-group p5-control-model p5-control-model-picker">
+          <button class="nav-group-label p5-control-label-main p5-strip-shift" type="button" @click="openP5ModelSelector">
+            <P5MenuStrip :title="person5ControlMeta.model.title" :subtitle="person5ControlMeta.model.subtitle" :hot="person5ControlMeta.model.hot" />
+          </button>
+          <ModelSelector ref="p5ModelSelectorRef" class="p5-model-modal-host" hide-trigger />
         </div>
       </template>
       <template v-else>

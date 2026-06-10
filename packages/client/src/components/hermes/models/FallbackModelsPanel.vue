@@ -5,7 +5,9 @@ import { useAppStore } from '@/stores/hermes/app'
 import { useModelsStore } from '@/stores/hermes/models'
 import { useProfilesStore } from '@/stores/hermes/profiles'
 import type { ModelFallbackConfig, ModelFallbackRule, ModelFallbackTarget } from '@/api/hermes/system'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const appStore = useAppStore()
 const modelsStore = useModelsStore()
 const profilesStore = useProfilesStore()
@@ -16,12 +18,12 @@ const search = ref('')
 const draft = ref<ModelFallbackConfig>({ enabled: false, rules: [] })
 
 const retryOptions = [
-  { label: '运行失败', value: 'run_failed' },
-  { label: '无输出完成', value: 'empty_output' },
+  { label: t('models.fallbackRetryRunFailed'), value: 'run_failed' },
+  { label: t('models.fallbackRetryEmptyOutput'), value: 'empty_output' },
 ]
 
 const profileOptions = computed(() => [
-  { label: '全部 profile', value: '' },
+  { label: t('models.fallbackAllProfiles'), value: '' },
   ...profilesStore.profiles.map(profile => ({ label: profile.name, value: profile.name })),
 ])
 
@@ -63,11 +65,27 @@ function modelOptions(provider: string) {
   }))
 }
 
-function firstTarget(): ModelFallbackTarget {
+function firstTarget(exclude: ModelFallbackTarget[] = []): ModelFallbackTarget {
+  const selected = {
+    provider: appStore.selectedProvider,
+    model: appStore.selectedModel,
+  }
+  const selectedExists = modelsStore.providers.some(item =>
+    item.provider === selected.provider && item.models.includes(selected.model),
+  )
+  if (selectedExists && !exclude.some(item => item.provider === selected.provider && item.model === selected.model)) {
+    return selected
+  }
   const provider = modelsStore.providers.find(item => item.models.length > 0)
+  const fallbackProvider = modelsStore.providers.find(item =>
+    item.models.some(model => !exclude.some(target => target.provider === item.provider && target.model === model)),
+  ) || provider
+  const model = fallbackProvider?.models.find(item =>
+    !exclude.some(target => target.provider === fallbackProvider.provider && target.model === item),
+  ) || fallbackProvider?.models[0] || ''
   return {
-    provider: provider?.provider || '',
-    model: provider?.models[0] || '',
+    provider: fallbackProvider?.provider || '',
+    model,
   }
 }
 
@@ -109,7 +127,7 @@ function removeRule(rule: ModelFallbackRule) {
 }
 
 function addFallback(rule: ModelFallbackRule) {
-  const target = firstTarget()
+  const target = firstTarget([{ provider: rule.provider, model: rule.model }, ...rule.fallbacks])
   rule.fallbacks.push(target)
 }
 
@@ -154,9 +172,9 @@ async function save() {
     next.rules?.forEach(ensureRuleDefaults)
     const res = await appStore.setModelFallback(next)
     draft.value = cloneConfig(res.model_fallback)
-    message.success('Fallback 策略已保存')
+    message.success(t('models.fallbackSaved'))
   } catch (e: any) {
-    message.error(e?.message || 'Fallback 策略保存失败')
+    message.error(e?.message || t('models.fallbackSaveFailed'))
   } finally {
     saving.value = false
   }
@@ -169,13 +187,13 @@ onMounted(loadConfig)
   <section class="fallback-panel">
     <div class="fallback-header">
       <div>
-        <h3>Fallback 策略</h3>
-        <p>主模型失败或无输出时，按备用链自动重试。</p>
+        <h3>{{ t('models.fallbackTitle') }}</h3>
+        <p>{{ t('models.fallbackSubtitle') }}</p>
       </div>
       <div class="fallback-header-actions">
         <NSwitch v-model:value="draft.enabled" />
-        <NButton size="small" @click="addRule">新增规则</NButton>
-        <NButton size="small" type="primary" :loading="saving" @click="save">保存</NButton>
+        <NButton size="small" @click="addRule">{{ t('models.fallbackAddRule') }}</NButton>
+        <NButton size="small" type="primary" :loading="saving" @click="save">{{ t('common.save') }}</NButton>
       </div>
     </div>
 
@@ -183,21 +201,22 @@ onMounted(loadConfig)
       v-model:value="search"
       size="small"
       clearable
-      placeholder="搜索 profile、provider 或模型"
+      :placeholder="t('models.fallbackSearchPlaceholder')"
       class="fallback-search"
     />
 
     <NAlert v-if="appStore.modelFallbackWarnings.length > 0" type="warning" class="fallback-alert">
-      有 {{ appStore.modelFallbackWarnings.length }} 个 fallback 配置项需要检查。
+      {{ t('models.fallbackWarningCount', { count: appStore.modelFallbackWarnings.length }) }}
     </NAlert>
 
     <div v-if="filteredRules.length === 0" class="fallback-empty">
-      暂无 fallback 规则
+      {{ t('models.fallbackEmpty') }}
     </div>
 
     <div v-for="rule in filteredRules" :key="rule.id" class="fallback-rule">
       <div class="rule-top">
         <NSwitch v-model:value="rule.enabled" />
+        <span class="rule-label">{{ t('models.fallbackPrimaryModel') }}</span>
         <NSelect
           v-model:value="rule.profile"
           :options="profileOptions"
@@ -218,7 +237,7 @@ onMounted(loadConfig)
           filterable
           class="model-select"
         />
-        <NButton size="tiny" quaternary type="error" @click="removeRule(rule)">删除</NButton>
+        <NButton size="tiny" quaternary type="error" @click="removeRule(rule)">{{ t('common.delete') }}</NButton>
       </div>
 
       <NCheckboxGroup v-model:value="rule.retry_on">
@@ -234,6 +253,7 @@ onMounted(loadConfig)
       </NCheckboxGroup>
 
       <div class="fallback-chain">
+        <div class="chain-label">{{ t('models.fallbackChain') }}</div>
         <div
           v-for="(target, index) in rule.fallbacks"
           :key="`${rule.id}-${index}`"
@@ -254,11 +274,11 @@ onMounted(loadConfig)
             filterable
             class="model-select"
           />
-          <NButton size="tiny" quaternary :disabled="index === 0" @click="moveFallback(rule, index, -1)">上移</NButton>
-          <NButton size="tiny" quaternary :disabled="index === rule.fallbacks.length - 1" @click="moveFallback(rule, index, 1)">下移</NButton>
-          <NButton size="tiny" quaternary type="error" @click="removeFallback(rule, index)">移除</NButton>
+          <NButton size="tiny" quaternary :disabled="index === 0" @click="moveFallback(rule, index, -1)">{{ t('common.moveUp') }}</NButton>
+          <NButton size="tiny" quaternary :disabled="index === rule.fallbacks.length - 1" @click="moveFallback(rule, index, 1)">{{ t('common.moveDown') }}</NButton>
+          <NButton size="tiny" quaternary type="error" @click="removeFallback(rule, index)">{{ t('common.remove') }}</NButton>
         </div>
-        <NButton size="tiny" quaternary @click="addFallback(rule)">添加备用模型</NButton>
+        <NButton size="tiny" quaternary @click="addFallback(rule)">{{ t('models.fallbackAddTarget') }}</NButton>
       </div>
 
       <div v-if="warningText(rule.id)" class="rule-warning">
@@ -328,6 +348,14 @@ onMounted(loadConfig)
   flex-wrap: wrap;
 }
 
+.rule-label,
+.chain-label {
+  flex: 0 0 auto;
+  color: $text-muted;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .profile-select {
   width: 150px;
 }
@@ -351,6 +379,10 @@ onMounted(loadConfig)
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.chain-label {
+  margin-top: 2px;
 }
 
 .fallback-target {

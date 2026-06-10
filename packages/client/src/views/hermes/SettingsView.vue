@@ -15,7 +15,7 @@ import MemorySettings from "@/components/hermes/settings/MemorySettings.vue";
 import CompressionSettings from "@/components/hermes/settings/CompressionSettings.vue";
 import SessionSettings from "@/components/hermes/settings/SessionSettings.vue";
 import PrivacySettings from "@/components/hermes/settings/PrivacySettings.vue";
-import ModelSettings from "@/components/hermes/settings/ModelSettings.vue";
+import ModelsWorkbench from "@/components/hermes/models/ModelsWorkbench.vue";
 import AccountSettings from "@/components/hermes/settings/AccountSettings.vue";
 import UserManagementSettings from "@/components/hermes/settings/UserManagementSettings.vue";
 import VoiceSettings from "@/components/hermes/settings/VoiceSettings.vue";
@@ -113,7 +113,7 @@ onMounted(() => {
             <PrivacySettings />
           </NTabPane>
           <NTabPane name="models" :tab="t('settings.tabs.models')">
-            <ModelSettings />
+            <ModelsWorkbench />
           </NTabPane>
           <NTabPane name="voice" :tab="t('settings.tabs.voice')">
             <VoiceSettings />

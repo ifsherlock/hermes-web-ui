@@ -169,6 +169,13 @@ export async function update(ctx: any) {
         if (base_url !== undefined) entry.base_url = base_url
         if (api_key !== undefined) entry.api_key = api_key
         if (model !== undefined) entry.model = model
+        if (model !== undefined) {
+          if (typeof config.model !== 'object' || config.model === null) { config.model = {} }
+          config.model.default = model
+          config.model.provider = poolKey
+          delete config.model.base_url
+          delete config.model.api_key
+        }
         return { data: config, result: true }
       })
       if (!found) {
@@ -176,10 +183,21 @@ export async function update(ctx: any) {
       }
     } else {
       const envMapping = PROVIDER_ENV_MAP[poolKey]
-      if (!envMapping?.api_key_env) {
+      if (!envMapping?.api_key_env && !envMapping?.base_url_env && !DIRECT_CONFIG_PROVIDERS.has(poolKey)) {
         ctx.status = 400; ctx.body = { error: `Cannot update credentials for "${poolKey}"` }; return
       }
-      if (api_key !== undefined) { await saveEnvValueForProfile(profile, envMapping.api_key_env, api_key) }
+      if (api_key !== undefined && envMapping?.api_key_env) { await saveEnvValueForProfile(profile, envMapping.api_key_env, api_key) }
+      if (base_url !== undefined && envMapping?.base_url_env) { await saveEnvValueForProfile(profile, envMapping.base_url_env, base_url) }
+      if (model !== undefined) {
+        await updateConfigYamlForProfile(profile, (config) => {
+          if (typeof config.model !== 'object' || config.model === null) { config.model = {} }
+          config.model.default = model
+          config.model.provider = poolKey
+          delete config.model.base_url
+          delete config.model.api_key
+          return config
+        })
+      }
     }
     // TODO: Test if provider works without gateway restart
     // try { await hermesCli.restartGateway() } catch (e: any) { logger.error(e, 'Gateway restart failed') }

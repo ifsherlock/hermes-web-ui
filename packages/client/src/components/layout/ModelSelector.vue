@@ -9,6 +9,10 @@ const { t } = useI18n()
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 
+defineProps<{
+  hideTrigger?: boolean
+}>()
+
 const showModal = ref(false)
 const searchQuery = ref('')
 const collapsedGroups = ref<Record<string, boolean>>({})
@@ -93,7 +97,8 @@ function toggleGroup(provider: string) {
 }
 
 function isGroupCollapsed(provider: string) {
-  return !!collapsedGroups.value[provider]
+  if (searchQuery.value.trim()) return false
+  return collapsedGroups.value[provider] ?? true
 }
 
 function handleSelect(model: string, provider: string) {
@@ -131,10 +136,15 @@ function openModal() {
   customProvider.value = appStore.selectedProvider
   showModal.value = true
 }
+
+defineExpose({
+  openModal,
+})
 </script>
 
 <template>
   <div class="model-selector">
+    <template v-if="!hideTrigger">
     <div class="model-label">{{ t('models.title') }}</div>
     <button class="model-trigger" @click="openModal">
       <span class="model-name" :title="appStore.selectedModel">{{ selectedDisplayName || '—' }}</span>
@@ -145,6 +155,7 @@ function openModal() {
     <div v-if="selectedFallbackChain.length > 0" class="model-fallback-summary">
       Fallback: {{ selectedFallbackLabel }}
     </div>
+    </template>
 
     <NModal
       v-model:show="showModal"
@@ -162,7 +173,11 @@ function openModal() {
       />
       <div class="model-list">
         <div v-for="group in filteredGroups" :key="group.provider" class="model-group">
-          <div class="model-group-header" @click="toggleGroup(group.provider)">
+          <div
+            class="model-group-header"
+            :class="{ current: group.provider === appStore.selectedProvider }"
+            @click="toggleGroup(group.provider)"
+          >
             <svg
               class="model-group-arrow"
               :class="{ collapsed: isGroupCollapsed(group.provider) }"
@@ -171,6 +186,9 @@ function openModal() {
               <polyline points="6 9 12 15 18 9" />
             </svg>
             <span class="model-group-label">{{ group.label }}</span>
+            <span v-if="group.provider === appStore.selectedProvider" class="model-group-current">
+              {{ t('models.currentProvider') }}
+            </span>
             <span class="model-group-count">{{ group.models.length }}</span>
           </div>
           <div v-show="!isGroupCollapsed(group.provider)" class="model-group-items">
@@ -327,6 +345,11 @@ function openModal() {
   &:hover {
     background-color: $bg-secondary;
   }
+
+  &.current {
+    background: rgba(var(--accent-primary-rgb), 0.08);
+    color: $text-primary;
+  }
 }
 
 .model-group-arrow {
@@ -346,6 +369,15 @@ function openModal() {
   font-size: 11px;
   color: $text-muted;
   font-weight: 400;
+}
+
+.model-group-current {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: $accent-primary;
+  background: rgba(var(--accent-primary-rgb), 0.12);
+  border-radius: 999px;
+  padding: 1px 6px;
 }
 
 .model-group-items {
@@ -369,6 +401,8 @@ function openModal() {
   }
 
   &.active {
+    background: rgba(var(--accent-primary-rgb), 0.12);
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-primary-rgb), 0.26);
     color: $accent-primary;
     font-weight: 500;
   }

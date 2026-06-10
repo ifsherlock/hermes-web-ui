@@ -77,6 +77,17 @@ export const useModelsStore = defineStore('models', () => {
     await useAppStore().reloadModels()
   }
 
+  async function updateProvider(poolKey: string, data: {
+    name?: string
+    base_url?: string
+    api_key?: string
+    model?: string
+  }) {
+    await systemApi.updateProvider(poolKey, data)
+    await fetchProviders()
+    await useAppStore().reloadModels()
+  }
+
   async function removeProvider(name: string) {
     await systemApi.removeCustomProvider(name)
     await fetchProviders()
@@ -97,6 +108,7 @@ export const useModelsStore = defineStore('models', () => {
     refreshModelCache,
     setDefaultModel,
     addProvider,
+    updateProvider,
     removeProvider,
   }
 })

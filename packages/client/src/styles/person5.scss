@@ -5366,6 +5366,13 @@ html.person5 .p5-control-group .p5-submenu-scroll {
   padding: 10px 10px 14px !important;
 }
 
+html.person5 .p5-limited-submenu.expanded-more,
+html.person5 .p5-submenu-scroll.expanded-more,
+html.person5 .p5-control-group .p5-submenu-scroll.expanded-more {
+  max-height: min(760px, calc(100vh - 160px)) !important;
+  scrollbar-color: rgba(255, 248, 236, 0.72) transparent !important;
+}
+
 html.person5 .nav-group-items:not(.collapsed) .nav-item:not(.logout-item),
 html.person5 .p5-submenu-scroll:not(.collapsed) .nav-item {
   width: min(228px, calc(100% - 12px)) !important;
@@ -6252,6 +6259,10 @@ html.person5 .nav-group:not(.nav-group-conversation) .nav-group-label.p5-strip-s
 html.person5 .p5-control-label-main.p5-strip-shift:has(.p5-menu-strip-svg) {
   margin-left: 18px !important;
   transform: translateX(-16px) !important;
+}
+
+html.person5 .p5-model-modal-host {
+  display: contents !important;
 }
 
 @media (max-width: 2200px) {

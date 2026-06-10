@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, nextTick } from 'vue'
 import { NModal, NForm, NFormItem, NInput, NInputNumber, NButton, NSelect, NRadioGroup, NRadioButton, useMessage, useDialog } from 'naive-ui'
 import { useModelsStore } from '@/stores/hermes/models'
 import { useI18n } from 'vue-i18n'
@@ -8,9 +8,14 @@ import NousLoginModal from './NousLoginModal.vue'
 import CopilotLoginModal from './CopilotLoginModal.vue'
 import XaiOAuthLoginModal from './XaiOAuthLoginModal.vue'
 import { checkCopilotToken, enableCopilot, type CopilotTokenSource } from '@/api/hermes/copilot-auth'
-import { fetchProviderModels } from '@/api/hermes/system'
+import { fetchProviderModels, type AvailableModelGroup } from '@/api/hermes/system'
+import { setModelContext } from '@/api/hermes/model-context'
 
 const { t } = useI18n()
+
+const props = defineProps<{
+  provider?: AvailableModelGroup | null
+}>()
 
 const emit = defineEmits<{
   close: []
@@ -29,6 +34,7 @@ const showNousLogin = ref(false)
 const showCopilotLogin = ref(false)
 const showXaiLogin = ref(false)
 const copilotChecking = ref(false)
+const hydratingForm = ref(false)
 
 const providerType = ref<'preset' | 'custom'>('preset')
 const selectedPreset = ref<string | null>(null)
@@ -61,6 +67,7 @@ const isCliproxyApi = computed(() => selectedPreset.value === CLIPROXYAPI_KEY)
 const isXaiOAuth = computed(() => selectedPreset.value === XAI_OAUTH_KEY)
 const isAlibabaCoding = computed(() => selectedPreset.value === ALIBABA_CODING_KEY)
 const alibabaCodingRegion = ref<'intl' | 'cn'>('intl')
+const isEditMode = computed(() => !!props.provider)
 
 const presetOptions = computed(() =>
   modelsStore.allProviders.map(g => ({ label: g.label, value: g.provider })),
@@ -68,10 +75,14 @@ const presetOptions = computed(() =>
 const selectedPresetProvider = computed(() =>
   selectedPreset.value ? modelsStore.allProviders.find(g => g.provider === selectedPreset.value) : null,
 )
-const canEditPresetBaseUrl = computed(() => !!selectedPresetProvider.value?.base_url_env)
+const canEditPresetBaseUrl = computed(() =>
+  isEditMode.value
+    ? !!props.provider?.base_url_env
+    : !!selectedPresetProvider.value?.base_url_env,
+)
 const canFetchProviderCatalog = computed(() =>
   !!formData.value.base_url.trim() &&
-  (providerType.value === 'custom' || (
+  (providerType.value === 'custom' || isEditMode.value || (
     providerType.value === 'preset' &&
     !isCodex.value &&
     !isNous.value &&
@@ -79,6 +90,38 @@ const canFetchProviderCatalog = computed(() =>
     !isXaiOAuth.value
   )),
 )
+
+function uniqueModels(...groups: Array<Array<string | undefined> | undefined>): string[] {
+  const seen = new Set<string>()
+  for (const group of groups) {
+    for (const model of group || []) {
+      if (model && !seen.has(model)) seen.add(model)
+    }
+  }
+  return [...seen]
+}
+
+function hydrateProvider(provider: AvailableModelGroup) {
+  hydratingForm.value = true
+  const isCustomProvider = provider.provider.startsWith('custom:')
+  providerType.value = isCustomProvider ? 'custom' : 'preset'
+  selectedPreset.value = isCustomProvider ? null : provider.provider
+  const source = modelsStore.allProviders.find(g => g.provider === provider.provider)
+  const currentDefaultModel = modelsStore.defaultProvider === provider.provider ? modelsStore.defaultModel : ''
+  const selectedModel = currentDefaultModel || provider.models[0] || provider.available_models?.[0] || source?.models?.[0] || ''
+  formData.value = {
+    name: provider.label,
+    base_url: provider.base_url,
+    api_key: provider.api_key || '',
+    model: selectedModel,
+    context_length: null,
+  }
+  modelOptions.value = uniqueModels([selectedModel], provider.models, provider.available_models, source?.models)
+    .map(model => ({ label: model, value: model }))
+  void nextTick(() => {
+    hydratingForm.value = false
+  })
+}
 
 function autoGenerateName(url: string): string {
   const clean = url.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, '')
@@ -94,6 +137,7 @@ function customProviderKey(name: string): string {
 }
 
 watch(selectedPreset, (val) => {
+  if (hydratingForm.value) return
   formData.value.model = ''
   alibabaCodingRegion.value = 'intl'
   if (val) {
@@ -116,6 +160,7 @@ watch(selectedPreset, (val) => {
 })
 
 watch(alibabaCodingRegion, (region) => {
+  if (hydratingForm.value) return
   if (isAlibabaCoding.value) {
     formData.value.base_url = ALIBABA_CODING_REGIONS[region]
   }
@@ -128,10 +173,15 @@ watch(() => formData.value.base_url, (url) => {
 })
 
 watch(providerType, () => {
+  if (hydratingForm.value) return
   modelOptions.value = []
   formData.value = { name: '', base_url: '', api_key: '', model: '', context_length: null }
   selectedPreset.value = null
 })
+
+watch(() => props.provider, (provider) => {
+  if (provider) hydrateProvider(provider)
+}, { immediate: true })
 
 onMounted(() => {
   if (modelsStore.providers.length === 0) {
@@ -148,14 +198,18 @@ async function fetchModels() {
 
   fetchingModels.value = true
   try {
-    const provider = providerType.value === 'preset'
+    const provider = isEditMode.value && props.provider
+      ? props.provider.provider
+      : providerType.value === 'preset'
       ? selectedPreset.value && CUSTOM_STORED_PRESET_KEYS.has(selectedPreset.value)
         ? customProviderKey(selectedPreset.value)
         : selectedPreset.value || undefined
       : formData.value.name.trim()
         ? customProviderKey(formData.value.name)
         : undefined
-    const label = providerType.value === 'preset'
+    const label = isEditMode.value && props.provider
+      ? props.provider.label
+      : providerType.value === 'preset'
       ? selectedPresetProvider.value?.label || provider
       : formData.value.name.trim() || provider
     const data = await fetchProviderModels({
@@ -184,24 +238,24 @@ async function handleSave() {
   }
 
   // Codex: 弹出授权码弹窗
-  if (isCodex.value) {
+  if (!isEditMode.value && isCodex.value) {
     showCodexLogin.value = true
     return
   }
 
   // Nous: 弹出 OAuth 设备码弹窗
-  if (isNous.value) {
+  if (!isEditMode.value && isNous.value) {
     showNousLogin.value = true
     return
   }
 
   // Copilot: 走 token-aware 的添加流程（已有 token → 确认窗；否则 device flow）
-  if (isCopilot.value) {
+  if (!isEditMode.value && isCopilot.value) {
     void triggerCopilotAdd()
     return
   }
 
-  if (isXaiOAuth.value) {
+  if (!isEditMode.value && isXaiOAuth.value) {
     showXaiLogin.value = true
     return
   }
@@ -210,7 +264,7 @@ async function handleSave() {
     message.warning(t('models.baseUrlRequired'))
     return
   }
-  if (!formData.value.api_key.trim() && !isCliproxyApi.value && !isXaiOAuth.value) {
+  if (!formData.value.api_key.trim() && !isCliproxyApi.value && !isXaiOAuth.value && !isCodex.value && !isNous.value && !isCopilot.value) {
     message.warning(t('models.apiKeyRequired'))
     return
   }
@@ -221,6 +275,22 @@ async function handleSave() {
 
   loading.value = true
   try {
+    if (isEditMode.value && props.provider) {
+      const contextLength = formData.value.context_length ?? undefined
+      await modelsStore.updateProvider(props.provider.provider, {
+        base_url: formData.value.base_url.trim(),
+        api_key: formData.value.api_key.trim(),
+        model: formData.value.model,
+      })
+      await modelsStore.setDefaultModel(formData.value.model, props.provider.provider)
+      if (contextLength && contextLength > 0) {
+        await setModelContext(props.provider.provider, formData.value.model, contextLength)
+      }
+      message.success(t('models.providerSaved'))
+      emit('saved')
+      return
+    }
+
     const contextLength = formData.value.context_length ?? undefined
     const providerKey = providerType.value === 'preset'
       ? selectedPreset.value
@@ -239,7 +309,7 @@ async function handleSave() {
     message.success(t('models.providerAdded'))
     emit('saved')
   } catch (e: any) {
-    message.error(e.message)
+    message.error(e.message || t(isEditMode.value ? 'models.providerSaveFailed' : 'models.fetchFailed'))
   } finally {
     loading.value = false
   }
@@ -340,13 +410,13 @@ function handleClose() {
   <NModal
     v-model:show="showModal"
     preset="card"
-    :title="t('models.addProvider')"
+    :title="isEditMode ? t('models.editProvider') : t('models.addProvider')"
     :style="{ width: 'min(520px, calc(100vw - 32px))' }"
     :mask-closable="!loading && !showCodexLogin && !showNousLogin && !showCopilotLogin && !showXaiLogin"
     @after-leave="emit('close')"
   >
     <NForm label-placement="top">
-      <NFormItem :label="t('models.providerType')">
+      <NFormItem v-if="!isEditMode" :label="t('models.providerType')">
         <div style="display: flex; gap: 12px">
           <NButton
             :type="providerType === 'preset' ? 'primary' : 'default'"
@@ -365,7 +435,7 @@ function handleClose() {
         </div>
       </NFormItem>
 
-      <NFormItem v-if="providerType === 'preset'" :label="t('models.selectProvider')" required>
+      <NFormItem v-if="providerType === 'preset' && !isEditMode" :label="t('models.selectProvider')" required>
         <NSelect
           v-model:value="selectedPreset"
           :options="presetOptions"
@@ -378,6 +448,7 @@ function handleClose() {
         <NInput
           v-model:value="formData.name"
           :placeholder="t('models.autoGeneratedName')"
+          :disabled="isEditMode"
         />
       </NFormItem>
 
@@ -426,7 +497,7 @@ function handleClose() {
         </div>
       </NFormItem>
 
-      <NFormItem v-if="providerType === 'custom'" :label="t('models.contextLength')">
+      <NFormItem v-if="providerType === 'custom' || isEditMode" :label="t('models.contextLength')">
         <NInputNumber
           v-model:value="formData.context_length as number | null"
           :placeholder="t('models.contextLengthPlaceholder')"
@@ -441,7 +512,7 @@ function handleClose() {
       <div class="modal-footer">
         <NButton @click="handleClose">{{ t('common.cancel') }}</NButton>
         <NButton type="primary" :loading="loading" @click="handleSave">
-          {{ t('common.add') }}
+          {{ isEditMode ? t('common.save') : t('common.add') }}
         </NButton>
       </div>
     </template>

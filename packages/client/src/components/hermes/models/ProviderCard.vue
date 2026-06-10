@@ -6,9 +6,13 @@ import { useModelsStore } from '@/stores/hermes/models'
 import { useAppStore } from '@/stores/hermes/app'
 import { useChatStore } from '@/stores/hermes/chat'
 import { checkCopilotToken, disableCopilot } from '@/api/hermes/copilot-auth'
+import { fetchProviderModels } from '@/api/hermes/system'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ provider: AvailableModelGroup }>()
+const emit = defineEmits<{
+  edit: [provider: AvailableModelGroup]
+}>()
 
 const { t } = useI18n()
 const modelsStore = useModelsStore()
@@ -30,15 +34,23 @@ const aliasInput = ref('')
 
 const showVisibilityModal = ref(false)
 const visibilitySaving = ref(false)
+const visibilityFetching = ref(false)
+const fetchedVisibilityModels = ref<string[] | null>(null)
 const selectedVisibleModels = ref<string[]>([])
+const expandedModels = ref(false)
 
 const sourceProvider = computed(() => modelsStore.allProviders.find(g => g.provider === props.provider.provider))
-const allModels = computed(() => props.provider.available_models?.length ? props.provider.available_models : (sourceProvider.value?.models?.length ? sourceProvider.value.models : props.provider.models))
+const allModels = computed(() =>
+  fetchedVisibilityModels.value?.length
+    ? fetchedVisibilityModels.value
+    : (props.provider.available_models?.length ? props.provider.available_models : (sourceProvider.value?.models?.length ? sourceProvider.value.models : props.provider.models)),
+)
 const visibilityRule = computed(() => appStore.getProviderVisibility(props.provider.provider))
 const isFiltered = computed(() => visibilityRule.value.mode === 'include')
 const visibleCountLabel = computed(() => `${props.provider.models.length}/${allModels.value.length}`)
 const isDefaultProvider = computed(() => modelsStore.defaultProvider === props.provider.provider)
 const displayedModels = computed(() => {
+  if (expandedModels.value) return props.provider.models
   const defaultModel = modelsStore.defaultModel
   const firstModels = props.provider.models.slice(0, 20)
   if (
@@ -88,9 +100,35 @@ async function clearAlias() {
 }
 
 function openVisibilityModal() {
+  fetchedVisibilityModels.value = null
   const rule = appStore.getProviderVisibility(props.provider.provider)
   selectedVisibleModels.value = rule.mode === 'include' ? allModels.value.filter(m => rule.models.includes(m)) : [...allModels.value]
   showVisibilityModal.value = true
+}
+
+async function handleVisibilityFetchModels() {
+  if (!props.provider.base_url) {
+    message.error(t('models.fetchModelsMissingBaseUrl'))
+    return
+  }
+  visibilityFetching.value = true
+  try {
+    const previous = new Set(selectedVisibleModels.value)
+    const res = await fetchProviderModels({
+      base_url: props.provider.base_url,
+      api_key: props.provider.api_key,
+      provider: props.provider.provider,
+      label: props.provider.label,
+      update_cache: true,
+    })
+    fetchedVisibilityModels.value = res.models
+    selectedVisibleModels.value = res.models.filter(model => previous.has(model))
+    message.success(t('models.fetchModelsSuccess', { count: res.models.length }))
+  } catch (e: any) {
+    message.error(e.message || t('models.fetchModelsFailed'))
+  } finally {
+    visibilityFetching.value = false
+  }
 }
 
 async function handleVisibilitySave() {
@@ -213,13 +251,27 @@ async function handleDelete() {
           <span v-if="isDefaultModel(model)" class="model-tag-default">{{ t('models.defaultShort') }}</span>
           <span v-if="modelAlias(model)" class="model-tag-id">{{ model }}</span>
         </button>
-        <span v-if="hiddenModelsCount > 0" class="model-tag model-tag-more">
+        <button
+          v-if="hiddenModelsCount > 0"
+          class="model-tag model-tag-more"
+          type="button"
+          @click="expandedModels = true"
+        >
           +{{ hiddenModelsCount }} {{ t('models.more') }}
-        </span>
+        </button>
+        <button
+          v-else-if="expandedModels && provider.models.length > 20"
+          class="model-tag model-tag-more"
+          type="button"
+          @click="expandedModels = false"
+        >
+          {{ t('models.showFewerModels') }}
+        </button>
       </div>
     </div>
 
     <div class="card-actions">
+      <NButton size="tiny" quaternary @click="emit('edit', provider)">{{ t('common.edit') }}</NButton>
       <NButton size="tiny" quaternary @click="showAliasListModal = true">{{ t('models.aliasManage') }}</NButton>
       <NButton size="tiny" quaternary @click="openVisibilityModal">{{ t('models.manageVisibleModels') }}</NButton>
       <NButton size="tiny" quaternary type="error" :loading="deleting" @click="handleDelete">{{ t('common.delete') }}</NButton>
@@ -282,8 +334,19 @@ async function handleDelete() {
       :mask-closable="!visibilitySaving"
     >
       <p class="visibility-hint">{{ t('models.visibilityHint') }}</p>
-      <div class="visibility-count">
-        {{ selectedVisibleModels.length }}/{{ allModels.length }} {{ t('models.count') }}
+      <div class="visibility-toolbar">
+        <div class="visibility-count">
+          {{ selectedVisibleModels.length }}/{{ allModels.length }} {{ t('models.count') }}
+        </div>
+        <NButton
+          size="small"
+          secondary
+          :loading="visibilityFetching"
+          :disabled="visibilitySaving"
+          @click="handleVisibilityFetchModels"
+        >
+          {{ t('models.fetchModels') }}
+        </NButton>
       </div>
       <div class="visibility-list">
         <NCheckboxGroup v-model:value="selectedVisibleModels">
@@ -299,17 +362,17 @@ async function handleDelete() {
         </NCheckboxGroup>
       </div>
       <div class="visibility-actions">
-        <NButton size="small" quaternary :disabled="visibilitySaving" @click="resetVisibility">
+        <NButton size="small" quaternary :disabled="visibilitySaving || visibilityFetching" @click="resetVisibility">
           {{ t('models.showAllModels') }}
         </NButton>
-        <NButton size="small" quaternary :disabled="visibilitySaving" @click="clearVisibility">
+        <NButton size="small" quaternary :disabled="visibilitySaving || visibilityFetching" @click="clearVisibility">
           {{ t('models.clearVisibleModels') }}
         </NButton>
         <div class="visibility-action-spacer" />
-        <NButton size="small" :disabled="visibilitySaving" @click="showVisibilityModal = false">
+        <NButton size="small" :disabled="visibilitySaving || visibilityFetching" @click="showVisibilityModal = false">
           {{ t('common.cancel') }}
         </NButton>
-        <NButton size="small" type="primary" :loading="visibilitySaving" @click="handleVisibilitySave">
+        <NButton size="small" type="primary" :loading="visibilitySaving" :disabled="visibilityFetching" @click="handleVisibilitySave">
           {{ t('common.save') }}
         </NButton>
       </div>
@@ -445,9 +508,15 @@ async function handleDelete() {
   text-overflow: ellipsis;
 
   &-more {
+    border: 0;
     background: rgba(var(--accent-primary-rgb), 0.15);
     color: $accent-primary;
+    cursor: pointer;
     font-weight: 500;
+
+    &:hover {
+      background: rgba(var(--accent-primary-rgb), 0.24);
+    }
   }
 
   &.default {
@@ -575,6 +644,13 @@ async function handleDelete() {
 .visibility-count {
   color: $text-muted;
   font-size: 12px;
+}
+
+.visibility-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 10px;
 }
 
