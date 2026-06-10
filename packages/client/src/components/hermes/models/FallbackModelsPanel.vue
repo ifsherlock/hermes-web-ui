@@ -274,9 +274,9 @@ onMounted(loadConfig)
             filterable
             class="model-select"
           />
-          <NButton size="tiny" quaternary :disabled="index === 0" @click="moveFallback(rule, index, -1)">{{ t('common.moveUp') }}</NButton>
-          <NButton size="tiny" quaternary :disabled="index === rule.fallbacks.length - 1" @click="moveFallback(rule, index, 1)">{{ t('common.moveDown') }}</NButton>
-          <NButton size="tiny" quaternary type="error" @click="removeFallback(rule, index)">{{ t('common.remove') }}</NButton>
+          <NButton size="tiny" quaternary :disabled="index === 0" @click="moveFallback(rule, index, -1)">{{ t('models.fallbackMoveUp') }}</NButton>
+          <NButton size="tiny" quaternary :disabled="index === rule.fallbacks.length - 1" @click="moveFallback(rule, index, 1)">{{ t('models.fallbackMoveDown') }}</NButton>
+          <NButton size="tiny" quaternary type="error" @click="removeFallback(rule, index)">{{ t('models.fallbackRemoveTarget') }}</NButton>
         </div>
         <NButton size="tiny" quaternary @click="addFallback(rule)">{{ t('models.fallbackAddTarget') }}</NButton>
       </div>
