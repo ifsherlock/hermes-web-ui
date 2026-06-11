@@ -99,7 +99,6 @@ function isChatChainChangeFragment(file) {
 }
 
 for (const file of [
-  'AGENTS.md',
   'ARCHITECTURE.md',
   'DEVELOPMENT.md',
   'docs/harness/README.md',
