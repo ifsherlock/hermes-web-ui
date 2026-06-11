@@ -488,15 +488,12 @@ defineExpose({
   margin-top: 16px;
   margin-left: auto;
   padding: 10px;
-  border: 1px solid rgba(var(--accent-info-rgb), 0.22);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.14);
   border-radius: 16px;
-  background: #ffffff;
+  background: $bg-card;
+  color: $text-primary;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14);
   backdrop-filter: blur(14px);
-
-  .dark & {
-    background: #262626;
-  }
 }
 
 .queue-float-header {
@@ -556,12 +553,8 @@ defineExpose({
   min-height: 34px;
   padding: 7px 8px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(var(--text-primary-rgb), 0.06);
   color: $text-primary;
-
-  .dark & {
-    background: rgba(255, 255, 255, 0.08);
-  }
 }
 
 .queue-index {
