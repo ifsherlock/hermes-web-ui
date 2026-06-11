@@ -79,15 +79,18 @@ export interface ModelFallbackTarget {
 export interface ModelFallbackRule {
   id: string
   enabled?: boolean
+  scope?: 'model' | 'provider' | 'profile'
   profile?: string
-  provider: string
-  model: string
+  provider?: string
+  model?: string
   fallbacks: ModelFallbackTarget[]
   retry_on?: ModelFallbackReason[]
 }
 
 export interface ModelFallbackConfig {
   enabled?: boolean
+  fallbacks?: ModelFallbackTarget[]
+  retry_on?: ModelFallbackReason[]
   rules?: ModelFallbackRule[]
 }
 

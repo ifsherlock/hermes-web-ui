@@ -183,6 +183,17 @@ function hasAvailableModel(groups: AvailableGroup[], target: ModelFallbackTarget
   return !!group?.models.includes(target.model)
 }
 
+function hasAvailableProvider(groups: AvailableGroup[], provider: string): boolean {
+  return groups.some(item => item.provider === provider && item.models.length > 0)
+}
+
+function fallbackRuleScope(rule: ModelFallbackRule): 'model' | 'provider' | 'profile' {
+  if (rule.scope === 'model' || rule.scope === 'provider' || rule.scope === 'profile') return rule.scope
+  if (rule.provider && rule.model) return 'model'
+  if (rule.provider) return 'provider'
+  return 'profile'
+}
+
 function groupsForFallbackValidation(
   rule: ModelFallbackRule,
   profileResults: Array<{ profile: string; groups: AvailableGroup[] }>,
@@ -198,15 +209,35 @@ function validateModelFallbackConfig(
   mergedGroups: AvailableGroup[],
 ): ModelFallbackWarning[] {
   const warnings: ModelFallbackWarning[] = []
+  for (const target of fallback.fallbacks || []) {
+    if (!hasAvailableModel(mergedGroups, target)) {
+      warnings.push({
+        rule_id: 'default',
+        kind: 'fallback_missing',
+        provider: target.provider,
+        model: target.model,
+        message: `Fallback model is not available: ${target.provider}/${target.model}`,
+      })
+    }
+  }
+
   for (const rule of fallback.rules || []) {
     const groups = groupsForFallbackValidation(rule, profileResults, mergedGroups)
-    if (!hasAvailableModel(groups, { provider: rule.provider, model: rule.model })) {
+    const scope = fallbackRuleScope(rule)
+    if (scope === 'model' && rule.provider && rule.model && !hasAvailableModel(groups, { provider: rule.provider, model: rule.model })) {
       warnings.push({
         rule_id: rule.id,
         kind: 'primary_missing',
         provider: rule.provider,
         model: rule.model,
         message: `Primary model is not available: ${rule.provider}/${rule.model}`,
+      })
+    } else if (scope === 'provider' && rule.provider && !hasAvailableProvider(groups, rule.provider)) {
+      warnings.push({
+        rule_id: rule.id,
+        kind: 'primary_missing',
+        provider: rule.provider,
+        message: `Provider is not available: ${rule.provider}`,
       })
     }
     if (!rule.fallbacks.length) {

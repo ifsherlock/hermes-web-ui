@@ -26,15 +26,18 @@ export interface ModelFallbackTarget {
 export interface ModelFallbackRule {
   id: string
   enabled?: boolean
+  scope?: 'model' | 'provider' | 'profile'
   profile?: string
-  provider: string
-  model: string
+  provider?: string
+  model?: string
   fallbacks: ModelFallbackTarget[]
   retry_on?: ModelFallbackReason[]
 }
 
 export interface ModelFallbackConfig {
   enabled?: boolean
+  fallbacks?: ModelFallbackTarget[]
+  retry_on?: ModelFallbackReason[]
   rules?: ModelFallbackRule[]
 }
 
@@ -94,44 +97,74 @@ function normalizeFallbackTarget(value: unknown): ModelFallbackTarget | null {
   return { provider, model }
 }
 
+function dedupeFallbackTargets(values: unknown[], primary?: ModelFallbackTarget): ModelFallbackTarget[] {
+  const seen = new Set<string>()
+  const targets: ModelFallbackTarget[] = []
+  for (const value of values) {
+    const target = normalizeFallbackTarget(value)
+    if (!target) continue
+    if (primary && target.provider === primary.provider && target.model === primary.model) continue
+    const key = `${target.provider}\n${target.model}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    targets.push(target)
+  }
+  return targets
+}
+
+function normalizeFallbackScope(value: unknown, provider: string, model: string, profile: string): ModelFallbackRule['scope'] {
+  if (value === 'provider' || value === 'profile' || value === 'model') return value
+  if (provider && model) return 'model'
+  if (provider) return 'provider'
+  if (profile) return 'profile'
+  return 'model'
+}
+
 export function normalizeModelFallbackConfig(value: unknown): ModelFallbackConfig {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return { enabled: false, rules: [] }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { enabled: false, fallbacks: [], retry_on: ['run_failed', 'empty_output'], rules: [] }
   const raw = value as Record<string, unknown>
   const rulesInput = Array.isArray(raw.rules) ? raw.rules : []
   const rules: ModelFallbackRule[] = []
   const seenIds = new Set<string>()
+  const globalFallbacks = dedupeFallbackTargets(Array.isArray(raw.fallbacks) ? raw.fallbacks : [])
 
   for (let index = 0; index < rulesInput.length; index += 1) {
     const item = rulesInput[index]
     if (!item || typeof item !== 'object' || Array.isArray(item)) continue
     const rule = item as Record<string, unknown>
+    const profile = normalizeConfigString(rule.profile, 128)
     const provider = normalizeConfigString(rule.provider)
     const model = normalizeConfigString(rule.model, 512)
-    if (!isSafeConfigKey(provider) || !isSafeConfigKey(model)) continue
+    const scope = normalizeFallbackScope(rule.scope, provider, model, profile)
+    if (profile && !isSafeConfigKey(profile)) continue
+    if ((scope === 'model' || scope === 'provider') && !isSafeConfigKey(provider)) continue
+    if (scope === 'model' && !isSafeConfigKey(model)) continue
 
     let id = normalizeConfigString(rule.id, 80).replace(/[^A-Za-z0-9_.:-]/g, '')
     if (!id) id = `rule_${index + 1}`
     while (seenIds.has(id)) id = `${id}_${index + 1}`
     seenIds.add(id)
 
-    const fallbacks = (Array.isArray(rule.fallbacks) ? rule.fallbacks : [])
-      .map(normalizeFallbackTarget)
-      .filter((target): target is ModelFallbackTarget => !!target)
-      .filter(target => !(target.provider === provider && target.model === model))
-
-    rules.push({
+    const normalizedRule: ModelFallbackRule = {
       id,
       enabled: rule.enabled !== false,
-      profile: normalizeConfigString(rule.profile, 128) || undefined,
-      provider,
-      model,
-      fallbacks: Array.from(new Map(fallbacks.map(target => [`${target.provider}\n${target.model}`, target])).values()),
+      scope,
+      profile: profile || undefined,
+      provider: scope === 'model' || scope === 'provider' ? provider : undefined,
+      model: scope === 'model' ? model : undefined,
+      fallbacks: dedupeFallbackTargets(
+        Array.isArray(rule.fallbacks) ? rule.fallbacks : [],
+        scope === 'model' ? { provider, model } : undefined,
+      ),
       retry_on: normalizeFallbackReasons(rule.retry_on),
-    })
+    }
+    rules.push(normalizedRule)
   }
 
   return {
     enabled: raw.enabled === true,
+    fallbacks: globalFallbacks,
+    retry_on: normalizeFallbackReasons(raw.retry_on),
     rules,
   }
 }

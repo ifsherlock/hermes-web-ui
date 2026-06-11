@@ -68,7 +68,9 @@ export const useModelsStore = defineStore('models', () => {
     defaultModel.value = modelId
     defaultProvider.value = provider
     const appStore = useAppStore()
-    appStore.reloadModels()
+    appStore.selectedModel = modelId
+    appStore.selectedProvider = provider
+    await appStore.reloadModels()
   }
 
   async function addProvider(data: CustomProvider) {

@@ -47,7 +47,7 @@ export const useAppStore = defineStore('app', () => {
   const customModels = ref<Record<string, string[]>>({})
   const modelAliases = ref<Record<string, Record<string, string>>>({})
   const modelVisibility = ref<ModelVisibility>({})
-  const modelFallback = ref<ModelFallbackConfig>({ enabled: false, rules: [] })
+  const modelFallback = ref<ModelFallbackConfig>({ enabled: false, fallbacks: [], retry_on: ['run_failed', 'empty_output'], rules: [] })
   const modelFallbackWarnings = ref<ModelFallbackWarning[]>([])
   const healthPollTimer = ref<ReturnType<typeof setInterval>>()
   const nodeVersion = ref('')
@@ -187,34 +187,62 @@ export const useAppStore = defineStore('app', () => {
 
   async function loadModelFallback() {
     const res = await fetchModelFallback()
-    modelFallback.value = res.model_fallback || { enabled: false, rules: [] }
+    modelFallback.value = res.model_fallback || { enabled: false, fallbacks: [], retry_on: ['run_failed', 'empty_output'], rules: [] }
     modelFallbackWarnings.value = res.warnings || []
     return res
   }
 
   async function setModelFallback(config: ModelFallbackConfig) {
     const res = await saveModelFallback(config)
-    modelFallback.value = res.model_fallback || { enabled: false, rules: [] }
+    modelFallback.value = res.model_fallback || { enabled: false, fallbacks: [], retry_on: ['run_failed', 'empty_output'], rules: [] }
     modelFallbackWarnings.value = res.warnings || []
     await reloadModels()
     return res
   }
 
-  function fallbackRuleMatches(rule: ModelFallbackRule, target: ModelFallbackTarget, profile?: string): boolean {
-    if (rule.enabled === false) return false
-    if (rule.provider !== target.provider || rule.model !== target.model) return false
-    return !rule.profile || !profile || rule.profile === profile
+  function fallbackRuleScore(rule: ModelFallbackRule, target: ModelFallbackTarget, profile?: string): number {
+    if (rule.enabled === false) return -1
+    if (rule.profile && rule.profile !== profile) return -1
+    const scope = rule.scope || (rule.provider && rule.model ? 'model' : rule.provider ? 'provider' : 'profile')
+    const profileBonus = rule.profile ? 10 : 0
+    if (scope === 'model') {
+      return rule.provider === target.provider && rule.model === target.model ? 300 + profileBonus : -1
+    }
+    if (scope === 'provider') {
+      return rule.provider === target.provider ? 200 + profileBonus : -1
+    }
+    if (scope === 'profile') {
+      return rule.profile && rule.profile === profile ? 100 + profileBonus : -1
+    }
+    return -1
+  }
+
+  function targetAvailable(target: ModelFallbackTarget): boolean {
+    if (!modelGroups.value.length) return true
+    return modelGroups.value.some(group => group.provider === target.provider && group.models.includes(target.model))
+  }
+
+  function filterFallbackChain(primary: ModelFallbackTarget, chain: ModelFallbackTarget[]): ModelFallbackTarget[] {
+    const seen = new Set<string>([`${primary.provider}\n${primary.model}`])
+    return chain
+      .filter(targetAvailable)
+      .filter(target => {
+        const key = `${target.provider}\n${target.model}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
   }
 
   function getFallbackChain(provider: string, model: string, profile?: string): ModelFallbackTarget[] {
     if (!modelFallback.value.enabled) return []
     const target = { provider, model }
     const rules = modelFallback.value.rules || []
-    const exactProfile = profile
-      ? rules.find(rule => rule.profile === profile && fallbackRuleMatches(rule, target, profile))
-      : undefined
-    const rule = exactProfile || rules.find(candidate => !candidate.profile && fallbackRuleMatches(candidate, target, profile))
-    return rule?.fallbacks || []
+    const rule = rules
+      .map((candidate, order) => ({ candidate, order, score: fallbackRuleScore(candidate, target, profile) }))
+      .filter(item => item.score >= 0)
+      .sort((a, b) => b.score - a.score || a.order - b.order)[0]?.candidate
+    return filterFallbackChain(target, rule?.fallbacks.length ? rule.fallbacks : modelFallback.value.fallbacks || [])
   }
 
   function getModelAlias(modelId: string, provider?: string): string {

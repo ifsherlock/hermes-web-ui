@@ -489,4 +489,55 @@ describe('App Store', () => {
     expect(store.profileModelGroups[0].groups[0].models).toEqual(['deepseek-v4-flash'])
     expect(store.profileModelGroups[0].groups[0].available_models).toEqual(['deepseek-v4-flash'])
   })
+
+  it('uses the default fallback chain for the active run model summary', () => {
+    const store = useAppStore()
+    store.modelGroups = [
+      { provider: 'openai', label: 'OpenAI', base_url: '', api_key: '', models: ['gpt-5.5'] },
+      { provider: 'deepseek', label: 'DeepSeek', base_url: '', api_key: '', models: ['deepseek-v4-flash'] },
+      { provider: 'mimo', label: 'Mimo', base_url: '', api_key: '', models: ['mimo-v2-pro'] },
+    ]
+    store.modelFallback = {
+      enabled: true,
+      fallbacks: [
+        { provider: 'openai', model: 'gpt-5.5' },
+        { provider: 'deepseek', model: 'deepseek-v4-flash' },
+        { provider: 'missing', model: 'missing-model' },
+      ],
+      rules: [],
+    }
+
+    expect(store.getFallbackChain('openai', 'gpt-5.5')).toEqual([
+      { provider: 'deepseek', model: 'deepseek-v4-flash' },
+    ])
+  })
+
+  it('shows the most specific matching fallback override', () => {
+    const store = useAppStore()
+    store.modelGroups = [
+      { provider: 'openai', label: 'OpenAI', base_url: '', api_key: '', models: ['gpt-5.5'] },
+      { provider: 'deepseek', label: 'DeepSeek', base_url: '', api_key: '', models: ['deepseek-v4-flash'] },
+      { provider: 'mimo', label: 'Mimo', base_url: '', api_key: '', models: ['mimo-v2-pro'] },
+    ]
+    store.modelFallback = {
+      enabled: true,
+      fallbacks: [{ provider: 'deepseek', model: 'deepseek-v4-flash' }],
+      rules: [{
+        id: 'provider',
+        scope: 'provider',
+        provider: 'openai',
+        fallbacks: [{ provider: 'deepseek', model: 'deepseek-v4-flash' }],
+      }, {
+        id: 'model',
+        scope: 'model',
+        provider: 'openai',
+        model: 'gpt-5.5',
+        fallbacks: [{ provider: 'mimo', model: 'mimo-v2-pro' }],
+      }],
+    }
+
+    expect(store.getFallbackChain('openai', 'gpt-5.5')).toEqual([
+      { provider: 'mimo', model: 'mimo-v2-pro' },
+    ])
+  })
 })

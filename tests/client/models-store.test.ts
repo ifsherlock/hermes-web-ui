@@ -8,6 +8,13 @@ const mockSystemApi = vi.hoisted(() => ({
   updateDefaultModel: vi.fn(),
   addCustomProvider: vi.fn(),
   removeCustomProvider: vi.fn(),
+  addCustomModel: vi.fn(),
+  removeCustomModel: vi.fn(),
+  updateModelAlias: vi.fn(),
+  updateModelVisibility: vi.fn(),
+  fetchModelFallback: vi.fn(),
+  saveModelFallback: vi.fn(),
+  triggerUpdate: vi.fn(),
 }))
 
 vi.mock('@/api/hermes/system', () => mockSystemApi)
@@ -91,5 +98,39 @@ describe('Models Store', () => {
     })
     expect(appStore.selectedModel).toBe('deepseek-v4-flash')
     expect(appStore.selectedProvider).toBe('deepseek')
+  })
+
+  it('syncs the current app model immediately when changing the default from the workbench', async () => {
+    const groups = [
+      {
+        provider: 'axonhub',
+        label: 'AxonHub',
+        base_url: 'https://example.test/v1',
+        api_key: 'sk-test',
+        models: ['mimo-v2-pro', 'gpt-5.5'],
+        available_models: ['mimo-v2-pro', 'gpt-5.5'],
+      },
+    ]
+    mockSystemApi.updateDefaultModel.mockResolvedValue({ success: true })
+    mockSystemApi.fetchAvailableModels.mockResolvedValue({
+      default: 'mimo-v2-pro',
+      default_provider: 'axonhub',
+      groups,
+      allProviders: groups,
+      profiles: [],
+    })
+
+    const appStore = useAppStore()
+    appStore.selectedProvider = 'axonhub'
+    appStore.selectedModel = 'gpt-5.5'
+
+    const modelsStore = useModelsStore()
+    await modelsStore.setDefaultModel('mimo-v2-pro', 'axonhub')
+
+    expect(mockSystemApi.updateDefaultModel).toHaveBeenCalledWith({ default: 'mimo-v2-pro', provider: 'axonhub' })
+    expect(appStore.selectedProvider).toBe('axonhub')
+    expect(appStore.selectedModel).toBe('mimo-v2-pro')
+    expect(modelsStore.defaultProvider).toBe('axonhub')
+    expect(modelsStore.defaultModel).toBe('mimo-v2-pro')
   })
 })
