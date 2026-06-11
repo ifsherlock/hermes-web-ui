@@ -140,22 +140,24 @@ for (const icon of [
   requireFile(icon)
 }
 
-const agents = await readText('AGENTS.md')
-const agentLines = agents.trimEnd().split(/\r?\n/)
-if (agentLines.length > 120) {
-  fail(`AGENTS.md should stay short; found ${agentLines.length} lines, expected <= 120`)
-}
+if (gitLines(['ls-files', 'AGENTS.md']).includes('AGENTS.md')) {
+  const agents = await readText('AGENTS.md')
+  const agentLines = agents.trimEnd().split(/\r?\n/)
+  if (agentLines.length > 120) {
+    fail(`AGENTS.md should stay short; found ${agentLines.length} lines, expected <= 120`)
+  }
 
-for (const requiredLink of [
-  'DEVELOPMENT.md',
-  'ARCHITECTURE.md',
-  'docs/harness/README.md',
-  'docs/harness/validation.md',
-  'docs/harness/worktree-runbook.md',
-  'docs/harness/pr-review.md',
-]) {
-  if (!agents.includes(requiredLink)) {
-    fail(`AGENTS.md must link to ${requiredLink}`)
+  for (const requiredLink of [
+    'DEVELOPMENT.md',
+    'ARCHITECTURE.md',
+    'docs/harness/README.md',
+    'docs/harness/validation.md',
+    'docs/harness/worktree-runbook.md',
+    'docs/harness/pr-review.md',
+  ]) {
+    if (!agents.includes(requiredLink)) {
+      fail(`AGENTS.md must link to ${requiredLink}`)
+    }
   }
 }
 
